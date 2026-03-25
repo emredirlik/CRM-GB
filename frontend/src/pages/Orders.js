@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Package, Search, ShoppingCart } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -52,13 +52,26 @@ const statusLabels = {
   en: { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' }
 };
 
+const units = [
+  { value: 'kg', label: 'Kilogram (kg)' },
+  { value: 'g', label: 'Gram (g)' },
+  { value: 'adet', label: 'Adet' },
+  { value: 'paket', label: 'Paket' },
+  { value: 'kutu', label: 'Kutu' },
+  { value: 'litre', label: 'Litre (L)' },
+  { value: 'ml', label: 'Mililitre (ml)' }
+];
+
 const initialFormData = {
   lead_id: '',
   product_name: '',
   product_code: '',
-  quantity: 1,
+  pieces: 1,
+  amount: 1,
+  unit: 'kg',
   unit_price: 0,
-  notes: ''
+  notes: '',
+  status: 'pending'
 };
 
 const Orders = () => {
@@ -109,7 +122,9 @@ const Orders = () => {
       lead_id: order.lead_id,
       product_name: order.product_name,
       product_code: order.product_code,
-      quantity: order.quantity,
+      pieces: order.pieces || 1,
+      amount: order.amount || order.quantity || 1,
+      unit: order.unit || 'kg',
       unit_price: order.unit_price,
       notes: order.notes || '',
       status: order.status
@@ -122,9 +137,16 @@ const Orders = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const calculateTotal = () => {
+    const pieces = parseFloat(formData.pieces) || 1;
+    const amount = parseFloat(formData.amount) || 0;
+    const unitPrice = parseFloat(formData.unit_price) || 0;
+    return pieces * amount * unitPrice;
+  };
+
   const handleSave = async () => {
     if (!formData.lead_id || !formData.product_name || !formData.product_code) {
-      toast.error('Error', { description: 'Please fill all required fields' });
+      toast.error('Error', { description: 'Lütfen tüm zorunlu alanları doldurun' });
       return;
     }
 
@@ -134,27 +156,31 @@ const Orders = () => {
         await axios.put(`${API}/orders/${selectedOrder.id}`, {
           product_name: formData.product_name,
           product_code: formData.product_code,
-          quantity: parseInt(formData.quantity),
+          pieces: parseInt(formData.pieces),
+          amount: parseFloat(formData.amount),
+          unit: formData.unit,
           unit_price: parseFloat(formData.unit_price),
           status: formData.status,
           notes: formData.notes
         });
-        toast.success(t('success'), { description: 'Sipariş güncellendi' });
+        toast.success('Başarılı', { description: 'Sipariş güncellendi' });
       } else {
         await axios.post(`${API}/orders`, {
           lead_id: formData.lead_id,
           product_name: formData.product_name,
           product_code: formData.product_code,
-          quantity: parseInt(formData.quantity),
+          pieces: parseInt(formData.pieces),
+          amount: parseFloat(formData.amount),
+          unit: formData.unit,
           unit_price: parseFloat(formData.unit_price),
           notes: formData.notes
         });
-        toast.success(t('success'), { description: 'Sipariş oluşturuldu' });
+        toast.success('Başarılı', { description: 'Sipariş oluşturuldu' });
       }
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error(t('error'), { description: error.response?.data?.detail || 'Operation failed' });
+      toast.error('Hata', { description: error.response?.data?.detail || 'İşlem başarısız' });
     } finally {
       setSaving(false);
     }
@@ -163,39 +189,50 @@ const Orders = () => {
   const handleDelete = async () => {
     try {
       await axios.delete(`${API}/orders/${selectedOrder.id}`);
-      toast.success(t('success'), { description: 'Sipariş silindi' });
+      toast.success('Başarılı', { description: 'Sipariş silindi' });
       setIsDeleteDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error(t('error'), { description: 'Failed to delete order' });
+      toast.error('Hata', { description: 'Sipariş silinemedi' });
     }
   };
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
       await axios.put(`${API}/orders/${orderId}`, { status: newStatus });
-      toast.success(t('success'), { description: 'Durum güncellendi' });
+      toast.success('Başarılı', { description: 'Durum güncellendi' });
       fetchData();
     } catch (error) {
-      toast.error(t('error'), { description: 'Failed to update status' });
+      toast.error('Hata', { description: 'Durum güncellenemedi' });
     }
   };
 
   const filteredOrders = orders.filter(order => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      order.company_name.toLowerCase().includes(searchLower) ||
-      order.product_name.toLowerCase().includes(searchLower) ||
-      order.product_code.toLowerCase().includes(searchLower)
+      order.company_name?.toLowerCase().includes(searchLower) ||
+      order.product_name?.toLowerCase().includes(searchLower) ||
+      order.product_code?.toLowerCase().includes(searchLower)
     );
   });
 
   const totalRevenue = orders.reduce((sum, order) => 
-    ['confirmed', 'shipped', 'delivered'].includes(order.status) ? sum + order.total_price : sum, 0
+    ['confirmed', 'shipped', 'delivered'].includes(order.status) ? sum + (order.total_price || 0) : sum, 0
   );
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount || 0);
+  };
+
+  const formatOrderQuantity = (order) => {
+    const pieces = order.pieces || 1;
+    const amount = order.amount || order.quantity || 1;
+    const unit = order.unit || 'kg';
+    
+    if (pieces > 1) {
+      return `${pieces} × ${amount} ${unit}`;
+    }
+    return `${amount} ${unit}`;
   };
 
   if (loading) {
@@ -212,7 +249,7 @@ const Orders = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Siparişler</h1>
-          <p className="text-muted-foreground mt-1">{orders.length} sipariş • Toplam: {formatCurrency(totalRevenue)}</p>
+          <p className="text-muted-foreground mt-1">{orders.length} sipariş • Toplam Gelir: {formatCurrency(totalRevenue)}</p>
         </div>
         <Button onClick={openAddDialog} data-testid="add-order-btn">
           <Plus className="w-4 h-4 mr-2" />
@@ -248,7 +285,7 @@ const Orders = () => {
                     <th>Ürün</th>
                     <th>Ürün Kodu</th>
                     <th>Müşteri</th>
-                    <th>Adet</th>
+                    <th>Miktar</th>
                     <th>Birim Fiyat</th>
                     <th>Toplam</th>
                     <th>Durum</th>
@@ -258,7 +295,12 @@ const Orders = () => {
                 <tbody>
                   {filteredOrders.map((order) => (
                     <tr key={order.id} data-testid={`order-row-${order.id}`}>
-                      <td className="font-medium">{order.product_name}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <Package className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{order.product_name}</span>
+                        </div>
+                      </td>
                       <td className="font-mono text-xs text-muted-foreground">{order.product_code}</td>
                       <td>
                         <div>
@@ -266,9 +308,11 @@ const Orders = () => {
                           <p className="text-xs text-muted-foreground">{order.lead_name}</p>
                         </div>
                       </td>
-                      <td>{order.quantity}</td>
-                      <td>{formatCurrency(order.unit_price)}</td>
-                      <td className="font-semibold">{formatCurrency(order.total_price)}</td>
+                      <td>
+                        <span className="font-medium">{formatOrderQuantity(order)}</span>
+                      </td>
+                      <td>{formatCurrency(order.unit_price)}/{order.unit || 'kg'}</td>
+                      <td className="font-semibold text-primary">{formatCurrency(order.total_price)}</td>
                       <td>
                         <Select 
                           value={order.status} 
@@ -280,31 +324,13 @@ const Orders = () => {
                             </Badge>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pending">
-                              <Badge className={`${statusColors.pending} border-0`}>
-                                {statusLabels[language]?.pending}
-                              </Badge>
-                            </SelectItem>
-                            <SelectItem value="confirmed">
-                              <Badge className={`${statusColors.confirmed} border-0`}>
-                                {statusLabels[language]?.confirmed}
-                              </Badge>
-                            </SelectItem>
-                            <SelectItem value="shipped">
-                              <Badge className={`${statusColors.shipped} border-0`}>
-                                {statusLabels[language]?.shipped}
-                              </Badge>
-                            </SelectItem>
-                            <SelectItem value="delivered">
-                              <Badge className={`${statusColors.delivered} border-0`}>
-                                {statusLabels[language]?.delivered}
-                              </Badge>
-                            </SelectItem>
-                            <SelectItem value="cancelled">
-                              <Badge className={`${statusColors.cancelled} border-0`}>
-                                {statusLabels[language]?.cancelled}
-                              </Badge>
-                            </SelectItem>
+                            {Object.keys(statusColors).map(status => (
+                              <SelectItem key={status} value={status}>
+                                <Badge className={`${statusColors[status]} border-0`}>
+                                  {statusLabels[language]?.[status]}
+                                </Badge>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </td>
@@ -350,6 +376,7 @@ const Orders = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Müşteri Seçimi */}
             {!selectedOrder && (
               <div className="space-y-2">
                 <Label>Müşteri *</Label>
@@ -368,6 +395,7 @@ const Orders = () => {
               </div>
             )}
             
+            {/* Ürün Bilgileri */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="product_name">Ürün Adı *</Label>
@@ -393,41 +421,82 @@ const Orders = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Adet *</Label>
-                <Input
-                  id="quantity"
-                  name="quantity"
-                  type="number"
-                  min="1"
-                  value={formData.quantity}
-                  onChange={handleInputChange}
-                  data-testid="input-quantity"
-                />
+            {/* Miktar Bilgileri - Yeni Format */}
+            <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">Miktar Hesaplama</p>
+              <div className="grid grid-cols-4 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="pieces">Adet</Label>
+                  <Input
+                    id="pieces"
+                    name="pieces"
+                    type="number"
+                    min="1"
+                    value={formData.pieces}
+                    onChange={handleInputChange}
+                    data-testid="input-pieces"
+                  />
+                </div>
+                <div className="flex items-end pb-2 justify-center text-lg font-bold text-muted-foreground">×</div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Miktar</Label>
+                  <Input
+                    id="amount"
+                    name="amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={handleInputChange}
+                    data-testid="input-amount"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Birim</Label>
+                  <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
+                    <SelectTrigger data-testid="select-unit">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map(unit => (
+                        <SelectItem key={unit.value} value={unit.value}>
+                          {unit.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="unit_price">Birim Fiyat (€) *</Label>
-                <Input
-                  id="unit_price"
-                  name="unit_price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.unit_price}
-                  onChange={handleInputChange}
-                  data-testid="input-unit-price"
-                />
+              
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="unit_price">Birim Fiyat (€/{formData.unit})</Label>
+                  <Input
+                    id="unit_price"
+                    name="unit_price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.unit_price}
+                    onChange={handleInputChange}
+                    data-testid="input-unit-price"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <div className="w-full p-3 bg-primary/10 rounded-md text-center">
+                    <p className="text-xs text-muted-foreground">Toplam Fiyat</p>
+                    <p className="text-xl font-bold text-primary">{formatCurrency(calculateTotal())}</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Hesaplama Özeti */}
+              <div className="text-center text-sm text-muted-foreground pt-2 border-t">
+                {formData.pieces} × {formData.amount} {formData.unit} × {formatCurrency(formData.unit_price)}/{formData.unit} = <strong className="text-foreground">{formatCurrency(calculateTotal())}</strong>
               </div>
             </div>
 
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground">Toplam Fiyat</p>
-              <p className="text-2xl font-bold font-['Manrope']">
-                {formatCurrency(formData.quantity * formData.unit_price)}
-              </p>
-            </div>
-
+            {/* Durum (sadece düzenleme modunda) */}
             {selectedOrder && (
               <div className="space-y-2">
                 <Label>Durum</Label>
@@ -446,6 +515,7 @@ const Orders = () => {
               </div>
             )}
 
+            {/* Notlar */}
             <div className="space-y-2">
               <Label htmlFor="notes">Notlar</Label>
               <Textarea

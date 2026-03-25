@@ -45,8 +45,8 @@ class Lead(BaseModel):
     tax_number: Optional[str] = ""
     address: Optional[str] = ""
     email: Optional[str] = ""
-    city: str
-    country: str
+    city: Optional[str] = ""
+    country: Optional[str] = ""
     notes: Optional[str] = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -149,8 +149,11 @@ class Order(BaseModel):
     company_name: str  # For display
     product_name: str
     product_code: str
-    quantity: int
-    unit_price: float
+    pieces: Optional[int] = 1  # Adet (kaç paket/kutu)
+    quantity: Optional[int] = None  # Legacy field for backwards compatibility
+    amount: Optional[float] = None  # Miktar (10 kg gibi)
+    unit: Optional[str] = "kg"  # Birim (kg, g, adet, paket, litre)
+    unit_price: float  # Birim fiyatı (€/kg gibi)
     total_price: float
     status: str = "pending"  # pending, confirmed, shipped, delivered, cancelled
     notes: Optional[str] = ""
@@ -161,14 +164,18 @@ class OrderCreate(BaseModel):
     lead_id: str
     product_name: str
     product_code: str
-    quantity: int
+    pieces: int = 1
+    amount: float
+    unit: str
     unit_price: float
     notes: Optional[str] = ""
 
 class OrderUpdate(BaseModel):
     product_name: Optional[str] = None
     product_code: Optional[str] = None
-    quantity: Optional[int] = None
+    pieces: Optional[int] = None
+    amount: Optional[float] = None
+    unit: Optional[str] = None
     unit_price: Optional[float] = None
     status: Optional[str] = None
     notes: Optional[str] = None
@@ -577,8 +584,9 @@ async def create_order(order_data: OrderCreate):
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
-    # Calculate total price
-    total_price = order_data.quantity * order_data.unit_price
+    # Calculate total price: pieces × amount × unit_price
+    # Example: 1 × 10 kg × 4 €/kg = 40 €
+    total_price = order_data.pieces * order_data.amount * order_data.unit_price
     
     order = Order(
         lead_id=order_data.lead_id,
@@ -586,7 +594,9 @@ async def create_order(order_data: OrderCreate):
         company_name=lead['company_name'],
         product_name=order_data.product_name,
         product_code=order_data.product_code,
-        quantity=order_data.quantity,
+        pieces=order_data.pieces,
+        amount=order_data.amount,
+        unit=order_data.unit,
         unit_price=order_data.unit_price,
         total_price=total_price,
         notes=order_data.notes
@@ -621,10 +631,11 @@ async def update_order(order_id: str, order_data: OrderUpdate):
     
     update_data = {k: v for k, v in order_data.model_dump().items() if v is not None}
     
-    # Recalculate total if quantity or price changed
-    quantity = update_data.get('quantity', existing['quantity'])
+    # Recalculate total: pieces × amount × unit_price
+    pieces = update_data.get('pieces', existing.get('pieces', 1))
+    amount = update_data.get('amount', existing.get('amount', existing.get('quantity', 1)))
     unit_price = update_data.get('unit_price', existing['unit_price'])
-    update_data['total_price'] = quantity * unit_price
+    update_data['total_price'] = pieces * amount * unit_price
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
     await db.orders.update_one({"id": order_id}, {"$set": update_data})
