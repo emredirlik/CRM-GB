@@ -1,0 +1,130 @@
+{
+  "identity": {
+    "name": "SpiceCRM",
+    "aesthetic": "Precision Industrial",
+    "description": "A clean, efficient B2B tool for a Berlin spice factory. Blends the sterility of a lab with the warmth of organic ingredients.",
+    "emotional_tone": "Trustworthy, Efficient, Precise, Organic",
+    "mode": "light"
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl font-bold tracking-tight",
+      "h2": "text-3xl font-semibold tracking-tight",
+      "h3": "text-2xl font-semibold",
+      "body": "text-sm leading-relaxed",
+      "small": "text-xs font-medium text-muted-foreground"
+    },
+    "installation": "Import 'Manrope' and 'Inter' from Google Fonts in index.css"
+  },
+  "colors": {
+    "palette": {
+      "background": "#F8F9FA",
+      "foreground": "#0F172A",
+      "card": "#FFFFFF",
+      "card_foreground": "#0F172A",
+      "popover": "#FFFFFF",
+      "popover_foreground": "#0F172A",
+      "primary": "#9A3412",
+      "primary_foreground": "#FFFFFF",
+      "secondary": "#F1F5F9",
+      "secondary_foreground": "#1E293B",
+      "muted": "#F1F5F9",
+      "muted_foreground": "#64748B",
+      "accent": "#FFF7ED",
+      "accent_foreground": "#9A3412",
+      "destructive": "#EF4444",
+      "destructive_foreground": "#FFFFFF",
+      "border": "#E2E8F0",
+      "input": "#E2E8F0",
+      "ring": "#9A3412"
+    },
+    "charts": {
+      "chart_1": "#9A3412",
+      "chart_2": "#334155",
+      "chart_3": "#15803D",
+      "chart_4": "#D97706",
+      "chart_5": "#64748B"
+    },
+    "gradients": {
+      "subtle_warm": "linear-gradient(135deg, #FFF7ED 0%, #FFFFFF 100%)",
+      "subtle_cool": "linear-gradient(135deg, #F8F9FA 0%, #E2E8F0 100%)"
+    }
+  },
+  "layout": {
+    "spacing": {
+      "container_padding": "p-8",
+      "section_gap": "gap-8",
+      "component_gap": "gap-4"
+    },
+    "radius": {
+      "default": "0.375rem",
+      "small": "0.25rem",
+      "large": "0.5rem"
+    },
+    "grid_strategies": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-4 gap-6",
+      "bento_hero": "col-span-full md:col-span-2 row-span-2",
+      "bento_standard": "col-span-1 row-span-1"
+    },
+    "sidebar": {
+      "width": "w-64",
+      "bg": "bg-slate-900",
+      "text": "text-slate-300",
+      "active_bg": "bg-slate-800",
+      "active_text": "text-white"
+    }
+  },
+  "components": {
+    "card": {
+      "base": "bg-card text-card-foreground rounded-md border border-border/60 shadow-sm",
+      "hover": "hover:shadow-md transition-shadow duration-200"
+    },
+    "button": {
+      "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm rounded-md font-medium tracking-wide",
+      "secondary": "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md font-medium",
+      "outline": "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground rounded-md"
+    },
+    "input": {
+      "base": "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "table": {
+      "wrapper": "w-full overflow-auto rounded-md border",
+      "header": "bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider",
+      "row": "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "soft": "0 2px 8px -2px rgba(0, 0, 0, 0.05)",
+      "sharp": "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+    },
+    "textures": {
+      "noise": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E\")"
+    }
+  },
+  "image_urls": {
+    "login_hero": "https://images.unsplash.com/photo-1664790702707-5de8895af266?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwyfHxpbmR1c3RyaWFsJTIwbGFib3JhdG9yeSUyMGNsZWFuJTIwbWluaW1hbCUyMHNwaWNlJTIwaW5ncmVkaWVudHN8ZW58MHx8fHwxNzc0NDMzNzMzfDA&ixlib=rb-4.1.0&q=85",
+    "dashboard_accent": "https://images.pexels.com/photos/1287565/pexels-photo-1287565.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "empty_state": "https://images.unsplash.com/photo-1563884525493-980d4380cb72?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHw0fHxpbmR1c3RyaWFsJTIwbGFib3JhdG9yeSUyMGNsZWFuJTIwbWluaW1hbCUyMHNwaWNlJTIwaW5ncmVkaWVudHN8ZW58MHx8fHwxNzc0NDMzNzMzfDA&ixlib=rb-4.1.0&q=85"
+  },
+  "motion": {
+    "reduced_motion": "true",
+    "hover_transform": "transform transition-all duration-200 ease-in-out hover:-translate-y-0.5",
+    "page_transition": "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out"
+  },
+  "universal_guidelines": [
+    "Don't make generic centered layouts.",
+    "Use 'Manrope' for all Headings.",
+    "Use 'Inter' for all Body text.",
+    "Primary color #9A3412 is for ACTIONS only.",
+    "Sidebar should be Dark Slate (#0F172A).",
+    "Tables should be high density for B2B efficiency.",
+    "Use data-testid on all interactive elements.",
+    "Use Sonner for toasts."
+  ]
+}
