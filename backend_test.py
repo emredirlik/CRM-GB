@@ -18,6 +18,7 @@ class SpiceCRMAPITester:
         self.tests_passed = 0
         self.test_lead_id = None
         self.test_template_id = None
+        self.test_order_id = None
 
     def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
         """Run a single API test"""
@@ -204,6 +205,93 @@ class SpiceCRMAPITester:
         # This will queue the email but may fail to send without proper SMTP
         return self.run_test("Send Email", "POST", "emails/send", 200, email_data)
 
+    def test_create_order(self):
+        """Test creating a new order"""
+        if not self.test_lead_id:
+            print("❌ Skipped - No test lead ID available")
+            return False, {}
+        
+        order_data = {
+            "lead_id": self.test_lead_id,
+            "product_name": "Gyros Spice Mix Premium",
+            "product_code": "GYR-001",
+            "quantity": 50,
+            "unit_price": 12.50,
+            "notes": "Test order for API testing"
+        }
+        
+        success, response = self.run_test("Create Order", "POST", "orders", 200, order_data)
+        if success and 'id' in response:
+            self.test_order_id = response['id']
+            print(f"   Created order with ID: {self.test_order_id}")
+            print(f"   Total price: €{response.get('total_price', 0)}")
+        return success, response
+
+    def test_get_orders(self):
+        """Test getting all orders"""
+        return self.run_test("Get All Orders", "GET", "orders", 200)
+
+    def test_get_order_by_id(self):
+        """Test getting a specific order by ID"""
+        if not self.test_order_id:
+            print("❌ Skipped - No test order ID available")
+            return False, {}
+        return self.run_test("Get Order by ID", "GET", f"orders/{self.test_order_id}", 200)
+
+    def test_update_order(self):
+        """Test updating an order"""
+        if not self.test_order_id:
+            print("❌ Skipped - No test order ID available")
+            return False, {}
+        
+        update_data = {
+            "quantity": 75,
+            "unit_price": 11.50,
+            "status": "confirmed",
+            "notes": "Updated order for testing - confirmed"
+        }
+        success, response = self.run_test("Update Order", "PUT", f"orders/{self.test_order_id}", 200, update_data)
+        if success:
+            print(f"   Updated total price: €{response.get('total_price', 0)}")
+            print(f"   Status: {response.get('status', 'unknown')}")
+        return success, response
+
+    def test_get_lead_orders(self):
+        """Test getting orders for a specific lead"""
+        if not self.test_lead_id:
+            print("❌ Skipped - No test lead ID available")
+            return False, {}
+        return self.run_test("Get Lead Orders", "GET", f"orders/lead/{self.test_lead_id}", 200)
+
+    def test_lead_finder_templates(self):
+        """Test getting lead finder search templates"""
+        return self.run_test("Get Search Templates", "GET", "leads/search/templates", 200)
+
+    def test_lead_finder_search(self):
+        """Test AI-powered lead search"""
+        search_data = {
+            "keywords": ["gyros producer", "döner manufacturer"],
+            "location": "Athens",
+            "country": "Greece",
+            "limit": 5
+        }
+        
+        print("   Note: AI lead search may take several seconds...")
+        success, response = self.run_test("AI Lead Search", "POST", "leads/search", 200, search_data)
+        
+        if success:
+            total_found = response.get('total_found', 0)
+            leads = response.get('leads', [])
+            print(f"   Found {total_found} leads")
+            if leads:
+                print(f"   Sample lead: {leads[0].get('company_name', 'Unknown')}")
+        
+        return success, response
+
+    def test_lead_finder_history(self):
+        """Test getting lead search history"""
+        return self.run_test("Get Search History", "GET", "leads/search/history", 200)
+
     def cleanup_test_data(self):
         """Clean up test data"""
         print("\n🧹 Cleaning up test data...")
@@ -217,6 +305,11 @@ class SpiceCRMAPITester:
             success, _ = self.run_test("Delete Test Template", "DELETE", f"templates/{self.test_template_id}", 200)
             if success:
                 print(f"   Deleted test template: {self.test_template_id}")
+        
+        if self.test_order_id:
+            success, _ = self.run_test("Delete Test Order", "DELETE", f"orders/{self.test_order_id}", 200)
+            if success:
+                print(f"   Deleted test order: {self.test_order_id}")
 
     def run_all_tests(self):
         """Run all API tests"""
@@ -249,6 +342,18 @@ class SpiceCRMAPITester:
         
         # Email sending test
         self.test_send_email()
+
+        # Orders CRUD tests
+        self.test_create_order()
+        self.test_get_orders()
+        self.test_get_order_by_id()
+        self.test_update_order()
+        self.test_get_lead_orders()
+
+        # Lead Finder tests
+        self.test_lead_finder_templates()
+        self.test_lead_finder_search()
+        self.test_lead_finder_history()
 
         # Cleanup
         self.cleanup_test_data()

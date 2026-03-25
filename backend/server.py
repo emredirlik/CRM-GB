@@ -42,9 +42,9 @@ class Lead(BaseModel):
     first_name: str
     last_name: str
     company_name: str
-    tax_number: str
-    address: str
-    email: EmailStr
+    tax_number: Optional[str] = ""
+    address: Optional[str] = ""
+    email: Optional[str] = ""
     city: str
     country: str
     notes: Optional[str] = ""
@@ -137,6 +137,41 @@ class DashboardStats(BaseModel):
     emails_sent: int
     emails_failed: int
     recent_leads: List[dict]
+    total_orders: int = 0
+    total_revenue: float = 0.0
+
+# Order Models
+class Order(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    lead_id: str
+    lead_name: str  # For display
+    company_name: str  # For display
+    product_name: str
+    product_code: str
+    quantity: int
+    unit_price: float
+    total_price: float
+    status: str = "pending"  # pending, confirmed, shipped, delivered, cancelled
+    notes: Optional[str] = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class OrderCreate(BaseModel):
+    lead_id: str
+    product_name: str
+    product_code: str
+    quantity: int
+    unit_price: float
+    notes: Optional[str] = ""
+
+class OrderUpdate(BaseModel):
+    product_name: Optional[str] = None
+    product_code: Optional[str] = None
+    quantity: Optional[int] = None
+    unit_price: Optional[float] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
 
 # Lead Finder Models
 class SearchLeadsRequest(BaseModel):
@@ -513,12 +548,103 @@ async def get_dashboard_stats():
     for lead in recent_leads:
         deserialize_datetime(lead)
     
+    # Order stats
+    total_orders = await db.orders.count_documents({})
+    
+    # Calculate total revenue from delivered orders
+    pipeline = [
+        {"$match": {"status": {"$in": ["delivered", "shipped", "confirmed"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_price"}}}
+    ]
+    revenue_result = await db.orders.aggregate(pipeline).to_list(1)
+    total_revenue = revenue_result[0]["total"] if revenue_result else 0.0
+    
     return DashboardStats(
         total_leads=total_leads,
         emails_sent=emails_sent,
         emails_failed=emails_failed,
-        recent_leads=recent_leads
+        recent_leads=recent_leads,
+        total_orders=total_orders,
+        total_revenue=total_revenue
     )
+
+# ===================== ORDER ENDPOINTS =====================
+
+@api_router.post("/orders", response_model=Order)
+async def create_order(order_data: OrderCreate):
+    # Get lead info
+    lead = await db.leads.find_one({"id": order_data.lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Calculate total price
+    total_price = order_data.quantity * order_data.unit_price
+    
+    order = Order(
+        lead_id=order_data.lead_id,
+        lead_name=f"{lead['first_name']} {lead['last_name']}",
+        company_name=lead['company_name'],
+        product_name=order_data.product_name,
+        product_code=order_data.product_code,
+        quantity=order_data.quantity,
+        unit_price=order_data.unit_price,
+        total_price=total_price,
+        notes=order_data.notes
+    )
+    
+    doc = order.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    await db.orders.insert_one(doc)
+    return order
+
+@api_router.get("/orders", response_model=List[Order])
+async def get_orders():
+    orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for order in orders:
+        deserialize_datetime(order)
+    return orders
+
+@api_router.get("/orders/{order_id}", response_model=Order)
+async def get_order(order_id: str):
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    deserialize_datetime(order)
+    return order
+
+@api_router.put("/orders/{order_id}", response_model=Order)
+async def update_order(order_id: str, order_data: OrderUpdate):
+    existing = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    update_data = {k: v for k, v in order_data.model_dump().items() if v is not None}
+    
+    # Recalculate total if quantity or price changed
+    quantity = update_data.get('quantity', existing['quantity'])
+    unit_price = update_data.get('unit_price', existing['unit_price'])
+    update_data['total_price'] = quantity * unit_price
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.orders.update_one({"id": order_id}, {"$set": update_data})
+    updated = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    deserialize_datetime(updated)
+    return updated
+
+@api_router.delete("/orders/{order_id}")
+async def delete_order(order_id: str):
+    result = await db.orders.delete_one({"id": order_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"message": "Order deleted successfully"}
+
+@api_router.get("/orders/lead/{lead_id}", response_model=List[Order])
+async def get_lead_orders(lead_id: str):
+    orders = await db.orders.find({"lead_id": lead_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for order in orders:
+        deserialize_datetime(order)
+    return orders
 
 # ===================== LEAD FINDER ENDPOINTS =====================
 

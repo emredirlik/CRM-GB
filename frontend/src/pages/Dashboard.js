@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getDashboardStats } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Mail, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Users, Mail, AlertTriangle, TrendingUp, ShoppingCart, Euro } from 'lucide-react';
 import { format } from 'date-fns';
 
 const Dashboard = () => {
@@ -11,7 +11,9 @@ const Dashboard = () => {
     total_leads: 0,
     emails_sent: 0,
     emails_failed: 0,
-    recent_leads: []
+    recent_leads: [],
+    total_orders: 0,
+    total_revenue: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +32,10 @@ const Dashboard = () => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
+  };
+
   const statCards = [
     {
       label: t('totalLeads'),
@@ -39,18 +45,26 @@ const Dashboard = () => {
       bgColor: 'bg-blue-50'
     },
     {
+      label: 'Siparişler',
+      value: stats.total_orders,
+      icon: ShoppingCart,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    {
+      label: 'Gelir',
+      value: formatCurrency(stats.total_revenue || 0),
+      icon: Euro,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      isText: true
+    },
+    {
       label: t('emailsSent'),
       value: stats.emails_sent,
       icon: Mail,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
-    },
-    {
-      label: t('emailsFailed'),
-      value: stats.emails_failed,
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50'
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50'
     }
   ];
 
@@ -71,14 +85,14 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {statCards.map((stat, index) => (
           <Card key={index} className="card-hover" data-testid={`stat-card-${index}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  <p className="stat-value mt-2">{stat.value}</p>
+                  <p className={`mt-2 ${stat.isText ? 'text-2xl font-bold' : 'stat-value'}`}>{stat.value}</p>
                 </div>
                 <div className={`w-12 h-12 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
                   <stat.icon className={`w-6 h-6 ${stat.color}`} />
