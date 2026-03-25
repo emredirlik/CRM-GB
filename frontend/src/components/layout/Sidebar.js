@@ -10,7 +10,8 @@ import {
   Settings,
   Sparkles,
   Search,
-  ShoppingCart
+  ShoppingCart,
+  BookOpen
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -22,6 +23,7 @@ const Sidebar = () => {
     { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
     { path: '/leads', icon: Users, label: 'leads' },
     { path: '/orders', icon: ShoppingCart, label: 'orders' },
+    { path: '/recipes', icon: BookOpen, label: 'recipes' },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/compose', icon: Mail, label: 'emailComposer' },
     { path: '/history', icon: History, label: 'emailHistory' },

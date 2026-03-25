@@ -207,6 +207,63 @@ class SearchResult(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = "completed"
 
+# Recipe Models - Müşteriye özel üretim reçeteleri
+class RecipeIngredient(BaseModel):
+    name: str  # Malzeme adı
+    amount: float  # Miktar
+    unit: str  # Birim (kg, g, L, ml, dakika, rpm vb.)
+
+class Recipe(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    lead_id: str  # Hangi müşteriye ait
+    lead_name: str  # Müşteri adı (görüntüleme için)
+    company_name: str  # Firma adı
+    name: str  # Reçete adı (örn: "Gyros Özel Karışım")
+    product_code: str  # Ürün kodu
+    # Malzemeler
+    meat_amount: float  # Et miktarı (kg)
+    water_amount: float  # Su miktarı (L)
+    spice_amount: float  # Baharat miktarı (kg)
+    binding_amount: float  # Bağlayıcı (binding) miktarı (kg)
+    # Üretim parametreleri
+    mixing_time: int  # Karışım süresi (dakika)
+    motor_speed: int  # Motor hızı (rpm)
+    # Ek malzemeler (dinamik liste)
+    additional_ingredients: Optional[List[dict]] = []  # [{"name": "Tuz", "amount": 0.5, "unit": "kg"}]
+    # Notlar ve talimatlar
+    instructions: Optional[str] = ""
+    notes: Optional[str] = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class RecipeCreate(BaseModel):
+    lead_id: str
+    name: str
+    product_code: str
+    meat_amount: float
+    water_amount: float
+    spice_amount: float
+    binding_amount: float
+    mixing_time: int
+    motor_speed: int
+    additional_ingredients: Optional[List[dict]] = []
+    instructions: Optional[str] = ""
+    notes: Optional[str] = ""
+
+class RecipeUpdate(BaseModel):
+    name: Optional[str] = None
+    product_code: Optional[str] = None
+    meat_amount: Optional[float] = None
+    water_amount: Optional[float] = None
+    spice_amount: Optional[float] = None
+    binding_amount: Optional[float] = None
+    mixing_time: Optional[int] = None
+    motor_speed: Optional[int] = None
+    additional_ingredients: Optional[List[dict]] = None
+    instructions: Optional[str] = None
+    notes: Optional[str] = None
+
 # ===================== HELPER FUNCTIONS =====================
 
 def serialize_datetime(obj):
@@ -656,6 +713,108 @@ async def get_lead_orders(lead_id: str):
     for order in orders:
         deserialize_datetime(order)
     return orders
+
+# ===================== RECIPE ENDPOINTS =====================
+
+@api_router.post("/recipes", response_model=Recipe)
+async def create_recipe(recipe_data: RecipeCreate):
+    # Get lead info
+    lead = await db.leads.find_one({"id": recipe_data.lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    recipe = Recipe(
+        lead_id=recipe_data.lead_id,
+        lead_name=f"{lead.get('first_name', '')} {lead.get('last_name', '')}",
+        company_name=lead.get('company_name', ''),
+        name=recipe_data.name,
+        product_code=recipe_data.product_code,
+        meat_amount=recipe_data.meat_amount,
+        water_amount=recipe_data.water_amount,
+        spice_amount=recipe_data.spice_amount,
+        binding_amount=recipe_data.binding_amount,
+        mixing_time=recipe_data.mixing_time,
+        motor_speed=recipe_data.motor_speed,
+        additional_ingredients=recipe_data.additional_ingredients or [],
+        instructions=recipe_data.instructions,
+        notes=recipe_data.notes
+    )
+    
+    doc = recipe.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    await db.recipes.insert_one(doc)
+    return recipe
+
+@api_router.get("/recipes", response_model=List[Recipe])
+async def get_recipes():
+    recipes = await db.recipes.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for recipe in recipes:
+        deserialize_datetime(recipe)
+    return recipes
+
+@api_router.get("/recipes/{recipe_id}", response_model=Recipe)
+async def get_recipe(recipe_id: str):
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    deserialize_datetime(recipe)
+    return recipe
+
+@api_router.get("/recipes/lead/{lead_id}", response_model=List[Recipe])
+async def get_lead_recipes(lead_id: str):
+    recipes = await db.recipes.find({"lead_id": lead_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for recipe in recipes:
+        deserialize_datetime(recipe)
+    return recipes
+
+@api_router.put("/recipes/{recipe_id}", response_model=Recipe)
+async def update_recipe(recipe_id: str, recipe_data: RecipeUpdate):
+    existing = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    update_data = {k: v for k, v in recipe_data.model_dump().items() if v is not None}
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.recipes.update_one({"id": recipe_id}, {"$set": update_data})
+    updated = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    deserialize_datetime(updated)
+    return updated
+
+@api_router.delete("/recipes/{recipe_id}")
+async def delete_recipe(recipe_id: str):
+    result = await db.recipes.delete_one({"id": recipe_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    return {"message": "Recipe deleted successfully"}
+
+@api_router.post("/recipes/{recipe_id}/duplicate")
+async def duplicate_recipe(recipe_id: str, new_lead_id: str):
+    """Bir reçeteyi başka bir müşteriye kopyala"""
+    original = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not original:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    # Get new lead info
+    new_lead = await db.leads.find_one({"id": new_lead_id}, {"_id": 0})
+    if not new_lead:
+        raise HTTPException(status_code=404, detail="Target lead not found")
+    
+    # Create new recipe
+    new_recipe = {
+        **original,
+        "id": str(uuid.uuid4()),
+        "lead_id": new_lead_id,
+        "lead_name": f"{new_lead.get('first_name', '')} {new_lead.get('last_name', '')}",
+        "company_name": new_lead.get('company_name', ''),
+        "name": f"{original['name']} (Kopya)",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.recipes.insert_one(new_recipe)
+    return {"message": "Recipe duplicated successfully", "new_recipe_id": new_recipe["id"]}
 
 # ===================== LEAD FINDER ENDPOINTS =====================
 

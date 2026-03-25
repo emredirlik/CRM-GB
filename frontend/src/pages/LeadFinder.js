@@ -97,16 +97,17 @@ const LeadFinder = () => {
         location,
         country,
         limit
-      });
+      }, { timeout: 120000 }); // 2 minute timeout
 
-      setResults(response.data.leads);
-      toast.success('Search Complete', { 
-        description: `Found ${response.data.total_found} potential leads` 
+      setResults(response.data.leads || []);
+      toast.success('Arama Tamamlandı', { 
+        description: `${response.data.total_found} potansiyel müşteri bulundu` 
       });
       fetchSearchHistory();
     } catch (error) {
-      toast.error('Search Failed', { 
-        description: error.response?.data?.detail || 'An error occurred during search' 
+      console.error('Search error:', error);
+      toast.error('Arama Başarısız', { 
+        description: error.response?.data?.detail || error.message || 'Arama sırasında bir hata oluştu' 
       });
     } finally {
       setLoading(false);

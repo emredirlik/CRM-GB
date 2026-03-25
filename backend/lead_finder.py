@@ -42,24 +42,17 @@ class LeadFinderService:
     ) -> List[FoundLead]:
         """
         Search for potential leads based on keywords and location
-        
-        Args:
-            keywords: List of business types to search (e.g., ["gyros producer", "döner manufacturer"])
-            location: City or region (e.g., "Athens")
-            country: Country name (e.g., "Greece")
-            limit: Maximum number of leads to return
         """
-        all_leads = []
+        # Tüm keywordleri birleştirip tek sorgu yap (daha hızlı)
+        combined_query = ", ".join(keywords)
+        query = f"{combined_query} manufacturers producers suppliers in {location} {country}"
         
-        for keyword in keywords:
-            query = f"{keyword} {location} {country} contact email"
-            leads = await self._search_with_ai(query, country, limit // len(keywords))
-            all_leads.extend(leads)
+        leads = await self._search_with_ai(query, country, location, limit)
         
         # Deduplicate by company name
         seen = set()
         unique_leads = []
-        for lead in all_leads:
+        for lead in leads:
             if lead.company_name:
                 key = lead.company_name.lower().strip()
                 if key not in seen:
@@ -68,50 +61,49 @@ class LeadFinderService:
         
         return unique_leads[:limit]
     
-    async def _search_with_ai(self, query: str, country: str, limit: int) -> List[FoundLead]:
+    async def _search_with_ai(self, query: str, country: str, location: str, limit: int) -> List[FoundLead]:
         """Use AI to search and extract business information"""
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
-        system_prompt = """You are an expert B2B lead researcher specializing in the food manufacturing industry. 
-Your task is to provide real business information for companies that manufacture gyros, döner, kebab, and souvlaki meat products.
+        system_prompt = f"""You are an expert B2B lead researcher specializing in the food manufacturing industry in {country}.
+Your task is to provide as many real business names as possible for companies that manufacture gyros, döner, kebab, souvlaki, and similar meat products.
+
+IMPORTANT: Return AT LEAST 15-20 companies in your response. The more companies the better!
 
 You must return a JSON array with real companies. Each company MUST have:
 - company_name: The actual name of the company (REQUIRED, cannot be null)
-- email: Business email address if known
-- phone: Business phone number if known  
-- address: Physical address if known
+- email: Business email address if known (can be null)
+- phone: Business phone number if known (can be null)
+- address: Physical address if known (can be null)
 - city: City where the company is located
 - country: Country where the company is located
-- website: Company website URL if known
+- website: Company website URL if known (can be null)
 - description: Brief description of what they produce
 
-Example of expected output:
-[
-  {
-    "company_name": "Kronos Foods",
-    "email": "info@kronosfoods.com",
-    "phone": "+30 210 5551234",
-    "address": "Industrial Zone, Aspropyrgos",
-    "city": "Athens",
-    "country": "Greece",
-    "website": "https://kronosfoods.com",
-    "description": "Large-scale gyros and döner meat producer for restaurants and food service"
-  }
-]
+Include companies from these categories:
+1. Meat processing plants and factories
+2. Gyros/döner meat producers
+3. Kebab manufacturers
+4. Food processing companies
+5. Wholesale meat suppliers
+6. Industrial food producers
+7. Spice and seasoning suppliers for meat industry
 
 IMPORTANT RULES:
 1. company_name is REQUIRED - never return null for company_name
-2. Only include companies you have knowledge about
+2. Include ALL companies you know about in {country}, especially in {location}
 3. Focus on B2B manufacturers and suppliers, NOT restaurants
-4. If you don't know specific contact details, you can leave those as null, but company_name MUST be provided
+4. Include both large and small companies
+5. Return as many companies as possible (minimum 15)
 """
         
-        user_prompt = f"""Find {limit} real businesses that match this search: "{query}"
+        user_prompt = f"""Find ALL businesses you know that match this search: "{query}"
 
-These should be gyros, döner, kebab, or souvlaki meat manufacturers, producers, or wholesale suppliers in or near {country}.
-Focus on B2B companies that supply to restaurants and food service businesses.
+List EVERY gyros, döner, kebab, souvlaki, or meat processing company you know in {country}, particularly in or near {location}.
+Include manufacturers, producers, wholesale suppliers, meat processing plants, and food factories.
 
-Return the results as a JSON array. Remember: company_name is REQUIRED for each entry."""
+Return AT LEAST 15-20 companies as a JSON array. The more the better!
+Remember: company_name is REQUIRED for each entry."""
 
         try:
             chat = LlmChat(
