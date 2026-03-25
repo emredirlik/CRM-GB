@@ -138,6 +138,33 @@ class DashboardStats(BaseModel):
     emails_failed: int
     recent_leads: List[dict]
 
+# Lead Finder Models
+class SearchLeadsRequest(BaseModel):
+    keywords: List[str]  # e.g., ["gyros producer", "döner manufacturer"]
+    location: str  # e.g., "Athens"
+    country: str  # e.g., "Greece"
+    limit: int = 20
+
+class FoundLeadResponse(BaseModel):
+    company_name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    website: Optional[str] = None
+    description: Optional[str] = None
+    source: Optional[str] = None
+
+class SearchResult(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    query_keywords: List[str]
+    location: str
+    country: str
+    leads_found: List[dict]
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    status: str = "completed"
+
 # ===================== HELPER FUNCTIONS =====================
 
 def serialize_datetime(obj):
@@ -493,6 +520,125 @@ async def get_dashboard_stats():
         recent_leads=recent_leads
     )
 
+# ===================== LEAD FINDER ENDPOINTS =====================
+
+@api_router.post("/leads/search")
+async def search_for_leads(request: SearchLeadsRequest):
+    """Search for potential leads using AI-powered search"""
+    from lead_finder import LeadFinderService, SEARCH_TEMPLATES
+    
+    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="LLM API key not configured")
+    
+    finder = LeadFinderService(api_key)
+    
+    try:
+        # Search for leads
+        found_leads = await finder.search_leads(
+            keywords=request.keywords,
+            location=request.location,
+            country=request.country,
+            limit=request.limit
+        )
+        
+        # Convert to response format
+        leads_data = []
+        for lead in found_leads:
+            leads_data.append({
+                "company_name": lead.company_name,
+                "email": lead.email,
+                "phone": lead.phone,
+                "address": lead.address,
+                "city": lead.city,
+                "country": lead.country,
+                "website": lead.website,
+                "description": lead.description,
+                "source": lead.source
+            })
+        
+        # Save search result to database
+        search_result = {
+            "id": str(uuid.uuid4()),
+            "query_keywords": request.keywords,
+            "location": request.location,
+            "country": request.country,
+            "leads_found": leads_data,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "completed"
+        }
+        await db.search_history.insert_one(search_result)
+        
+        return {
+            "status": "success",
+            "total_found": len(leads_data),
+            "leads": leads_data
+        }
+        
+    except Exception as e:
+        logger.error(f"Lead search failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+@api_router.get("/leads/search/templates")
+async def get_search_templates():
+    """Get predefined search templates for common industries"""
+    from lead_finder import SEARCH_TEMPLATES
+    return SEARCH_TEMPLATES
+
+@api_router.get("/leads/search/history")
+async def get_search_history():
+    """Get history of lead searches"""
+    history = await db.search_history.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    for item in history:
+        if isinstance(item.get('created_at'), str):
+            item['created_at'] = datetime.fromisoformat(item['created_at'])
+    return history
+
+@api_router.post("/leads/import")
+async def import_found_leads(leads: List[dict]):
+    """Import found leads into the main leads database"""
+    imported = []
+    skipped = []
+    
+    for lead_data in leads:
+        # Check if lead already exists by email or company name
+        existing = None
+        if lead_data.get('email'):
+            existing = await db.leads.find_one({"email": lead_data['email']}, {"_id": 0})
+        if not existing and lead_data.get('company_name'):
+            existing = await db.leads.find_one({"company_name": lead_data['company_name']}, {"_id": 0})
+        
+        if existing:
+            skipped.append(lead_data.get('company_name', 'Unknown'))
+            continue
+        
+        # Create new lead
+        new_lead = {
+            "id": str(uuid.uuid4()),
+            "first_name": lead_data.get('contact_name', '').split()[0] if lead_data.get('contact_name') else "Contact",
+            "last_name": lead_data.get('contact_name', '').split()[-1] if lead_data.get('contact_name') and len(lead_data.get('contact_name', '').split()) > 1 else "",
+            "company_name": lead_data.get('company_name', 'Unknown'),
+            "tax_number": lead_data.get('tax_number', ''),
+            "address": lead_data.get('address', ''),
+            "email": lead_data.get('email', f"contact@{lead_data.get('company_name', 'unknown').lower().replace(' ', '')}.com"),
+            "city": lead_data.get('city', ''),
+            "country": lead_data.get('country', ''),
+            "notes": f"Source: {lead_data.get('source', 'AI Search')}\nWebsite: {lead_data.get('website', 'N/A')}\nPhone: {lead_data.get('phone', 'N/A')}\nDescription: {lead_data.get('description', '')}",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.leads.insert_one(new_lead)
+        imported.append(new_lead['company_name'])
+    
+    return {
+        "status": "success",
+        "imported_count": len(imported),
+        "skipped_count": len(skipped),
+        "imported": imported,
+        "skipped": skipped
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -507,3 +653,4 @@ app.add_middleware(
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+

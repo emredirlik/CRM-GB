@@ -5,6 +5,7 @@ const translations = {
     // Navigation
     dashboard: 'Kontrol Paneli',
     leads: 'Müşteriler',
+    findLeads: 'Müşteri Bul',
     templates: 'Şablonlar',
     emailComposer: 'Mail Oluştur',
     emailHistory: 'Mail Geçmişi',
@@ -98,6 +99,7 @@ const translations = {
     // Navigation
     dashboard: 'Dashboard',
     leads: 'Kunden',
+    findLeads: 'Kunden finden',
     templates: 'Vorlagen',
     emailComposer: 'E-Mail erstellen',
     emailHistory: 'E-Mail-Verlauf',
@@ -191,6 +193,7 @@ const translations = {
     // Navigation
     dashboard: 'Dashboard',
     leads: 'Leads',
+    findLeads: 'Find Leads',
     templates: 'Templates',
     emailComposer: 'Compose Email',
     emailHistory: 'Email History',

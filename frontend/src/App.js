@@ -4,6 +4,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import Layout from "@/components/layout/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Leads from "@/pages/Leads";
+import LeadFinder from "@/pages/LeadFinder";
 import Templates from "@/pages/Templates";
 import EmailComposer from "@/pages/EmailComposer";
 import EmailHistory from "@/pages/EmailHistory";
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/find-leads" element={<LeadFinder />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/compose" element={<EmailComposer />} />
             <Route path="/history" element={<EmailHistory />} />

@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -196,6 +197,9 @@ const Templates = () => {
         <DialogContent className="max-w-2xl" data-testid="template-dialog">
           <DialogHeader>
             <DialogTitle className="font-['Manrope']">{t('addTemplate')}</DialogTitle>
+            <DialogDescription>
+              Create a new email template for your campaigns
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">

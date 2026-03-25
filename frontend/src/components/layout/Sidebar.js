@@ -8,7 +8,8 @@ import {
   Mail, 
   History, 
   Settings,
-  Sparkles
+  Sparkles,
+  Search
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -17,6 +18,7 @@ const Sidebar = () => {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'dashboard' },
+    { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
     { path: '/leads', icon: Users, label: 'leads' },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/compose', icon: Mail, label: 'emailComposer' },
@@ -51,10 +53,13 @@ const Sidebar = () => {
             key={item.path}
             to={item.path}
             data-testid={`nav-${item.label}`}
-            className={`sidebar-item ${isActive(item.path) ? 'active' : ''}`}
+            className={`sidebar-item ${isActive(item.path) ? 'active' : ''} ${item.highlight ? 'bg-orange-900/30 border border-orange-600/30' : ''}`}
           >
-            <item.icon className="w-5 h-5" />
+            <item.icon className={`w-5 h-5 ${item.highlight ? 'text-orange-400' : ''}`} />
             <span className="font-medium">{t(item.label)}</span>
+            {item.highlight && (
+              <span className="ml-auto text-[10px] px-1.5 py-0.5 bg-orange-600 text-white rounded font-bold">AI</span>
+            )}
           </NavLink>
         ))}
       </nav>

@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -254,6 +255,9 @@ const Leads = () => {
             <DialogTitle className="font-['Manrope']">
               {selectedLead ? t('editLead') : t('addLead')}
             </DialogTitle>
+            <DialogDescription>
+              {selectedLead ? 'Update lead information' : 'Add a new lead to your database'}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
