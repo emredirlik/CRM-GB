@@ -294,16 +294,62 @@ const translations = {
     connectionFailed: 'Connection failed',
     error: 'Error',
     success: 'Success',
+  },
+  pl: {
+    // Navigation - Polish
+    dashboard: 'Panel sterowania',
+    leads: 'Klienci',
+    findLeads: 'Znajdź klientów',
+    orders: 'Zamówienia',
+    products: 'Produkty',
+    recipes: 'Receptury',
+    routePlanner: 'Planowanie trasy',
+    templates: 'Szablony',
+    emailComposer: 'Napisz e-mail',
+    emailHistory: 'Historia e-mail',
+    settings: 'Ustawienia',
+    
+    // Dashboard
+    totalLeads: 'Łączna liczba klientów',
+    emailsSent: 'Wysłane e-maile',
+    emailsFailed: 'Nieudane e-maile',
+    recentLeads: 'Ostatnio dodani klienci',
+    noLeadsYet: 'Brak klientów',
+    
+    // Leads
+    addLead: 'Dodaj klienta',
+    editLead: 'Edytuj klienta',
+    deleteLead: 'Usuń klienta',
+    firstName: 'Imię',
+    lastName: 'Nazwisko',
+    companyName: 'Nazwa firmy',
+    taxNumber: 'NIP',
+    address: 'Adres',
+    email: 'E-mail',
+    city: 'Miasto',
+    country: 'Kraj',
+    notes: 'Notatki',
+    actions: 'Akcje',
+    save: 'Zapisz',
+    cancel: 'Anuluj',
+    delete: 'Usuń',
+    edit: 'Edytuj',
+    sendEmail: 'Wyślij e-mail',
+    confirmDelete: 'Czy na pewno chcesz usunąć tego klienta?',
+    
+    // Common
+    error: 'Błąd',
+    success: 'Sukces',
   }
 };
 
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('tr');
+  const [language, setLanguage] = useState('en'); // Default to English
   
   const t = useCallback((key) => {
-    return translations[language][key] || key;
+    return translations[language]?.[key] || translations['en']?.[key] || key;
   }, [language]);
   
   return (

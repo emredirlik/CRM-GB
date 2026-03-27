@@ -1,0 +1,518 @@
+"""
+PDF Generation Utilities with Turkish Character Support
+"""
+import io
+from datetime import datetime
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import cm
+from reportlab.lib.colors import HexColor, white, black
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register DejaVu fonts for Turkish character support
+try:
+    pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+    FONT_REGULAR = 'DejaVu'
+    FONT_BOLD = 'DejaVu-Bold'
+except:
+    FONT_REGULAR = 'Helvetica'
+    FONT_BOLD = 'Helvetica-Bold'
+
+# Colors matching the app design
+PRIMARY_COLOR = HexColor('#1e293b')    # slate-800
+ACCENT_COLOR = HexColor('#f97316')     # orange-500
+BG_LIGHT = HexColor('#f8fafc')         # slate-50
+TEXT_MUTED = HexColor('#64748b')       # slate-500
+SUCCESS_COLOR = HexColor('#22c55e')    # green-500
+RED_COLOR = HexColor('#ef4444')
+BLUE_COLOR = HexColor('#3b82f6')
+PURPLE_COLOR = HexColor('#8b5cf6')
+GREEN_COLOR = HexColor('#22c55e')
+GRAY_COLOR = HexColor('#6b7280')
+
+
+def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
+    """Generate a professionally styled order PDF with Turkish character support"""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header background
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    # Company name
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2*cm, height - 3.2*cm, "Sipariş Formu")
+    
+    # Document ID
+    c.setFont(FONT_BOLD, 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, f"#{order['id'][:8].upper()}")
+    c.setFont(FONT_REGULAR, 10)
+    c.drawRightString(width - 2*cm, height - 3.2*cm, datetime.now().strftime('%d.%m.%Y'))
+    
+    y = height - 5.5*cm
+    
+    # Customer info card
+    c.setFillColor(BG_LIGHT)
+    c.roundRect(1.5*cm, y - 3*cm, width - 3*cm, 3*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 9)
+    c.drawString(2*cm, y - 0.7*cm, "MÜŞTERİ")
+    c.setFillColor(black)
+    c.setFont(FONT_BOLD, 14)
+    c.drawString(2*cm, y - 1.4*cm, order.get('company_name', ''))
+    c.setFont(FONT_REGULAR, 10)
+    c.setFillColor(TEXT_MUTED)
+    c.drawString(2*cm, y - 2.1*cm, order.get('lead_name', ''))
+    
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 9)
+    c.drawString(10*cm, y - 0.7*cm, "TARİH")
+    c.setFillColor(black)
+    c.setFont(FONT_BOLD, 11)
+    c.drawString(10*cm, y - 1.4*cm, datetime.now().strftime('%d.%m.%Y'))
+    
+    y -= 4*cm
+    
+    # Product details header
+    c.setFillColor(ACCENT_COLOR)
+    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 10)
+    c.drawString(2*cm, y - 0.7*cm, "ÜRÜN DETAYLARI")
+    
+    y -= 1.5*cm
+    
+    # Product info
+    pieces = order.get('pieces', 1)
+    amount = order.get('amount', order.get('quantity', 1))
+    unit = order.get('unit', 'kg')
+    
+    items = [
+        ("Ürün Adı", order.get('product_name', '')),
+        ("Ürün Kodu", order.get('product_code', '')),
+        ("Miktar", f"{pieces} × {amount} {unit}"),
+        ("Birim Fiyat", f"€{order.get('unit_price', 0):.2f}/{unit}"),
+    ]
+    
+    for label, value in items:
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_REGULAR, 9)
+        c.drawString(2*cm, y, label)
+        c.setFillColor(black)
+        c.setFont(FONT_BOLD, 11)
+        c.drawString(6*cm, y, str(value))
+        y -= 0.8*cm
+    
+    y -= 0.5*cm
+    
+    # Total box
+    c.setFillColor(SUCCESS_COLOR)
+    c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont(FONT_REGULAR, 12)
+    c.drawString(2*cm, y - 0.8*cm, "TOPLAM TUTAR")
+    c.setFont(FONT_BOLD, 24)
+    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{order.get('total_price', 0):.2f}")
+    
+    y -= 3*cm
+    
+    # Status badge
+    status_colors = {
+        'pending': HexColor('#eab308'),
+        'confirmed': HexColor('#3b82f6'),
+        'shipped': HexColor('#8b5cf6'),
+        'delivered': HexColor('#22c55e'),
+        'cancelled': HexColor('#ef4444')
+    }
+    status_labels = {
+        'pending': 'BEKLEMEDE',
+        'confirmed': 'ONAYLANDI',
+        'shipped': 'GÖNDERİLDİ',
+        'delivered': 'TESLİM EDİLDİ',
+        'cancelled': 'İPTAL'
+    }
+    
+    status = order.get('status', 'pending')
+    c.setFillColor(status_colors.get(status, TEXT_MUTED))
+    c.roundRect(2*cm, y - 1*cm, 4*cm, 1*cm, 3, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 10)
+    c.drawCentredString(4*cm, y - 0.7*cm, status_labels.get(status, status.upper()))
+    
+    # Notes
+    if order.get('notes'):
+        y -= 2*cm
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_REGULAR, 9)
+        c.drawString(2*cm, y, "NOTLAR")
+        c.setFillColor(black)
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(2*cm, y - 0.6*cm, order['notes'][:100])
+    
+    # Footer
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
+    """Generate a professionally styled recipe PDF matching the UI design"""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2*cm, height - 3.2*cm, "Üretim Reçetesi")
+    
+    c.setFont(FONT_BOLD, 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, recipe.get('product_code', ''))
+    
+    y = height - 5.5*cm
+    
+    # Recipe title card
+    c.setFillColor(BG_LIGHT)
+    c.roundRect(1.5*cm, y - 2.5*cm, width - 3*cm, 2.5*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(black)
+    c.setFont(FONT_BOLD, 18)
+    c.drawString(2*cm, y - 1*cm, recipe.get('name', ''))
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 11)
+    c.drawString(2*cm, y - 1.8*cm, f"Müşteri: {recipe.get('company_name', '')}")
+    
+    y -= 4*cm
+    
+    # Main ingredients header
+    c.setFillColor(ACCENT_COLOR)
+    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 10)
+    c.drawString(2*cm, y - 0.7*cm, "ANA MALZEMELER")
+    
+    y -= 1.8*cm
+    
+    # Ingredient boxes (2x2 grid like in UI)
+    box_width = (width - 4*cm) / 2
+    box_height = 1.8*cm
+    
+    ingredients = [
+        (RED_COLOR, HexColor('#fef2f2'), "Et Miktarı", f"{recipe.get('meat_amount', 0)} kg"),
+        (BLUE_COLOR, HexColor('#eff6ff'), "Su Miktarı", f"{recipe.get('water_amount', 0)} L"),
+        (ACCENT_COLOR, HexColor('#fff7ed'), "Baharat Miktarı", f"{recipe.get('spice_amount', 0)} kg"),
+        (PURPLE_COLOR, HexColor('#faf5ff'), "Binding Miktarı", f"{recipe.get('binding_amount', 0)} kg"),
+    ]
+    
+    for i, (text_color, bg_color, label, value) in enumerate(ingredients):
+        col = i % 2
+        row = i // 2
+        x = 1.5*cm + col * (box_width + 0.5*cm)
+        box_y = y - row * (box_height + 0.3*cm)
+        
+        # Light colored background
+        c.setFillColor(bg_color)
+        c.roundRect(x, box_y - box_height, box_width - 0.3*cm, box_height, 5, fill=True, stroke=False)
+        
+        c.setFillColor(text_color)
+        c.setFont(FONT_REGULAR, 9)
+        c.drawString(x + 0.4*cm, box_y - 0.6*cm, label)
+        c.setFillColor(black)
+        c.setFont(FONT_BOLD, 16)
+        c.drawString(x + 0.4*cm, box_y - 1.3*cm, value)
+    
+    y -= 4.5*cm
+    
+    # Production parameters header
+    c.setFillColor(GREEN_COLOR)
+    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 10)
+    c.drawString(2*cm, y - 0.7*cm, "ÜRETİM PARAMETRELERİ")
+    
+    y -= 1.8*cm
+    
+    params = [
+        (GREEN_COLOR, HexColor('#f0fdf4'), "Karışım Süresi", f"{recipe.get('mixing_time', 0)} dakika"),
+        (GRAY_COLOR, HexColor('#f3f4f6'), "Motor Hızı", f"{recipe.get('motor_speed', 0)} rpm"),
+    ]
+    
+    for i, (text_color, bg_color, label, value) in enumerate(params):
+        x = 1.5*cm + i * (box_width + 0.5*cm)
+        
+        c.setFillColor(bg_color)
+        c.roundRect(x, y - box_height, box_width - 0.3*cm, box_height, 5, fill=True, stroke=False)
+        
+        c.setFillColor(text_color)
+        c.setFont(FONT_REGULAR, 9)
+        c.drawString(x + 0.4*cm, y - 0.6*cm, label)
+        c.setFillColor(black)
+        c.setFont(FONT_BOLD, 16)
+        c.drawString(x + 0.4*cm, y - 1.3*cm, value)
+    
+    y -= 3*cm
+    
+    # Additional ingredients
+    if recipe.get('additional_ingredients'):
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y, "EK MALZEMELER")
+        y -= 0.6*cm
+        
+        c.setFont(FONT_REGULAR, 10)
+        for ing in recipe['additional_ingredients'][:5]:
+            c.setFillColor(black)
+            c.drawString(2*cm, y, f"• {ing.get('name', '')}: {ing.get('amount', '')} {ing.get('unit', '')}")
+            y -= 0.5*cm
+    
+    y -= 0.5*cm
+    
+    # Instructions
+    if recipe.get('instructions'):
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y, "ÜRETİM TALİMATLARI")
+        y -= 0.6*cm
+        
+        c.setFillColor(BG_LIGHT)
+        c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
+        c.setFillColor(black)
+        c.setFont(FONT_REGULAR, 9)
+        instructions = recipe['instructions'][:200]
+        c.drawString(2*cm, y - 0.5*cm, instructions[:80])
+        if len(instructions) > 80:
+            c.drawString(2*cm, y - 1*cm, instructions[80:160])
+    
+    # Footer
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, company_settings: dict = None) -> bytes:
+    """Generate a professionally styled lead/customer PDF"""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2*cm, height - 3.2*cm, "Müşteri Bilgileri")
+    
+    c.setFont(FONT_BOLD, 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, datetime.now().strftime('%d.%m.%Y'))
+    
+    y = height - 5.5*cm
+    
+    # Company info card
+    c.setFillColor(BG_LIGHT)
+    c.roundRect(1.5*cm, y - 4*cm, width - 3*cm, 4*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(ACCENT_COLOR)
+    c.setFont(FONT_BOLD, 20)
+    c.drawString(2*cm, y - 1*cm, lead.get('company_name', ''))
+    
+    c.setFillColor(black)
+    c.setFont(FONT_BOLD, 14)
+    c.drawString(2*cm, y - 1.8*cm, f"{lead.get('first_name', '')} {lead.get('last_name', '')}")
+    
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 11)
+    contact_info = []
+    if lead.get('email'):
+        contact_info.append(f"📧 {lead['email']}")
+    if lead.get('phone'):
+        contact_info.append(f"📱 {lead['phone']}")
+    if lead.get('city') and lead.get('country'):
+        contact_info.append(f"📍 {lead['city']}, {lead['country']}")
+    
+    for i, info in enumerate(contact_info[:3]):
+        c.drawString(2*cm, y - 2.5*cm - (i * 0.5*cm), info)
+    
+    y -= 5.5*cm
+    
+    # Address section
+    if lead.get('address'):
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y, "ADRES")
+        c.setFillColor(black)
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(2*cm, y - 0.6*cm, lead['address'][:80])
+        y -= 1.5*cm
+    
+    # Tax info
+    if lead.get('tax_number'):
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y, "VERGİ NUMARASI")
+        c.setFillColor(black)
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(2*cm, y - 0.6*cm, lead['tax_number'])
+        y -= 1.5*cm
+    
+    # Orders section
+    if orders and len(orders) > 0:
+        c.setFillColor(BLUE_COLOR)
+        c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+        c.setFillColor(white)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y - 0.7*cm, f"SİPARİŞLER ({len(orders)})")
+        
+        y -= 1.5*cm
+        
+        for order in orders[:5]:
+            c.setFillColor(black)
+            c.setFont(FONT_REGULAR, 9)
+            status_emoji = {'delivered': '✅', 'shipped': '📦', 'confirmed': '✓', 'pending': '⏳', 'cancelled': '❌'}
+            emoji = status_emoji.get(order.get('status', ''), '•')
+            c.drawString(2*cm, y, f"{emoji} {order.get('product_name', '')} - €{order.get('total_price', 0):.2f}")
+            y -= 0.5*cm
+        
+        y -= 0.5*cm
+    
+    # Recipes section
+    if recipes and len(recipes) > 0:
+        c.setFillColor(PURPLE_COLOR)
+        c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+        c.setFillColor(white)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y - 0.7*cm, f"REÇETELER ({len(recipes)})")
+        
+        y -= 1.5*cm
+        
+        for recipe in recipes[:5]:
+            c.setFillColor(black)
+            c.setFont(FONT_REGULAR, 9)
+            c.drawString(2*cm, y, f"• {recipe.get('name', '')} ({recipe.get('product_code', '')})")
+            y -= 0.5*cm
+    
+    # Footer
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def generate_route_pdf(route_data: dict, company_settings: dict = None) -> bytes:
+    """Generate a route plan PDF"""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2*cm, height - 3.2*cm, "Rota Planı")
+    
+    c.setFont(FONT_BOLD, 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, datetime.now().strftime('%d.%m.%Y'))
+    
+    y = height - 5.5*cm
+    
+    # Route summary card
+    c.setFillColor(BG_LIGHT)
+    c.roundRect(1.5*cm, y - 2.5*cm, width - 3*cm, 2.5*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(ACCENT_COLOR)
+    c.setFont(FONT_BOLD, 16)
+    c.drawString(2*cm, y - 1*cm, f"Toplam: {route_data.get('total_distance', 0):.1f} km")
+    
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 12)
+    hours = route_data.get('total_duration', 0) / 60
+    c.drawString(2*cm, y - 1.8*cm, f"Tahmini Süre: {hours:.1f} saat ({route_data.get('total_duration', 0):.0f} dakika)")
+    
+    y -= 4*cm
+    
+    # Start point
+    start = route_data.get('start_point', {})
+    c.setFillColor(GREEN_COLOR)
+    c.roundRect(1.5*cm, y - 1.2*cm, width - 3*cm, 1.2*cm, 5, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 10)
+    c.drawString(2*cm, y - 0.8*cm, f"BAŞLANGIÇ: {start.get('address', 'Berlin')}")
+    
+    y -= 2*cm
+    
+    # Route stops
+    stops = route_data.get('stops', [])
+    for i, stop in enumerate(stops):
+        c.setFillColor(ACCENT_COLOR)
+        c.circle(2*cm, y - 0.3*cm, 0.3*cm, fill=True, stroke=False)
+        c.setFillColor(white)
+        c.setFont(FONT_BOLD, 8)
+        c.drawCentredString(2*cm, y - 0.45*cm, str(i + 1))
+        
+        c.setFillColor(black)
+        c.setFont(FONT_BOLD, 11)
+        c.drawString(3*cm, y - 0.3*cm, stop.get('company_name', ''))
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_REGULAR, 9)
+        c.drawString(3*cm, y - 0.9*cm, f"{stop.get('city', '')}, {stop.get('country', '')}")
+        
+        if stop.get('distance'):
+            c.setFillColor(BLUE_COLOR)
+            c.setFont(FONT_REGULAR, 9)
+            c.drawRightString(width - 2*cm, y - 0.3*cm, f"{stop.get('distance', 0):.1f} km")
+        
+        y -= 1.5*cm
+        
+        if y < 3*cm:
+            break
+    
+    # Footer
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()

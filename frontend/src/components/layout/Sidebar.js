@@ -59,8 +59,8 @@ const Sidebar = () => {
             className="w-10 h-10 object-contain bg-white rounded-lg p-1"
           />
           <div>
-            <h1 className="text-lg font-bold text-white font-['Manrope']">Gewürzberg GmbH</h1>
-            <p className="text-xs text-slate-400">Emre Dirlik</p>
+            <h1 className="text-lg font-bold text-white font-['Manrope']">Gewürzberg</h1>
+            <p className="text-xs text-slate-400">GmbH</p>
           </div>
         </div>
       </div>
@@ -87,7 +87,7 @@ const Sidebar = () => {
       <div className="p-4 border-t border-slate-700">
         <p className="text-xs text-slate-500 mb-2 uppercase tracking-wider">Language</p>
         <div className="flex gap-2">
-          {['tr', 'de', 'en'].map((lang) => (
+          {['en', 'tr', 'de', 'pl'].map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}

@@ -27,15 +27,48 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.03%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50"></div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      {/* Background with spice images */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {/* Spice pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=1920&q=80')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(2px)'
+          }}
+        />
+        {/* Gradient overlay for readability */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/85 to-orange-900/30" />
+        
+        {/* Decorative spice circles */}
+        <div className="absolute top-20 left-10 w-32 h-32 rounded-full opacity-10"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1599909533681-74084c802052?w=200&q=80')`,
+            backgroundSize: 'cover'
+          }}
+        />
+        <div className="absolute bottom-20 right-20 w-48 h-48 rounded-full opacity-10"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=200&q=80')`,
+            backgroundSize: 'cover'
+          }}
+        />
+        <div className="absolute top-1/3 right-10 w-24 h-24 rounded-full opacity-10"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1506368249639-73a05d6f6488?w=200&q=80')`,
+            backgroundSize: 'cover'
+          }}
+        />
+      </div>
       
       <div className="relative z-10 w-full max-w-md px-4">
         {/* Logo and Company Name */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <div className="w-20 h-20 bg-white rounded-2xl p-3 shadow-2xl">
+            <div className="w-24 h-24 bg-white rounded-2xl p-4 shadow-2xl transform hover:scale-105 transition-transform">
               <img 
                 src="https://customer-assets.emergentagent.com/job_customer-agent-2/artifacts/u9wa6amt_Ads%C4%B1z%20tasar%C4%B1m%20%281%29.png"
                 alt="Gewürzberg Logo"
@@ -43,16 +76,16 @@ const Login = () => {
               />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white font-['Manrope']">Gewürzberg GmbH</h1>
-          <p className="text-slate-400 mt-2">Emre Dirlik</p>
+          <h1 className="text-4xl font-bold text-white font-['Manrope'] tracking-tight">Gewürzberg GmbH</h1>
+          <p className="text-orange-300/80 mt-2 text-lg">B2B Customer Relationship Management</p>
         </div>
 
         {/* Login Card */}
-        <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur">
+        <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-bold text-center font-['Manrope']">Giriş Yap</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center font-['Manrope']">Welcome</CardTitle>
             <CardDescription className="text-center">
-              CRM sistemine erişmek için giriş yapın
+              Sign in to access your CRM dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -66,14 +99,14 @@ const Login = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-sm font-medium">
-                  Kullanıcı Adı
+                  Username
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Kullanıcı adınızı girin"
+                    placeholder="Enter your username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
@@ -85,14 +118,14 @@ const Login = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  Şifre
+                  Password
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Şifrenizi girin"
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
@@ -104,19 +137,19 @@ const Login = () => {
 
               <Button 
                 type="submit" 
-                className="w-full h-11 bg-slate-900 hover:bg-slate-800"
+                className="w-full h-11 bg-orange-600 hover:bg-orange-700"
                 disabled={loading}
                 data-testid="login-submit"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Giriş yapılıyor...</span>
+                    <span>Signing in...</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <LogIn className="w-4 h-4" />
-                    <span>Giriş Yap</span>
+                    <span>Sign In</span>
                   </div>
                 )}
               </Button>
@@ -125,8 +158,8 @@ const Login = () => {
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-slate-500 text-sm mt-6">
-          B2B Müşteri Yönetim Sistemi
+        <p className="text-center text-slate-400 text-sm mt-6">
+          Premium Spices & Binders for Food Manufacturers
         </p>
       </div>
     </div>

@@ -15,7 +15,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Sparkles, Send, Eye, Loader2, Users, FileText } from 'lucide-react';
+import { Sparkles, Send, Eye, Loader2, Users, FileText, Paperclip, X } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const EmailComposer = () => {
   const { t, language } = useLanguage();
@@ -32,6 +36,7 @@ const EmailComposer = () => {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [attachment, setAttachment] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -104,22 +109,46 @@ const EmailComposer = () => {
 
     setSending(true);
     try {
-      await sendEmail({
-        lead_id: selectedLeadId,
-        subject: subject,
-        body: body
+      // Use new endpoint with attachment support
+      const formData = new FormData();
+      formData.append('lead_id', selectedLeadId);
+      formData.append('subject', subject);
+      formData.append('body', body);
+      if (attachment) {
+        formData.append('attachment', attachment);
+      }
+      
+      await axios.post(`${API}/emails/send-with-attachment`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       toast.success(t('success'), { description: t('emailQueued') });
       // Reset form
       setSubject('');
       setBody('');
       setSelectedLeadId('');
       setSelectedTemplateId('');
+      setAttachment(null);
     } catch (error) {
       toast.error(t('error'), { description: error.response?.data?.detail || 'Failed to send email' });
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error(t('error'), { description: 'File size must be less than 10MB' });
+        return;
+      }
+      setAttachment(file);
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachment(null);
   };
 
   const selectedLead = leads.find(l => l.id === selectedLeadId);
@@ -323,11 +352,54 @@ const EmailComposer = () => {
                       id="body"
                       value={body}
                       onChange={(e) => setBody(e.target.value)}
-                      rows={16}
+                      rows={12}
                       placeholder="Enter email content..."
                       className="font-['Inter'] text-sm"
                       data-testid="input-email-body"
                     />
+                  </div>
+                  
+                  {/* Attachment Section */}
+                  <div className="space-y-2 pt-4 border-t">
+                    <Label>Attachment</Label>
+                    {attachment ? (
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                        <Paperclip className="w-4 h-4 text-blue-600" />
+                        <span className="flex-1 text-sm truncate">{attachment.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {(attachment.size / 1024).toFixed(1)} KB
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeAttachment}
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          id="attachment"
+                          className="hidden"
+                          onChange={handleFileSelect}
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => document.getElementById('attachment').click()}
+                        >
+                          <Paperclip className="w-4 h-4 mr-2" />
+                          Add Attachment
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          PDF, DOC, XLS, images (max 10MB)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

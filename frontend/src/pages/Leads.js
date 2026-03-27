@@ -25,8 +25,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Mail, Users, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const initialFormData = {
   first_name: '',
@@ -51,6 +55,9 @@ const Leads = () => {
   const [selectedLead, setSelectedLead] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [saving, setSaving] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [leadDetails, setLeadDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -133,6 +140,38 @@ const Leads = () => {
     navigate('/compose', { state: { selectedLead: lead } });
   };
 
+  const downloadLeadPdf = async (leadId) => {
+    try {
+      const response = await axios.get(`${API}/leads/${leadId}/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `musteri_${leadId.slice(0,8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(t('success'), { description: 'PDF downloaded' });
+    } catch (error) {
+      toast.error(t('error'), { description: 'Failed to download PDF' });
+    }
+  };
+
+  const openLeadDetails = async (lead) => {
+    setIsDetailDialogOpen(true);
+    setLoadingDetails(true);
+    try {
+      const response = await axios.get(`${API}/leads/${lead.id}/details`);
+      setLeadDetails(response.data);
+    } catch (error) {
+      toast.error(t('error'), { description: 'Failed to load details' });
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
   const filteredLeads = leads.filter(lead => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -212,6 +251,24 @@ const Leads = () => {
                       <td>{lead.country}</td>
                       <td>
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openLeadDetails(lead)}
+                            title="View Details"
+                            data-testid={`view-details-${lead.id}`}
+                          >
+                            <Eye className="w-4 h-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => downloadLeadPdf(lead.id)}
+                            title="Download PDF"
+                            data-testid={`download-pdf-${lead.id}`}
+                          >
+                            <FileDown className="w-4 h-4 text-green-600" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -381,6 +438,119 @@ const Leads = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Lead Details Dialog */}
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="lead-details-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-['Manrope']">Customer Details</DialogTitle>
+          </DialogHeader>
+          {loadingDetails ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : leadDetails ? (
+            <div className="space-y-6">
+              {/* Company Info */}
+              <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg">
+                <h3 className="text-xl font-bold text-orange-600">{leadDetails.company_name}</h3>
+                <p className="text-lg">{leadDetails.first_name} {leadDetails.last_name}</p>
+                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium">{leadDetails.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Phone</p>
+                    <p className="font-medium">{leadDetails.phone || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">City</p>
+                    <p className="font-medium">{leadDetails.city}, {leadDetails.country}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Tax Number</p>
+                    <p className="font-medium font-mono">{leadDetails.tax_number || '-'}</p>
+                  </div>
+                </div>
+                {leadDetails.address && (
+                  <div className="mt-4">
+                    <p className="text-muted-foreground text-sm">Address</p>
+                    <p className="font-medium">{leadDetails.address}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-blue-600">{leadDetails.total_orders}</p>
+                  <p className="text-xs text-muted-foreground">Orders</p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-purple-600">{leadDetails.total_recipes}</p>
+                  <p className="text-xs text-muted-foreground">Recipes</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-lg text-center">
+                  <p className="text-2xl font-bold text-green-600">€{leadDetails.total_revenue?.toFixed(0) || 0}</p>
+                  <p className="text-xs text-muted-foreground">Revenue</p>
+                </div>
+              </div>
+
+              {/* Orders */}
+              {leadDetails.orders?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    Recent Orders ({leadDetails.orders.length})
+                  </h4>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {leadDetails.orders.slice(0, 5).map(order => (
+                      <div key={order.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                        <span>{order.product_name}</span>
+                        <span className="font-semibold">€{order.total_price?.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recipes */}
+              {leadDetails.recipes?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                    Recipes ({leadDetails.recipes.length})
+                  </h4>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {leadDetails.recipes.slice(0, 5).map(recipe => (
+                      <div key={recipe.id} className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm">
+                        <span>{recipe.name}</span>
+                        <span className="text-muted-foreground">{recipe.product_code}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {leadDetails.notes && (
+                <div>
+                  <h4 className="font-semibold mb-2">Notes</h4>
+                  <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">{leadDetails.notes}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => downloadLeadPdf(leadDetails?.id)}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+            <Button onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

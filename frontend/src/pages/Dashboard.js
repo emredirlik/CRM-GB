@@ -25,11 +25,11 @@ const Dashboard = () => {
   const [period, setPeriod] = useState('all');
 
   const periods = [
-    { value: 'all', label: 'Tümü' },
-    { value: 'month', label: '1 Ay' },
-    { value: 'quarter', label: '3 Ay' },
-    { value: 'half_year', label: '6 Ay' },
-    { value: 'year', label: '1 Yıl' }
+    { value: 'all', label: 'All' },
+    { value: 'month', label: '1 Month' },
+    { value: 'quarter', label: '3 Months' },
+    { value: 'half_year', label: '6 Months' },
+    { value: 'year', label: '1 Year' }
   ];
 
   useEffect(() => {
@@ -65,14 +65,14 @@ const Dashboard = () => {
       bgColor: 'bg-blue-50'
     },
     {
-      label: 'Siparişler',
+      label: 'Orders',
       value: stats.total_orders,
       icon: ShoppingCart,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50'
     },
     {
-      label: 'Gelir',
+      label: 'Revenue',
       value: formatCurrency(stats.total_revenue || 0),
       icon: Euro,
       color: 'text-green-600',
@@ -102,7 +102,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('dashboard')}</h1>
-          <p className="text-muted-foreground mt-1">Gewürzberg GmbH - B2B Müşteri Yönetim Sistemi</p>
+          <p className="text-muted-foreground mt-1">Gewürzberg GmbH - B2B Customer Management System</p>
         </div>
         
         {/* Period Filter */}
@@ -133,18 +133,18 @@ const Dashboard = () => {
                   <Target className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-green-800">Yıllık Gelir Hedefi</p>
+                  <p className="text-sm font-medium text-green-800">Annual Revenue Target</p>
                   <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.yearly_target)}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm text-green-700">Mevcut Gelir</p>
+                <p className="text-sm text-green-700">Current Revenue</p>
                 <p className="text-xl font-bold text-green-900">{formatCurrency(stats.total_revenue)}</p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-green-700">İlerleme</span>
+                <span className="text-green-700">Progress</span>
                 <span className="font-medium text-green-900">{revenueProgress.toFixed(1)}%</span>
               </div>
               <Progress value={revenueProgress} className="h-3 bg-green-200" />
@@ -226,7 +226,7 @@ const Dashboard = () => {
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-white">
               <h2 className="text-2xl font-bold font-['Manrope']">Gewürzberg GmbH</h2>
-              <p className="text-slate-300 mt-2">Premium Baharatlar & Gıda Üreticileri için Binding</p>
+              <p className="text-slate-300 mt-2">Premium Spices & Binders for Food Manufacturers</p>
             </div>
           </div>
         </div>

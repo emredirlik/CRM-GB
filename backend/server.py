@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Response, Request, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Response, Request, Depends, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -15,9 +15,15 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from email.mime.base import MIMEBase
+from email import encoders
 import bcrypt
 import jwt
 from urllib.parse import quote
+import base64
+
+# Import PDF utilities
+from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -430,6 +436,57 @@ async def delete_lead(lead_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead deleted successfully"}
+
+@api_router.get("/leads/{lead_id}/pdf")
+async def get_lead_pdf(lead_id: str):
+    """Generate PDF for a single lead with their orders and recipes"""
+    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Get lead's orders and recipes
+    orders = await db.orders.find({"lead_id": lead_id}, {"_id": 0}).to_list(100)
+    recipes = await db.recipes.find({"lead_id": lead_id}, {"_id": 0}).to_list(100)
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    
+    pdf_content = generate_lead_pdf(lead, orders, recipes, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=musteri_{lead_id[:8]}.pdf"}
+    )
+
+@api_router.get("/leads/{lead_id}/details")
+async def get_lead_details(lead_id: str):
+    """Get detailed lead info with orders and recipes"""
+    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    deserialize_datetime(lead)
+    
+    # Get lead's orders
+    orders = await db.orders.find({"lead_id": lead_id}, {"_id": 0}).to_list(100)
+    for order in orders:
+        deserialize_datetime(order)
+    
+    # Get lead's recipes
+    recipes = await db.recipes.find({"lead_id": lead_id}, {"_id": 0}).to_list(100)
+    for recipe in recipes:
+        deserialize_datetime(recipe)
+    
+    # Calculate total revenue from this lead
+    total_revenue = sum(order.get('total_price', 0) for order in orders if order.get('status') in ['delivered', 'shipped', 'confirmed'])
+    
+    return {
+        **lead,
+        "orders": orders,
+        "recipes": recipes,
+        "total_orders": len(orders),
+        "total_recipes": len(recipes),
+        "total_revenue": total_revenue
+    }
 
 # ===================== EMAIL TEMPLATE ENDPOINTS =====================
 
@@ -868,6 +925,242 @@ async def geocode_batch(leads: List[dict]):
                     logger.error(f"Geocoding error for {lead.get('id')}: {e}")
     return results
 
+# ===================== ROUTE PLANNER ENDPOINTS =====================
+
+class RouteRequest(BaseModel):
+    start_address: str
+    lead_ids: List[str]
+
+@api_router.post("/route/calculate")
+async def calculate_route(request: RouteRequest):
+    """Calculate optimized route with distance and duration"""
+    import math
+    
+    # Geocode start address
+    start_coords = None
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"format": "json", "q": request.start_address, "limit": 1},
+                headers={"User-Agent": "GewurzbergCRM/1.0"},
+                timeout=10.0
+            )
+            data = response.json()
+            if data and len(data) > 0:
+                start_coords = {
+                    "lat": float(data[0]["lat"]),
+                    "lng": float(data[0]["lon"]),
+                    "address": data[0].get("display_name", request.start_address)
+                }
+        except Exception as e:
+            logger.error(f"Geocoding start address error: {e}")
+    
+    if not start_coords:
+        raise HTTPException(status_code=400, detail="Could not geocode start address")
+    
+    # Get leads and their coordinates
+    leads_data = []
+    for lead_id in request.lead_ids:
+        lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+        if lead and lead.get("city") and lead.get("country"):
+            leads_data.append(lead)
+    
+    # Geocode all leads
+    geocoded_leads = []
+    async with httpx.AsyncClient() as client:
+        for lead in leads_data:
+            try:
+                query = f"{lead['city']}, {lead['country']}"
+                response = await client.get(
+                    "https://nominatim.openstreetmap.org/search",
+                    params={"format": "json", "q": query, "limit": 1},
+                    headers={"User-Agent": "GewurzbergCRM/1.0"},
+                    timeout=10.0
+                )
+                data = response.json()
+                if data and len(data) > 0:
+                    geocoded_leads.append({
+                        **lead,
+                        "lat": float(data[0]["lat"]),
+                        "lng": float(data[0]["lon"])
+                    })
+                import asyncio
+                await asyncio.sleep(0.3)
+            except Exception as e:
+                logger.error(f"Geocoding error for lead {lead.get('id')}: {e}")
+    
+    if len(geocoded_leads) < 1:
+        raise HTTPException(status_code=400, detail="Could not geocode any leads")
+    
+    # Calculate optimal route using nearest neighbor
+    def haversine_distance(lat1, lon1, lat2, lon2):
+        R = 6371  # Earth's radius in km
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        return R * c
+    
+    visited = set()
+    route = []
+    current = start_coords
+    total_distance = 0
+    
+    while len(visited) < len(geocoded_leads):
+        nearest = None
+        nearest_dist = float('inf')
+        
+        for lead in geocoded_leads:
+            if lead['id'] in visited:
+                continue
+            dist = haversine_distance(current['lat'], current['lng'], lead['lat'], lead['lng'])
+            if dist < nearest_dist:
+                nearest_dist = dist
+                nearest = lead
+        
+        if nearest:
+            visited.add(nearest['id'])
+            route.append({
+                "id": nearest['id'],
+                "company_name": nearest.get('company_name', ''),
+                "city": nearest.get('city', ''),
+                "country": nearest.get('country', ''),
+                "lat": nearest['lat'],
+                "lng": nearest['lng'],
+                "distance": nearest_dist
+            })
+            total_distance += nearest_dist
+            current = {"lat": nearest['lat'], "lng": nearest['lng']}
+    
+    # Estimate duration (average 60 km/h + 30 min per stop)
+    driving_time = (total_distance / 60) * 60  # minutes
+    stop_time = len(route) * 30  # 30 minutes per stop
+    total_duration = driving_time + stop_time
+    
+    return {
+        "start_point": start_coords,
+        "stops": route,
+        "total_distance": total_distance,
+        "total_duration": total_duration,  # in minutes
+        "estimated_hours": total_duration / 60
+    }
+
+@api_router.post("/route/pdf")
+async def generate_route_pdf_endpoint(request: RouteRequest):
+    """Generate PDF for a calculated route"""
+    # Calculate route first
+    route_data = await calculate_route(request)
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_route_pdf(route_data, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=rota_plani.pdf"}
+    )
+
+# ===================== EMAIL WITH ATTACHMENT =====================
+
+@api_router.post("/emails/send-with-attachment")
+async def send_email_with_attachment(
+    lead_id: str = Form(...),
+    subject: str = Form(...),
+    body: str = Form(...),
+    attachment: Optional[UploadFile] = File(None),
+    background_tasks: BackgroundTasks = None
+):
+    """Send email with optional file attachment"""
+    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    settings = await db.smtp_settings.find_one({}, {"_id": 0})
+    if not settings:
+        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+    
+    # Read attachment if provided
+    attachment_data = None
+    attachment_name = None
+    if attachment:
+        attachment_data = await attachment.read()
+        attachment_name = attachment.filename
+    
+    history_id = str(uuid.uuid4())
+    
+    try:
+        msg = MIMEMultipart()
+        msg['Subject'] = subject
+        msg['From'] = f"{settings['from_name']} <{settings['from_email']}>"
+        msg['To'] = lead['email']
+        
+        # Add body
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            {body.replace(chr(10), '<br>')}
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(body, 'plain'))
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Add attachment if provided
+        if attachment_data and attachment_name:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment_data)
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f'attachment; filename="{attachment_name}"')
+            msg.attach(part)
+        
+        if settings.get('use_tls', True):
+            server = smtplib.SMTP(settings['host'], settings['port'])
+            server.starttls()
+        else:
+            server = smtplib.SMTP_SSL(settings['host'], settings['port'])
+        
+        server.login(settings['username'], settings['password'])
+        server.sendmail(settings['from_email'], lead['email'], msg.as_string())
+        server.quit()
+        
+        # Save to history
+        history = {
+            "id": history_id,
+            "lead_id": lead['id'],
+            "lead_email": lead['email'],
+            "lead_name": f"{lead['first_name']} {lead['last_name']}",
+            "company_name": lead['company_name'],
+            "subject": subject,
+            "body": body,
+            "status": "sent",
+            "has_attachment": attachment_name is not None,
+            "attachment_name": attachment_name,
+            "error_message": None,
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.email_history.insert_one(history)
+        
+        return {"success": True, "message": "Email sent successfully"}
+        
+    except Exception as e:
+        # Save failed attempt
+        history = {
+            "id": history_id,
+            "lead_id": lead['id'],
+            "lead_email": lead['email'],
+            "lead_name": f"{lead['first_name']} {lead['last_name']}",
+            "company_name": lead['company_name'],
+            "subject": subject,
+            "body": body,
+            "status": "failed",
+            "error_message": str(e),
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.email_history.insert_one(history)
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
 # ===================== PRODUCT ENDPOINTS =====================
 
 @api_router.post("/products", response_model=Product)
@@ -1022,7 +1315,7 @@ async def get_order_pdf(order_id: str):
         raise HTTPException(status_code=404, detail="Order not found")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_professional_order_pdf(order, settings)
+    pdf_content = generate_order_pdf(order, settings)
     
     return Response(
         content=pdf_content,
@@ -1087,7 +1380,7 @@ async def get_recipe_pdf(recipe_id: str):
         raise HTTPException(status_code=404, detail="Recipe not found")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_professional_recipe_pdf(recipe, settings)
+    pdf_content = generate_recipe_pdf(recipe, settings)
     
     return Response(
         content=pdf_content,
@@ -1108,18 +1401,8 @@ async def email_recipe(recipe_id: str, to_email: str, background_tasks: Backgrou
     if not smtp_settings:
         raise HTTPException(status_code=400, detail="SMTP settings not configured")
     
-    # Generate PDF
-    data = {
-        "Reçete Adı": recipe['name'],
-        "Ürün Kodu": recipe['product_code'],
-        "Et": f"{recipe['meat_amount']} kg",
-        "Su": f"{recipe['water_amount']} L",
-        "Baharat": f"{recipe['spice_amount']} kg",
-        "Binding": f"{recipe['binding_amount']} kg",
-        "Karışım": f"{recipe['mixing_time']} dk",
-        "Motor": f"{recipe['motor_speed']} rpm",
-    }
-    pdf_content = generate_pdf_content(f"Reçete - {recipe['name']}", data, settings)
+    # Generate PDF using new function
+    pdf_content = generate_recipe_pdf(recipe, settings)
     
     # Send email with attachment
     async def send_recipe_email():

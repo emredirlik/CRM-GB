@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { MapPin, Navigation, Route, List, RotateCcw, ExternalLink, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, Route, List, RotateCcw, ExternalLink, Loader2, Clock, FileDown, Search } from 'lucide-react';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -53,9 +55,11 @@ const RoutePlanner = () => {
   const [geocoding, setGeocoding] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [geocodedLeads, setGeocodedLeads] = useState({});
-  const [route, setRoute] = useState([]);
+  const [route, setRoute] = useState(null);
   const [calculating, setCalculating] = useState(false);
-  const [startPoint, setStartPoint] = useState({ lat: 52.52, lng: 13.405 }); // Berlin default
+  const [startAddress, setStartAddress] = useState('');
+  const [startCoords, setStartCoords] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -72,7 +76,7 @@ const RoutePlanner = () => {
       geocodeLeads(response.data);
     } catch (error) {
       console.error('Failed to fetch leads:', error);
-      toast.error('Hata', { description: 'Müşteriler yüklenemedi' });
+      toast.error('Error', { description: 'Failed to load customers' });
       setLoading(false);
     }
   };
@@ -80,7 +84,6 @@ const RoutePlanner = () => {
   const geocodeLeads = async (leadsList) => {
     setGeocoding(true);
     try {
-      // Filter leads with city info
       const leadsToGeocode = leadsList.filter(lead => lead.city && lead.country);
       
       if (leadsToGeocode.length === 0) {
@@ -88,7 +91,6 @@ const RoutePlanner = () => {
         return;
       }
 
-      // Use backend geocoding API
       const response = await axios.post(`${API}/geocode/batch`, leadsToGeocode);
       setGeocodedLeads(response.data);
     } catch (error) {
@@ -115,81 +117,86 @@ const RoutePlanner = () => {
 
   const clearSelection = () => {
     setSelectedLeads(new Set());
-    setRoute([]);
+    setRoute(null);
+    setStartCoords(null);
   };
 
-  // Simple nearest neighbor algorithm for route optimization
-  const calculateOptimalRoute = () => {
-    if (selectedLeads.size < 2) {
-      toast.error('Hata', { description: 'En az 2 müşteri seçin' });
+  const calculateOptimalRoute = async () => {
+    if (!startAddress.trim()) {
+      toast.error('Error', { description: 'Please enter a start address' });
+      return;
+    }
+    
+    if (selectedLeads.size < 1) {
+      toast.error('Error', { description: 'Select at least 1 customer' });
       return;
     }
 
     setCalculating(true);
 
-    // Get selected lead coordinates
-    const points = Array.from(selectedLeads)
-      .filter(id => geocodedLeads[id])
-      .map(id => ({
-        id,
-        ...geocodedLeads[id],
-        lead: leads.find(l => l.id === id)
-      }));
-
-    if (points.length < 2) {
-      toast.error('Hata', { description: 'Seçilen müşterilerin konumları bulunamadı' });
+    try {
+      const response = await axios.post(`${API}/route/calculate`, {
+        start_address: startAddress,
+        lead_ids: Array.from(selectedLeads)
+      });
+      
+      setRoute(response.data);
+      setStartCoords(response.data.start_point);
+      toast.success('Success', { 
+        description: `Route created: ${response.data.total_distance.toFixed(1)} km, ~${response.data.estimated_hours.toFixed(1)} hours` 
+      });
+    } catch (error) {
+      const detail = error.response?.data?.detail || 'Failed to calculate route';
+      toast.error('Error', { description: detail });
+    } finally {
       setCalculating(false);
-      return;
     }
+  };
 
-    // Nearest neighbor algorithm starting from Berlin
-    const visited = new Set();
-    const orderedRoute = [];
-    let current = startPoint;
-
-    while (visited.size < points.length) {
-      let nearest = null;
-      let nearestDist = Infinity;
-
-      for (const point of points) {
-        if (visited.has(point.id)) continue;
-        
-        const dist = Math.sqrt(
-          Math.pow(current.lat - point.lat, 2) + 
-          Math.pow(current.lng - point.lng, 2)
-        );
-        
-        if (dist < nearestDist) {
-          nearestDist = dist;
-          nearest = point;
-        }
-      }
-
-      if (nearest) {
-        visited.add(nearest.id);
-        orderedRoute.push(nearest);
-        current = nearest;
-      }
+  const downloadRoutePdf = async () => {
+    if (!route) return;
+    
+    setDownloadingPdf(true);
+    try {
+      const response = await axios.post(`${API}/route/pdf`, {
+        start_address: startAddress,
+        lead_ids: Array.from(selectedLeads)
+      }, { responseType: 'blob' });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'rota_plani.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Success', { description: 'PDF downloaded' });
+    } catch (error) {
+      toast.error('Error', { description: 'Failed to download PDF' });
+    } finally {
+      setDownloadingPdf(false);
     }
-
-    setRoute(orderedRoute);
-    setCalculating(false);
-    toast.success('Başarılı', { description: `${orderedRoute.length} noktalı rota oluşturuldu` });
   };
 
   const openGoogleMapsRoute = () => {
-    if (route.length === 0) return;
+    if (!route || !route.stops.length) return;
 
-    // Build Google Maps directions URL
-    const waypoints = route.map(p => `${p.lat},${p.lng}`).join('/');
-    const origin = `${startPoint.lat},${startPoint.lng}`;
+    const origin = `${route.start_point.lat},${route.start_point.lng}`;
+    const waypoints = route.stops.map(p => `${p.lat},${p.lng}`).join('/');
     
     const url = `https://www.google.com/maps/dir/${origin}/${waypoints}`;
     window.open(url, '_blank');
   };
 
   const leadsWithCoords = leads.filter(lead => geocodedLeads[lead.id]);
-  const mapPositions = Object.values(geocodedLeads).map(c => [c.lat, c.lng]);
+  
+  // Build map positions including start point
+  const mapPositions = [];
+  if (startCoords) {
+    mapPositions.push([startCoords.lat, startCoords.lng]);
+  }
+  Object.values(geocodedLeads).forEach(c => mapPositions.push([c.lat, c.lng]));
 
   if (loading) {
     return (
@@ -202,29 +209,57 @@ const RoutePlanner = () => {
   return (
     <div className="space-y-6" data-testid="route-planner-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Rota Planlayıcı</h1>
+          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Route Planner</h1>
           <p className="text-muted-foreground mt-1">
-            İş seyahatleri için otomatik rota oluşturun
-            {geocoding && <span className="ml-2 text-orange-600">(Konumlar yükleniyor...)</span>}
+            Create optimized routes for business trips
+            {geocoding && <span className="ml-2 text-orange-600">(Loading locations...)</span>}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={selectAll} disabled={Object.keys(geocodedLeads).length === 0}>
             <List className="w-4 h-4 mr-2" />
-            Tümünü Seç
+            Select All
           </Button>
           <Button variant="outline" onClick={clearSelection}>
             <RotateCcw className="w-4 h-4 mr-2" />
-            Temizle
-          </Button>
-          <Button onClick={calculateOptimalRoute} disabled={calculating || selectedLeads.size < 2}>
-            {calculating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Route className="w-4 h-4 mr-2" />}
-            {calculating ? 'Hesaplanıyor...' : 'Rota Oluştur'}
+            Clear
           </Button>
         </div>
       </div>
+
+      {/* Start Address Input */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-4 items-end flex-wrap">
+            <div className="flex-1 min-w-[300px]">
+              <Label htmlFor="start-address" className="text-sm font-medium mb-2 block">
+                Start Address
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="start-address"
+                  placeholder="e.g. Gewürzberg GmbH, Berlin, Germany"
+                  value={startAddress}
+                  onChange={(e) => setStartAddress(e.target.value)}
+                  className="pl-10"
+                  data-testid="start-address-input"
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={calculateOptimalRoute} 
+              disabled={calculating || selectedLeads.size < 1 || !startAddress.trim()}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {calculating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Route className="w-4 h-4 mr-2" />}
+              {calculating ? 'Calculating...' : 'Create Route'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map */}
@@ -244,19 +279,21 @@ const RoutePlanner = () => {
                 
                 {mapPositions.length > 0 && <FitBounds positions={mapPositions} />}
                 
-                {/* Start point (Berlin) */}
-                <Marker position={[startPoint.lat, startPoint.lng]} icon={greenIcon}>
-                  <Popup>
-                    <strong>Başlangıç: Berlin</strong><br />
-                    Gewürzberg GmbH
-                  </Popup>
-                </Marker>
+                {/* Start point */}
+                {startCoords && (
+                  <Marker position={[startCoords.lat, startCoords.lng]} icon={greenIcon}>
+                    <Popup>
+                      <strong>Start: {startAddress}</strong>
+                    </Popup>
+                  </Marker>
+                )}
                 
                 {/* Lead markers */}
                 {leadsWithCoords.map((lead) => {
                   const coords = geocodedLeads[lead.id];
                   const isSelected = selectedLeads.has(lead.id);
-                  const routeIndex = route.findIndex(r => r.id === lead.id);
+                  const routeStop = route?.stops?.find(r => r.id === lead.id);
+                  const routeIndex = route?.stops?.findIndex(r => r.id === lead.id) ?? -1;
                   
                   return (
                     <Marker 
@@ -271,7 +308,7 @@ const RoutePlanner = () => {
                         <div className="min-w-[200px]">
                           {routeIndex >= 0 && (
                             <span className="inline-block mb-2 px-2 py-1 bg-orange-500 text-white text-xs rounded">
-                              Durak #{routeIndex + 1}
+                              Stop #{routeIndex + 1} ({routeStop?.distance?.toFixed(1)} km)
                             </span>
                           )}
                           <strong>{lead.company_name}</strong><br />
@@ -286,14 +323,14 @@ const RoutePlanner = () => {
                 })}
                 
                 {/* Route polyline */}
-                {route.length > 0 && (
+                {route && route.stops.length > 0 && startCoords && (
                   <Polyline
                     positions={[
-                      [startPoint.lat, startPoint.lng],
-                      ...route.map(p => [p.lat, p.lng])
+                      [startCoords.lat, startCoords.lng],
+                      ...route.stops.map(p => [p.lat, p.lng])
                     ]}
                     color="#f97316"
-                    weight={3}
+                    weight={4}
                     dashArray="10, 10"
                   />
                 )}
@@ -302,48 +339,73 @@ const RoutePlanner = () => {
           </Card>
         </div>
 
-        {/* Sidebar - Lead list and Route */}
+        {/* Sidebar - Route Summary and Lead Selection */}
         <div className="space-y-4">
           {/* Route Summary */}
-          {route.length > 0 && (
-            <Card className="bg-orange-50 border-orange-200">
+          {route && (
+            <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Navigation className="w-5 h-5 text-orange-600" />
-                  Planlanan Rota
+                  Route Summary
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge variant="outline" className="bg-green-100">Başlangıç</Badge>
-                    <span>Berlin - Gewürzberg GmbH</span>
+              <CardContent className="space-y-4">
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                    <p className="text-2xl font-bold text-orange-600">{route.total_distance.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">Kilometers</p>
                   </div>
-                  {route.map((point, index) => (
-                    <div key={point.id} className="flex items-center gap-2 text-sm">
-                      <Badge className="bg-orange-500">{index + 1}</Badge>
-                      <span className="truncate">{point.lead?.company_name}</span>
+                  <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                    <p className="text-2xl font-bold text-blue-600">{route.estimated_hours.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">Hours</p>
+                  </div>
+                </div>
+                
+                {/* Stops */}
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Badge variant="outline" className="bg-green-100 text-green-700">Start</Badge>
+                    <span className="truncate text-xs">{startAddress}</span>
+                  </div>
+                  {route.stops.map((stop, index) => (
+                    <div key={stop.id} className="flex items-center gap-2 text-sm">
+                      <Badge className="bg-orange-500 text-white min-w-[24px] justify-center">{index + 1}</Badge>
+                      <span className="truncate flex-1">{stop.company_name}</span>
+                      <span className="text-xs text-muted-foreground">{stop.distance?.toFixed(0)} km</span>
                     </div>
                   ))}
                 </div>
-                <Button 
-                  className="w-full mt-4"
-                  onClick={openGoogleMapsRoute}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Google Maps'te Aç
-                </Button>
+                
+                {/* Actions */}
+                <div className="flex gap-2 pt-2">
+                  <Button 
+                    className="flex-1"
+                    onClick={openGoogleMapsRoute}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Google Maps
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={downloadRoutePdf}
+                    disabled={downloadingPdf}
+                  >
+                    {downloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
 
           {/* Lead Selection */}
-          <Card className="max-h-[500px] overflow-hidden flex flex-col">
+          <Card className="max-h-[400px] overflow-hidden flex flex-col">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <MapPin className="w-5 h-5" />
-                  Müşteriler
+                  Customers
                 </span>
                 <Badge variant="secondary">
                   {selectedLeads.size} / {leadsWithCoords.length}
@@ -354,17 +416,17 @@ const RoutePlanner = () => {
               {geocoding ? (
                 <div className="flex items-center justify-center py-8 text-muted-foreground">
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Konumlar yükleniyor...
+                  Loading locations...
                 </div>
               ) : leadsWithCoords.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Konum bilgisi olan müşteri bulunamadı
+                  No customers with location data found
                 </p>
               ) : (
                 <div className="space-y-2">
                   {leadsWithCoords.map((lead) => {
                     const isSelected = selectedLeads.has(lead.id);
-                    const routeIndex = route.findIndex(r => r.id === lead.id);
+                    const routeIndex = route?.stops?.findIndex(r => r.id === lead.id) ?? -1;
                     
                     return (
                       <div
