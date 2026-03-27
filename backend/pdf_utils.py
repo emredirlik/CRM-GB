@@ -115,14 +115,14 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     
     y -= 0.5*cm
     
-    # Total box
+    # Unit Price box (instead of total)
     c.setFillColor(SUCCESS_COLOR)
     c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_REGULAR, 12)
-    c.drawString(2*cm, y - 0.8*cm, "TOPLAM TUTAR")
+    c.drawString(2*cm, y - 0.8*cm, "ÜRÜN FİYATI")
     c.setFont(FONT_BOLD, 24)
-    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{order.get('total_price', 0):.2f}")
+    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{order.get('unit_price', 0):.2f}/{unit}")
     
     y -= 3*cm
     

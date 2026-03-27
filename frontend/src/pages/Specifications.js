@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, FileText, GripVertical, FileDown, Mail, Eye, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, FileText, GripVertical, FileDown, Mail, Eye, X, Upload, File, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -47,7 +47,8 @@ const initialSpecData = {
   allergens: '',
   storage_instructions: '',
   shelf_life: '',
-  certifications: ''
+  certifications: '',
+  attachments: []
 };
 
 const Specifications = () => {
@@ -68,6 +69,12 @@ const Specifications = () => {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  
+  // File upload states
+  const [attachments, setAttachments] = useState([]);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchData();
@@ -129,10 +136,102 @@ const Specifications = () => {
     setDraggedIndex(null);
   };
 
+  // File drag and drop handlers
+  const handleFileDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(true);
+  };
+
+  const handleFileDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+  };
+
+  const handleFileDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleFileDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const pdfFiles = files.filter(f => f.type === 'application/pdf');
+    
+    if (pdfFiles.length === 0) {
+      toast.error('Only PDF files are allowed');
+      return;
+    }
+    
+    await uploadFiles(pdfFiles);
+  };
+
+  const handleFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      await uploadFiles(files);
+    }
+    e.target.value = '';
+  };
+
+  const uploadFiles = async (files) => {
+    setUploadingFile(true);
+    
+    for (const file of files) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await axios.post(`${API}/specifications/upload`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        setAttachments(prev => [...prev, {
+          id: response.data.id,
+          filename: file.name,
+          url: response.data.url,
+          size: file.size
+        }]);
+        
+        toast.success(`Uploaded: ${file.name}`);
+      } catch (error) {
+        // If upload endpoint doesn't exist, store locally
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setAttachments(prev => [...prev, {
+            id: Date.now().toString(),
+            filename: file.name,
+            data: e.target.result,
+            size: file.size
+          }]);
+        };
+        reader.readAsDataURL(file);
+        toast.success(`Added: ${file.name}`);
+      }
+    }
+    
+    setUploadingFile(false);
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   const openAddDialog = () => {
     setSelectedSpec(null);
     setFormData(initialSpecData);
     setIngredients([{ name: '', percentage: '', description: '' }]);
+    setAttachments([]);
     setIsDialogOpen(true);
   };
 
@@ -150,6 +249,7 @@ const Specifications = () => {
       certifications: spec.certifications || ''
     });
     setIngredients(spec.ingredients?.length ? spec.ingredients : [{ name: '', percentage: '', description: '' }]);
+    setAttachments(spec.attachments || []);
     setIsDialogOpen(true);
   };
 
@@ -181,7 +281,8 @@ const Specifications = () => {
     try {
       const payload = {
         ...formData,
-        ingredients: ingredients.filter(i => i.name.trim())
+        ingredients: ingredients.filter(i => i.name.trim()),
+        attachments: attachments
       };
 
       if (selectedSpec) {
@@ -337,6 +438,16 @@ const Specifications = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Show attachments count */}
+                {spec.attachments?.length > 0 && (
+                  <div className="mb-3">
+                    <Badge variant="secondary" className="text-xs">
+                      <File className="w-3 h-3 mr-1" />
+                      {spec.attachments.length} PDF attached
+                    </Badge>
+                  </div>
+                )}
                 
                 <div className="flex items-center justify-end gap-1 pt-3 border-t">
                   <Button variant="ghost" size="sm" onClick={() => openPreview(spec)} title="Preview">
@@ -420,6 +531,81 @@ const Specifications = () => {
                 rows={2}
                 placeholder="Product description..."
               />
+            </div>
+
+            {/* PDF File Upload - Drag & Drop Zone */}
+            <div className="space-y-2">
+              <Label>PDF Attachments (Drag & Drop)</Label>
+              <div
+                onDragEnter={handleFileDragEnter}
+                onDragOver={handleFileDragOver}
+                onDragLeave={handleFileDragLeave}
+                onDrop={handleFileDrop}
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  isDraggingFile 
+                    ? 'border-orange-500 bg-orange-50' 
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                
+                {uploadingFile ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-orange-600" />
+                    <span>Uploading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Drag and drop PDF files here, or
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Browse Files
+                    </Button>
+                  </>
+                )}
+              </div>
+              
+              {/* Uploaded Files List */}
+              {attachments.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  {attachments.map((file) => (
+                    <div
+                      key={file.id}
+                      className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg"
+                    >
+                      <File className="w-5 h-5 text-red-600 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.filename}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAttachment(file.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             {/* Ingredients - Drag & Drop */}
@@ -587,6 +773,21 @@ const Specifications = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Show attachments in preview */}
+              {selectedSpec.attachments?.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Attached Documents</h3>
+                  <div className="space-y-2">
+                    {selectedSpec.attachments.map((file, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+                        <File className="w-4 h-4 text-red-600" />
+                        <span className="text-sm">{file.filename}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               

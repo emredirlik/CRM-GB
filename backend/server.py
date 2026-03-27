@@ -1234,6 +1234,50 @@ async def delete_specification(spec_id: str):
         raise HTTPException(status_code=404, detail="Specification not found")
     return {"message": "Specification deleted successfully"}
 
+@api_router.post("/specifications/upload")
+async def upload_specification_file(file: UploadFile = File(...)):
+    """Upload a PDF file for specification attachment"""
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    
+    # Read file content
+    content = await file.read()
+    file_id = str(uuid.uuid4())
+    
+    # Store in database as base64
+    doc = {
+        "id": file_id,
+        "filename": file.filename,
+        "content_type": "application/pdf",
+        "size": len(content),
+        "data": base64.b64encode(content).decode('utf-8'),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.specification_files.insert_one(doc)
+    
+    return {
+        "id": file_id,
+        "filename": file.filename,
+        "url": f"{BACKEND_URL}/api/specifications/files/{file_id}"
+    }
+
+# Add BACKEND_URL constant near the top imports
+BACKEND_URL = os.environ.get('REACT_APP_BACKEND_URL', '')
+
+@api_router.get("/specifications/files/{file_id}")
+async def get_specification_file(file_id: str):
+    """Download a specification attachment"""
+    doc = await db.specification_files.find_one({"id": file_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    content = base64.b64decode(doc['data'])
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={doc['filename']}"}
+    )
+
 @api_router.get("/specifications/{spec_id}/pdf")
 async def get_specification_pdf(spec_id: str):
     spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
@@ -2327,6 +2371,58 @@ async def get_recipe_pdf_professional(recipe_id: str):
         headers={"Content-Disposition": f"attachment; filename=recete_{recipe_id[:8]}.pdf"}
     )
 
+# ===================== AGENDA ENDPOINTS =====================
+
+class AgendaTask(BaseModel):
+    title: str
+    due_date: Optional[str] = None
+    completed: bool = False
+
+class AgendaTaskUpdate(BaseModel):
+    title: Optional[str] = None
+    due_date: Optional[str] = None
+    completed: Optional[bool] = None
+
+@api_router.get("/agenda")
+async def get_agenda():
+    """Get all agenda tasks"""
+    tasks = await db.agenda.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return tasks
+
+@api_router.post("/agenda")
+async def create_agenda_task(task: AgendaTask):
+    """Create a new agenda task"""
+    doc = {
+        "id": str(uuid.uuid4()),
+        "title": task.title,
+        "due_date": task.due_date,
+        "completed": task.completed,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.agenda.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != '_id'}
+
+@api_router.put("/agenda/{task_id}")
+async def update_agenda_task(task_id: str, task: AgendaTaskUpdate):
+    """Update an agenda task"""
+    existing = await db.agenda.find_one({"id": task_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    update_data = {k: v for k, v in task.model_dump().items() if v is not None}
+    await db.agenda.update_one({"id": task_id}, {"$set": update_data})
+    
+    updated = await db.agenda.find_one({"id": task_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/agenda/{task_id}")
+async def delete_agenda_task(task_id: str):
+    """Delete an agenda task"""
+    result = await db.agenda.delete_one({"id": task_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"message": "Task deleted successfully"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
@@ -2376,4 +2472,3 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-

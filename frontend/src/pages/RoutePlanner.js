@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { MapPin, Navigation, Route, List, RotateCcw, ExternalLink, Loader2, Clock, FileDown, Search } from 'lucide-react';
+import { MapPin, Navigation, Route, List, RotateCcw, ExternalLink, Loader2, Clock, FileDown, Search, X } from 'lucide-react';
 import axios from 'axios';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -60,6 +60,14 @@ const RoutePlanner = () => {
   const [startAddress, setStartAddress] = useState('');
   const [startCoords, setStartCoords] = useState(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  
+  // Autocomplete states
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const inputRef = useRef(null);
+  
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -100,6 +108,61 @@ const RoutePlanner = () => {
     }
   };
 
+  // Address autocomplete search
+  const searchAddress = useCallback(async (query) => {
+    if (!query || query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    
+    setSearchingAddress(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'GewurzbergCRM/1.0'
+          }
+        }
+      );
+      const data = await response.json();
+      setSuggestions(data);
+      setShowSuggestions(data.length > 0);
+    } catch (error) {
+      console.error('Address search error:', error);
+    } finally {
+      setSearchingAddress(false);
+    }
+  }, []);
+
+  const handleAddressChange = (e) => {
+    const value = e.target.value;
+    setStartAddress(value);
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Debounce search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchAddress(value);
+    }, 400);
+  };
+
+  const selectSuggestion = (suggestion) => {
+    setStartAddress(suggestion.display_name);
+    setStartCoords({
+      lat: parseFloat(suggestion.lat),
+      lng: parseFloat(suggestion.lon),
+      address: suggestion.display_name
+    });
+    setSuggestions([]);
+    setShowSuggestions(false);
+    toast.success('Address selected', { description: suggestion.display_name.slice(0, 50) + '...' });
+  };
+
   const toggleLeadSelection = (leadId) => {
     const newSelected = new Set(selectedLeads);
     if (newSelected.has(leadId)) {
@@ -119,11 +182,12 @@ const RoutePlanner = () => {
     setSelectedLeads(new Set());
     setRoute(null);
     setStartCoords(null);
+    setStartAddress('');
   };
 
   const calculateOptimalRoute = async () => {
     if (!startAddress.trim()) {
-      toast.error('Error', { description: 'Please enter a start address' });
+      toast.error('Error', { description: 'Please enter and select a start address' });
       return;
     }
     
@@ -142,8 +206,8 @@ const RoutePlanner = () => {
       
       setRoute(response.data);
       setStartCoords(response.data.start_point);
-      toast.success('Success', { 
-        description: `Route created: ${response.data.total_distance.toFixed(1)} km, ~${response.data.estimated_hours.toFixed(1)} hours` 
+      toast.success('Route created!', { 
+        description: `${response.data.total_distance.toFixed(1)} km, ~${response.data.estimated_hours.toFixed(1)} hours` 
       });
     } catch (error) {
       const detail = error.response?.data?.detail || 'Failed to calculate route';
@@ -171,7 +235,7 @@ const RoutePlanner = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Success', { description: 'PDF downloaded' });
+      toast.success('PDF downloaded');
     } catch (error) {
       toast.error('Error', { description: 'Failed to download PDF' });
     } finally {
@@ -229,26 +293,75 @@ const RoutePlanner = () => {
         </div>
       </div>
 
-      {/* Start Address Input */}
-      <Card>
+      {/* Start Address Input with Autocomplete */}
+      <Card className="relative z-50">
         <CardContent className="p-4">
           <div className="flex gap-4 items-end flex-wrap">
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-[300px] relative">
               <Label htmlFor="start-address" className="text-sm font-medium mb-2 block">
                 Start Address
               </Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
+                  ref={inputRef}
                   id="start-address"
-                  placeholder="e.g. Gewürzberg GmbH, Berlin, Germany"
+                  placeholder="Type to search... (e.g. Berlin, Germany)"
                   value={startAddress}
-                  onChange={(e) => setStartAddress(e.target.value)}
-                  className="pl-10"
+                  onChange={handleAddressChange}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  className="pl-10 pr-10"
                   data-testid="start-address-input"
+                  autoComplete="off"
                 />
+                {searchingAddress && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+                )}
+                {startAddress && !searchingAddress && (
+                  <button
+                    onClick={() => {
+                      setStartAddress('');
+                      setStartCoords(null);
+                      setSuggestions([]);
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
+              
+              {/* Autocomplete Suggestions Dropdown */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-[1000] max-h-60 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => selectSuggestion(suggestion)}
+                      className="w-full px-4 py-3 text-left hover:bg-orange-50 border-b last:border-b-0 transition-colors flex items-start gap-3"
+                      data-testid={`suggestion-${idx}`}
+                    >
+                      <MapPin className="w-4 h-4 text-orange-600 mt-1 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{suggestion.display_name.split(',')[0]}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {suggestion.display_name.split(',').slice(1, 4).join(',')}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* Selected address indicator */}
+              {startCoords && (
+                <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                  <MapPin className="w-4 h-4" />
+                  <span>Address verified ✓</span>
+                </div>
+              )}
             </div>
+            
             <Button 
               onClick={calculateOptimalRoute} 
               disabled={calculating || selectedLeads.size < 1 || !startAddress.trim()}
@@ -258,6 +371,13 @@ const RoutePlanner = () => {
               {calculating ? 'Calculating...' : 'Create Route'}
             </Button>
           </div>
+          
+          {/* Quick Tips */}
+          {!startCoords && (
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
+              <strong>Tip:</strong> Type your start address (e.g., "Gewürzberg GmbH, Berlin") and select from suggestions. Then select customers from the list and click "Create Route".
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -283,7 +403,7 @@ const RoutePlanner = () => {
                 {startCoords && (
                   <Marker position={[startCoords.lat, startCoords.lng]} icon={greenIcon}>
                     <Popup>
-                      <strong>Start: {startAddress}</strong>
+                      <strong>Start: {startCoords.address || startAddress}</strong>
                     </Popup>
                   </Marker>
                 )}
@@ -367,7 +487,7 @@ const RoutePlanner = () => {
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   <div className="flex items-center gap-2 text-sm">
                     <Badge variant="outline" className="bg-green-100 text-green-700">Start</Badge>
-                    <span className="truncate text-xs">{startAddress}</span>
+                    <span className="truncate text-xs">{startAddress.slice(0, 30)}...</span>
                   </div>
                   {route.stops.map((stop, index) => (
                     <div key={stop.id} className="flex items-center gap-2 text-sm">
@@ -419,9 +539,11 @@ const RoutePlanner = () => {
                   Loading locations...
                 </div>
               ) : leadsWithCoords.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No customers with location data found
-                </p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium">No customers with locations</p>
+                  <p className="text-xs mt-1">Add customers with city/country info first</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {leadsWithCoords.map((lead) => {

@@ -38,7 +38,7 @@ class LeadFinderService:
         keywords: List[str], 
         location: str, 
         country: str,
-        limit: int = 20
+        limit: int = 50
     ) -> List[FoundLead]:
         """
         Search for potential leads based on keywords and location
@@ -46,12 +46,29 @@ class LeadFinderService:
         combined_query = ", ".join(keywords)
         query = f"{combined_query} manufacturers producers suppliers in {location} {country}"
         
-        leads = await self._search_with_kimi(query, country, location, limit)
+        # Run multiple searches to get more results
+        all_leads = []
+        
+        # Primary search with main keywords
+        leads1 = await self._search_with_kimi(query, country, location, limit)
+        all_leads.extend(leads1)
+        
+        # Secondary search with specific industry terms
+        if len(all_leads) < limit:
+            query2 = f"gyros döner kebab souvlaki meat processing factory in {location} {country}"
+            leads2 = await self._search_with_kimi(query2, country, location, limit)
+            all_leads.extend(leads2)
+        
+        # Third search for wholesale suppliers
+        if len(all_leads) < limit:
+            query3 = f"wholesale meat supplier food manufacturer in {location} {country}"
+            leads3 = await self._search_with_kimi(query3, country, location, limit)
+            all_leads.extend(leads3)
         
         # Deduplicate by company name
         seen = set()
         unique_leads = []
-        for lead in leads:
+        for lead in all_leads:
             if lead.company_name:
                 key = lead.company_name.lower().strip()
                 if key not in seen:
@@ -71,7 +88,7 @@ Your task is to provide real business names for companies that manufacture gyros
 - You MUST ONLY return companies that are physically located in or very near **{location}** city.
 - Do NOT include companies from other cities or regions within {country}.
 
-IMPORTANT: Return AT LEAST 10-15 companies from {location} specifically.
+IMPORTANT: Return AT LEAST 15-25 companies from {location} specifically. Be comprehensive.
 
 You must return a JSON array with real companies. Each company MUST have:
 - company_name: The actual name of the company (REQUIRED, cannot be null)
@@ -104,9 +121,18 @@ IMPORTANT RULES:
 
 List gyros, döner, kebab, souvlaki, or meat processing companies that are physically located in {location} city.
 
-Return as a JSON array with at least 10-15 companies. Remember: 
+Be COMPREHENSIVE. Include:
+- Large manufacturers
+- Small/medium producers  
+- Wholesale suppliers
+- Industrial food processors
+- Spice and seasoning companies
+- Meat cutting/processing plants
+
+Return as a JSON array with AT LEAST 15-25 companies. Remember: 
 - company_name is REQUIRED
-- city MUST be {location}"""
+- city MUST be {location}
+- Include as many real businesses as you know"""
 
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
