@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getDashboardStats } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Mail, AlertTriangle, TrendingUp, ShoppingCart, Euro } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Users, Mail, AlertTriangle, TrendingUp, ShoppingCart, Euro, Target, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const Dashboard = () => {
   const { t } = useLanguage();
@@ -13,17 +18,28 @@ const Dashboard = () => {
     emails_failed: 0,
     recent_leads: [],
     total_orders: 0,
-    total_revenue: 0
+    total_revenue: 0,
+    yearly_target: 0
   });
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('all');
+
+  const periods = [
+    { value: 'all', label: 'Tümü' },
+    { value: 'month', label: '1 Ay' },
+    { value: 'quarter', label: '3 Ay' },
+    { value: 'half_year', label: '6 Ay' },
+    { value: 'year', label: '1 Yıl' }
+  ];
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    fetchStats(period);
+  }, [period]);
 
-  const fetchStats = async () => {
+  const fetchStats = async (selectedPeriod) => {
+    setLoading(true);
     try {
-      const response = await getDashboardStats();
+      const response = await axios.get(`${API}/dashboard/stats?period=${selectedPeriod}`);
       setStats(response.data);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
@@ -35,6 +51,10 @@ const Dashboard = () => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
   };
+
+  const revenueProgress = stats.yearly_target > 0 
+    ? Math.min(100, (stats.total_revenue / stats.yearly_target) * 100) 
+    : 0;
 
   const statCards = [
     {
@@ -78,11 +98,60 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8" data-testid="dashboard-page">
-      {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('dashboard')}</h1>
-        <p className="text-muted-foreground mt-1">Welcome to SpiceCRM - Your B2B Lead Management System</p>
+      {/* Header with Period Filter */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('dashboard')}</h1>
+          <p className="text-muted-foreground mt-1">Gewürzberg GmbH - B2B Müşteri Yönetim Sistemi</p>
+        </div>
+        
+        {/* Period Filter */}
+        <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg" data-testid="period-filter">
+          <Calendar className="w-4 h-4 text-muted-foreground ml-2" />
+          {periods.map((p) => (
+            <Button
+              key={p.value}
+              variant={period === p.value ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPeriod(p.value)}
+              data-testid={`period-${p.value}`}
+              className={period === p.value ? "" : "text-muted-foreground"}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
       </div>
+
+      {/* Yearly Revenue Target */}
+      {stats.yearly_target > 0 && (
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200" data-testid="revenue-target-card">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-green-800">Yıllık Gelir Hedefi</p>
+                  <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.yearly_target)}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-green-700">Mevcut Gelir</p>
+                <p className="text-xl font-bold text-green-900">{formatCurrency(stats.total_revenue)}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-green-700">İlerleme</span>
+                <span className="font-medium text-green-900">{revenueProgress.toFixed(1)}%</span>
+              </div>
+              <Progress value={revenueProgress} className="h-3 bg-green-200" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -156,8 +225,8 @@ const Dashboard = () => {
           />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-white">
-              <h2 className="text-2xl font-bold font-['Manrope']">Berlin Spice Factory</h2>
-              <p className="text-slate-300 mt-2">Premium Spices & Binders for Food Manufacturers</p>
+              <h2 className="text-2xl font-bold font-['Manrope']">Gewürzberg GmbH</h2>
+              <p className="text-slate-300 mt-2">Premium Baharatlar & Gıda Üreticileri için Binding</p>
             </div>
           </div>
         </div>

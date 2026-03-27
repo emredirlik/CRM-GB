@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -64,6 +64,7 @@ const units = [
 
 const initialFormData = {
   lead_id: '',
+  product_id: '', // Ürün seçimi için
   product_name: '',
   product_code: '',
   pieces: 1,
@@ -78,6 +79,7 @@ const Orders = () => {
   const { t, language } = useLanguage();
   const [orders, setOrders] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [products, setProducts] = useState([]); // Ürün listesi
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -92,12 +94,14 @@ const Orders = () => {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, leadsRes] = await Promise.all([
+      const [ordersRes, leadsRes, productsRes] = await Promise.all([
         axios.get(`${API}/orders`),
-        axios.get(`${API}/leads`)
+        axios.get(`${API}/leads`),
+        axios.get(`${API}/products`)
       ]);
       setOrders(ordersRes.data);
       setLeads(leadsRes.data);
+      setProducts(productsRes.data);
     } catch (error) {
       toast.error('Error', { description: 'Failed to fetch data' });
     } finally {
@@ -110,6 +114,21 @@ const Orders = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Ürün seçildiğinde otomatik doldur
+  const handleProductSelect = (productId) => {
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      setFormData(prev => ({
+        ...prev,
+        product_id: productId,
+        product_name: product.name,
+        product_code: product.code,
+        unit: product.default_unit || 'kg',
+        unit_price: product.default_price || 0
+      }));
+    }
+  };
+
   const openAddDialog = () => {
     setSelectedOrder(null);
     setFormData(initialFormData);
@@ -120,6 +139,7 @@ const Orders = () => {
     setSelectedOrder(order);
     setFormData({
       lead_id: order.lead_id,
+      product_id: '',
       product_name: order.product_name,
       product_code: order.product_code,
       pieces: order.pieces || 1,
@@ -204,6 +224,25 @@ const Orders = () => {
       fetchData();
     } catch (error) {
       toast.error('Hata', { description: 'Durum güncellenemedi' });
+    }
+  };
+
+  const downloadPdf = async (orderId) => {
+    try {
+      const response = await axios.get(`${API}/orders/${orderId}/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `siparis_${orderId.slice(0,8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Başarılı', { description: 'PDF indirildi' });
+    } catch (error) {
+      toast.error('Hata', { description: 'PDF indirilemedi' });
     }
   };
 
@@ -339,6 +378,15 @@ const Orders = () => {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => downloadPdf(order.id)}
+                            title="PDF İndir"
+                            data-testid={`download-pdf-${order.id}`}
+                          >
+                            <FileDown className="w-4 h-4 text-blue-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => openEditDialog(order)}
                             data-testid={`edit-order-${order.id}`}
                           >
@@ -395,6 +443,26 @@ const Orders = () => {
               </div>
             )}
             
+            {/* Ürün Seçimi */}
+            {!selectedOrder && products.length > 0 && (
+              <div className="space-y-2">
+                <Label>Kayıtlı Ürünlerden Seç</Label>
+                <Select value={formData.product_id} onValueChange={handleProductSelect}>
+                  <SelectTrigger data-testid="select-product">
+                    <SelectValue placeholder="Ürün seçin (opsiyonel)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} ({product.code}) - {formatCurrency(product.default_price)}/{product.default_unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Ürün seçtiğinizde bilgiler otomatik doldurulur</p>
+              </div>
+            )}
+            
             {/* Ürün Bilgileri */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -421,7 +489,7 @@ const Orders = () => {
               </div>
             </div>
 
-            {/* Miktar Bilgileri - Yeni Format */}
+            {/* Miktar Bilgileri */}
             <div className="p-4 bg-muted/50 rounded-lg space-y-4">
               <p className="text-sm font-medium text-muted-foreground">Miktar Hesaplama</p>
               <div className="grid grid-cols-4 gap-3">

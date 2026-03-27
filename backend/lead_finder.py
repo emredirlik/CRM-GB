@@ -65,22 +65,29 @@ class LeadFinderService:
         """Use AI to search and extract business information"""
         from emergentintegrations.llm.chat import LlmChat, UserMessage
         
-        system_prompt = f"""You are an expert B2B lead researcher specializing in the food manufacturing industry in {country}.
-Your task is to provide as many real business names as possible for companies that manufacture gyros, döner, kebab, souvlaki, and similar meat products.
+        system_prompt = f"""You are an expert B2B lead researcher specializing in the food manufacturing industry.
+Your task is to provide real business names for companies that manufacture gyros, döner, kebab, souvlaki, and similar meat products.
 
-IMPORTANT: Return AT LEAST 15-20 companies in your response. The more companies the better!
+**CRITICAL LOCATION REQUIREMENT:**
+- The user is searching for businesses in **{location}** city in **{country}**.
+- You MUST ONLY return companies that are physically located in or very near **{location}** city.
+- Do NOT include companies from other cities or regions within {country}.
+- If the user says "Berlin", only return Berlin-based companies. NOT companies from Munich, Hamburg, or other German cities.
+- If the user says "Athens", only return Athens-based companies. NOT companies from Thessaloniki, Patras, or other Greek cities.
+
+IMPORTANT: Return AT LEAST 10-15 companies from {location} specifically. Quality over quantity - only companies actually in {location}.
 
 You must return a JSON array with real companies. Each company MUST have:
 - company_name: The actual name of the company (REQUIRED, cannot be null)
 - email: Business email address if known (can be null)
 - phone: Business phone number if known (can be null)
-- address: Physical address if known (can be null)
-- city: City where the company is located
-- country: Country where the company is located
+- address: Physical address if known (should include {location} city)
+- city: MUST be "{location}" or nearby suburb of {location} (REQUIRED)
+- country: "{country}" (REQUIRED)
 - website: Company website URL if known (can be null)
 - description: Brief description of what they produce
 
-Include companies from these categories:
+Include companies from these categories (ONLY if they are in {location}):
 1. Meat processing plants and factories
 2. Gyros/döner meat producers
 3. Kebab manufacturers
@@ -91,19 +98,25 @@ Include companies from these categories:
 
 IMPORTANT RULES:
 1. company_name is REQUIRED - never return null for company_name
-2. Include ALL companies you know about in {country}, especially in {location}
-3. Focus on B2B manufacturers and suppliers, NOT restaurants
-4. Include both large and small companies
-5. Return as many companies as possible (minimum 15)
+2. **ONLY include companies physically located in {location} city or its immediate suburbs**
+3. city field MUST be "{location}" or a nearby suburb - NOT other cities in {country}
+4. Focus on B2B manufacturers and suppliers, NOT restaurants
+5. If you don't know enough companies in {location}, return fewer results rather than including companies from other cities
 """
         
         user_prompt = f"""Find ALL businesses you know that match this search: "{query}"
 
-List EVERY gyros, döner, kebab, souvlaki, or meat processing company you know in {country}, particularly in or near {location}.
-Include manufacturers, producers, wholesale suppliers, meat processing plants, and food factories.
+**LOCATION FILTER: {location}, {country} ONLY**
 
-Return AT LEAST 15-20 companies as a JSON array. The more the better!
-Remember: company_name is REQUIRED for each entry."""
+List gyros, döner, kebab, souvlaki, or meat processing companies that are physically located in {location} city.
+Do NOT include companies from other cities in {country} - ONLY {location}!
+
+Include manufacturers, producers, wholesale suppliers, meat processing plants, and food factories BASED IN {location}.
+
+Return as a JSON array. Remember: 
+- company_name is REQUIRED
+- city MUST be {location} (or immediate suburb)
+- Do NOT include companies from other cities"""
 
         try:
             chat = LlmChat(

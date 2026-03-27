@@ -11,7 +11,8 @@ import {
   Sparkles,
   Search,
   ShoppingCart,
-  BookOpen
+  BookOpen,
+  Package
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -23,6 +24,7 @@ const Sidebar = () => {
     { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
     { path: '/leads', icon: Users, label: 'leads' },
     { path: '/orders', icon: ShoppingCart, label: 'orders' },
+    { path: '/products', icon: Package, label: 'products' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/compose', icon: Mail, label: 'emailComposer' },
@@ -40,12 +42,14 @@ const Sidebar = () => {
       {/* Logo Section */}
       <div className="p-6 border-b border-slate-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-600 to-orange-700 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
+          <img 
+            src="https://customer-assets.emergentagent.com/job_customer-agent-2/artifacts/u9wa6amt_Ads%C4%B1z%20tasar%C4%B1m%20%281%29.png"
+            alt="Gewürzberg Logo"
+            className="w-10 h-10 object-contain bg-white rounded-lg p-1"
+          />
           <div>
-            <h1 className="text-lg font-bold text-white font-['Manrope']">SpiceCRM</h1>
-            <p className="text-xs text-slate-400">Berlin Spice Factory</p>
+            <h1 className="text-lg font-bold text-white font-['Manrope']">Gewürzberg GmbH</h1>
+            <p className="text-xs text-slate-400">Emre Dirlik</p>
           </div>
         </div>
       </div>

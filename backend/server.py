@@ -1,17 +1,20 @@
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Response
+from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+import io
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -139,6 +142,42 @@ class DashboardStats(BaseModel):
     recent_leads: List[dict]
     total_orders: int = 0
     total_revenue: float = 0.0
+
+# Product Models - Ürün Kataloğu
+class Product(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    code: str
+    description: Optional[str] = ""
+    default_unit: str = "kg"
+    default_price: float = 0.0
+    category: Optional[str] = ""
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProductCreate(BaseModel):
+    name: str
+    code: str
+    description: Optional[str] = ""
+    default_unit: str = "kg"
+    default_price: float = 0.0
+    category: Optional[str] = ""
+
+# Company Settings - Firma Ayarları
+class CompanySettings(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = "company_settings"
+    company_name: str = "SpiceCRM"
+    logo_url: Optional[str] = None
+    address: Optional[str] = ""
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    website: Optional[str] = ""
+    tax_number: Optional[str] = ""
+    yearly_target: float = 0.0  # Yıllık hedef ciro
+    currency: str = "EUR"
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # Order Models
 class Order(BaseModel):
@@ -602,8 +641,12 @@ async def get_lead_email_history(lead_id: str):
 
 # ===================== DASHBOARD ENDPOINTS =====================
 
-@api_router.get("/dashboard/stats", response_model=DashboardStats)
-async def get_dashboard_stats():
+@api_router.get("/dashboard/stats")
+async def get_dashboard_stats(period: str = "all"):
+    """
+    Get dashboard statistics
+    period: all, month, quarter, half_year, year
+    """
     total_leads = await db.leads.count_documents({})
     emails_sent = await db.email_history.count_documents({"status": "sent"})
     emails_failed = await db.email_history.count_documents({"status": "failed"})
@@ -612,25 +655,370 @@ async def get_dashboard_stats():
     for lead in recent_leads:
         deserialize_datetime(lead)
     
-    # Order stats
-    total_orders = await db.orders.count_documents({})
+    # Date filter for period
+    now = datetime.now(timezone.utc)
+    date_filter = {}
+    if period == "month":
+        date_filter = {"created_at": {"$gte": (now - timedelta(days=30)).isoformat()}}
+    elif period == "quarter":
+        date_filter = {"created_at": {"$gte": (now - timedelta(days=90)).isoformat()}}
+    elif period == "half_year":
+        date_filter = {"created_at": {"$gte": (now - timedelta(days=180)).isoformat()}}
+    elif period == "year":
+        date_filter = {"created_at": {"$gte": (now - timedelta(days=365)).isoformat()}}
     
-    # Calculate total revenue from delivered orders
+    # Order stats with period filter
+    order_filter = {"status": {"$in": ["delivered", "shipped", "confirmed"]}}
+    if date_filter:
+        order_filter.update(date_filter)
+    
+    total_orders = await db.orders.count_documents(date_filter if date_filter else {})
+    
+    # Calculate revenue
     pipeline = [
-        {"$match": {"status": {"$in": ["delivered", "shipped", "confirmed"]}}},
+        {"$match": order_filter},
         {"$group": {"_id": None, "total": {"$sum": "$total_price"}}}
     ]
     revenue_result = await db.orders.aggregate(pipeline).to_list(1)
     total_revenue = revenue_result[0]["total"] if revenue_result else 0.0
     
-    return DashboardStats(
-        total_leads=total_leads,
-        emails_sent=emails_sent,
-        emails_failed=emails_failed,
-        recent_leads=recent_leads,
-        total_orders=total_orders,
-        total_revenue=total_revenue
+    # Get company settings for yearly target
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    yearly_target = settings.get("yearly_target", 0) if settings else 0
+    
+    return {
+        "total_leads": total_leads,
+        "emails_sent": emails_sent,
+        "emails_failed": emails_failed,
+        "recent_leads": recent_leads,
+        "total_orders": total_orders,
+        "total_revenue": total_revenue,
+        "yearly_target": yearly_target,
+        "period": period
+    }
+
+# ===================== PRODUCT ENDPOINTS =====================
+
+@api_router.post("/products", response_model=Product)
+async def create_product(product_data: ProductCreate):
+    # Check if product code exists
+    existing = await db.products.find_one({"code": product_data.code}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Product code already exists")
+    
+    product = Product(**product_data.model_dump())
+    doc = product.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.products.insert_one(doc)
+    return product
+
+@api_router.get("/products", response_model=List[Product])
+async def get_products():
+    products = await db.products.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    for p in products:
+        deserialize_datetime(p, ['created_at'])
+    return products
+
+@api_router.get("/products/{product_id}", response_model=Product)
+async def get_product(product_id: str):
+    product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    deserialize_datetime(product, ['created_at'])
+    return product
+
+@api_router.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: str, product_data: ProductCreate):
+    existing = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    update_data = product_data.model_dump()
+    await db.products.update_one({"id": product_id}, {"$set": update_data})
+    updated = await db.products.find_one({"id": product_id}, {"_id": 0})
+    deserialize_datetime(updated, ['created_at'])
+    return updated
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str):
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted successfully"}
+
+# ===================== COMPANY SETTINGS ENDPOINTS =====================
+
+@api_router.get("/settings/company")
+async def get_company_settings():
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    if not settings:
+        # Return default settings
+        return CompanySettings().model_dump()
+    deserialize_datetime(settings, ['updated_at'])
+    return settings
+
+@api_router.post("/settings/company")
+async def save_company_settings(
+    company_name: str = "SpiceCRM",
+    logo_url: Optional[str] = None,
+    address: Optional[str] = "",
+    phone: Optional[str] = "",
+    email: Optional[str] = "",
+    website: Optional[str] = "",
+    tax_number: Optional[str] = "",
+    yearly_target: float = 0.0,
+    currency: str = "EUR"
+):
+    settings = CompanySettings(
+        company_name=company_name,
+        logo_url=logo_url,
+        address=address,
+        phone=phone,
+        email=email,
+        website=website,
+        tax_number=tax_number,
+        yearly_target=yearly_target,
+        currency=currency
     )
+    doc = settings.model_dump()
+    doc['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    await db.company_settings.replace_one(
+        {"id": "company_settings"},
+        doc,
+        upsert=True
+    )
+    return settings
+
+# ===================== PDF GENERATION ENDPOINTS =====================
+
+def generate_pdf_content(title: str, data: dict, company_settings: dict = None) -> bytes:
+    """Generate a simple PDF using reportlab"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import cm
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Company header
+    y = height - 2*cm
+    if company_settings:
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(2*cm, y, company_settings.get('company_name', 'SpiceCRM'))
+        y -= 0.7*cm
+        c.setFont("Helvetica", 10)
+        if company_settings.get('address'):
+            c.drawString(2*cm, y, company_settings['address'])
+            y -= 0.5*cm
+        if company_settings.get('phone'):
+            c.drawString(2*cm, y, f"Tel: {company_settings['phone']}")
+            y -= 0.5*cm
+        if company_settings.get('email'):
+            c.drawString(2*cm, y, f"Email: {company_settings['email']}")
+            y -= 0.5*cm
+    
+    # Title
+    y -= 1*cm
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(2*cm, y, title)
+    y -= 1*cm
+    
+    # Content
+    c.setFont("Helvetica", 10)
+    for key, value in data.items():
+        if y < 3*cm:
+            c.showPage()
+            y = height - 2*cm
+            c.setFont("Helvetica", 10)
+        
+        c.drawString(2*cm, y, f"{key}: {value}")
+        y -= 0.5*cm
+    
+    # Footer
+    c.setFont("Helvetica", 8)
+    c.drawString(2*cm, 1*cm, f"Oluşturulma Tarihi: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+@api_router.get("/orders/{order_id}/pdf")
+async def get_order_pdf(order_id: str):
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    
+    data = {
+        "Sipariş No": order['id'][:8].upper(),
+        "Müşteri": order['company_name'],
+        "Kişi": order.get('lead_name', ''),
+        "Ürün": order['product_name'],
+        "Ürün Kodu": order['product_code'],
+        "Miktar": f"{order.get('pieces', 1)} x {order.get('amount', order.get('quantity', 1))} {order.get('unit', 'kg')}",
+        "Birim Fiyat": f"€{order['unit_price']:.2f}",
+        "Toplam": f"€{order['total_price']:.2f}",
+        "Durum": order['status'].upper(),
+        "Notlar": order.get('notes', '')
+    }
+    
+    pdf_content = generate_pdf_content(f"Sipariş - {order['product_name']}", data, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=siparis_{order_id[:8]}.pdf"}
+    )
+
+@api_router.get("/leads/export/pdf")
+async def export_leads_pdf():
+    leads = await db.leads.find({}, {"_id": 0}).to_list(1000)
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import cm
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    y = height - 2*cm
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(2*cm, y, "Müşteri Listesi")
+    y -= 1*cm
+    c.setFont("Helvetica", 8)
+    c.drawString(2*cm, y, f"Toplam: {len(leads)} müşteri | Tarih: {datetime.now().strftime('%d.%m.%Y')}")
+    y -= 1*cm
+    
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(2*cm, y, "Firma")
+    c.drawString(7*cm, y, "Kişi")
+    c.drawString(11*cm, y, "Şehir")
+    c.drawString(14*cm, y, "Ülke")
+    y -= 0.5*cm
+    
+    c.setFont("Helvetica", 9)
+    for lead in leads:
+        if y < 2*cm:
+            c.showPage()
+            y = height - 2*cm
+            c.setFont("Helvetica", 9)
+        
+        c.drawString(2*cm, y, (lead.get('company_name', '')[:25]))
+        c.drawString(7*cm, y, f"{lead.get('first_name', '')} {lead.get('last_name', '')}"[:20])
+        c.drawString(11*cm, y, (lead.get('city', '') or '')[:15])
+        c.drawString(14*cm, y, (lead.get('country', '') or '')[:15])
+        y -= 0.4*cm
+    
+    c.save()
+    buffer.seek(0)
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=musteriler.pdf"}
+    )
+
+@api_router.get("/recipes/{recipe_id}/pdf")
+async def get_recipe_pdf(recipe_id: str):
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    
+    data = {
+        "Reçete Adı": recipe['name'],
+        "Ürün Kodu": recipe['product_code'],
+        "Müşteri": recipe['company_name'],
+        "---": "--- ANA MALZEMELER ---",
+        "Et Miktarı": f"{recipe['meat_amount']} kg",
+        "Su Miktarı": f"{recipe['water_amount']} L",
+        "Baharat Miktarı": f"{recipe['spice_amount']} kg",
+        "Binding Miktarı": f"{recipe['binding_amount']} kg",
+        "----": "--- ÜRETİM PARAMETRELERİ ---",
+        "Karışım Süresi": f"{recipe['mixing_time']} dakika",
+        "Motor Hızı": f"{recipe['motor_speed']} rpm",
+    }
+    
+    # Add additional ingredients
+    if recipe.get('additional_ingredients'):
+        data["-----"] = "--- EK MALZEMELER ---"
+        for i, ing in enumerate(recipe['additional_ingredients'], 1):
+            data[f"Malzeme {i}"] = f"{ing['name']}: {ing['amount']} {ing['unit']}"
+    
+    if recipe.get('instructions'):
+        data["------"] = "--- TALİMATLAR ---"
+        data["Talimatlar"] = recipe['instructions']
+    
+    pdf_content = generate_pdf_content(f"Reçete - {recipe['name']}", data, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=recete_{recipe_id[:8]}.pdf"}
+    )
+
+@api_router.post("/recipes/{recipe_id}/email")
+async def email_recipe(recipe_id: str, to_email: str, background_tasks: BackgroundTasks):
+    """Send recipe as PDF via email"""
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    smtp_settings = await db.smtp_settings.find_one({}, {"_id": 0})
+    
+    if not smtp_settings:
+        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+    
+    # Generate PDF
+    data = {
+        "Reçete Adı": recipe['name'],
+        "Ürün Kodu": recipe['product_code'],
+        "Et": f"{recipe['meat_amount']} kg",
+        "Su": f"{recipe['water_amount']} L",
+        "Baharat": f"{recipe['spice_amount']} kg",
+        "Binding": f"{recipe['binding_amount']} kg",
+        "Karışım": f"{recipe['mixing_time']} dk",
+        "Motor": f"{recipe['motor_speed']} rpm",
+    }
+    pdf_content = generate_pdf_content(f"Reçete - {recipe['name']}", data, settings)
+    
+    # Send email with attachment
+    async def send_recipe_email():
+        try:
+            msg = MIMEMultipart()
+            msg['Subject'] = f"Reçete: {recipe['name']}"
+            msg['From'] = f"{smtp_settings['from_name']} <{smtp_settings['from_email']}>"
+            msg['To'] = to_email
+            
+            body = f"Merhaba,\n\n{recipe['name']} reçetesi ekte yer almaktadır.\n\nSaygılarımızla"
+            msg.attach(MIMEText(body, 'plain'))
+            
+            attachment = MIMEApplication(pdf_content, _subtype='pdf')
+            attachment.add_header('Content-Disposition', 'attachment', filename=f"recete_{recipe['name']}.pdf")
+            msg.attach(attachment)
+            
+            if smtp_settings.get('use_tls', True):
+                server = smtplib.SMTP(smtp_settings['host'], smtp_settings['port'])
+                server.starttls()
+            else:
+                server = smtplib.SMTP_SSL(smtp_settings['host'], smtp_settings['port'])
+            
+            server.login(smtp_settings['username'], smtp_settings['password'])
+            server.sendmail(smtp_settings['from_email'], to_email, msg.as_string())
+            server.quit()
+            logger.info(f"Recipe email sent to {to_email}")
+        except Exception as e:
+            logger.error(f"Failed to send recipe email: {str(e)}")
+    
+    background_tasks.add_task(send_recipe_email)
+    return {"message": "Recipe email queued for sending"}
 
 # ===================== ORDER ENDPOINTS =====================
 

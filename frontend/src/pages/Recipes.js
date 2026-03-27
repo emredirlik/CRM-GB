@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, BookOpen, Copy, ChefHat, Droplets, Timer, Gauge, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, BookOpen, Copy, ChefHat, Droplets, Timer, Gauge, Package, FileDown } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -205,6 +205,25 @@ const Recipes = () => {
     }
   };
 
+  const downloadRecipePdf = async (recipeId) => {
+    try {
+      const response = await axios.get(`${API}/recipes/${recipeId}/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `recete_${recipeId.slice(0,8)}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Başarılı', { description: 'PDF indirildi' });
+    } catch (error) {
+      toast.error('Hata', { description: 'PDF indirilemedi' });
+    }
+  };
+
   const filteredRecipes = recipes.filter(recipe => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -297,6 +316,9 @@ const Recipes = () => {
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="sm" onClick={() => downloadRecipePdf(recipe.id)} title="PDF İndir">
+                    <FileDown className="w-4 h-4 text-blue-600" />
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => openEditDialog(recipe)}>
                     <Pencil className="w-4 h-4" />
                   </Button>

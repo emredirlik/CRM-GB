@@ -6,6 +6,7 @@ import Dashboard from "@/pages/Dashboard";
 import Leads from "@/pages/Leads";
 import LeadFinder from "@/pages/LeadFinder";
 import Orders from "@/pages/Orders";
+import Products from "@/pages/Products";
 import Recipes from "@/pages/Recipes";
 import Templates from "@/pages/Templates";
 import EmailComposer from "@/pages/EmailComposer";
@@ -22,6 +23,7 @@ function App() {
             <Route path="/leads" element={<Leads />} />
             <Route path="/find-leads" element={<LeadFinder />} />
             <Route path="/orders" element={<Orders />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/recipes" element={<Recipes />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/compose" element={<EmailComposer />} />

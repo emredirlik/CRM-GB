@@ -8,6 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 120000, // 2 dakika timeout (AI araması uzun sürebilir)
 });
 
 // Lead APIs
