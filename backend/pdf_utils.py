@@ -668,3 +668,108 @@ def generate_specification_pdf(spec: dict, company_settings: dict = None) -> byt
     c.save()
     buffer.seek(0)
     return buffer.getvalue()
+
+
+
+def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> bytes:
+    """Generate a PDF for daily visit report"""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header background
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    # Company name
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 24)
+    c.drawString(2*cm, height - 2*cm, company_name)
+    
+    # Document title
+    c.setFont(FONT_REGULAR, 12)
+    c.drawString(2*cm, height - 2.8*cm, "GÜNLÜK ZİYARET RAPORU")
+    
+    # Date badge
+    c.setFillColor(ACCENT_COLOR)
+    date_text = report.get('date', '')
+    c.drawRightString(width - 2*cm, height - 2*cm, f"Tarih: {date_text}")
+    
+    y = height - 5.5*cm
+    
+    # Customer info box
+    c.setFillColor(BG_LIGHT)
+    c.roundRect(1.5*cm, y - 3*cm, width - 3*cm, 3*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(black)
+    c.setFont(FONT_BOLD, 14)
+    c.drawString(2*cm, y - 0.8*cm, report.get('company_name', 'Müşteri'))
+    
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2*cm, y - 1.5*cm, f"Şehir: {report.get('city', 'N/A')}")
+    c.drawString(2*cm, y - 2.2*cm, f"Ziyaret Türü: {report.get('visit_type', 'N/A')}")
+    
+    y -= 4*cm
+    
+    # Notes section
+    c.setFillColor(PRIMARY_COLOR)
+    c.setFont(FONT_BOLD, 12)
+    c.drawString(2*cm, y, "NOTLAR")
+    y -= 0.8*cm
+    
+    c.setFillColor(black)
+    c.setFont(FONT_REGULAR, 10)
+    notes = report.get('notes', '')
+    lines = []
+    words = notes.split()
+    current_line = ""
+    for word in words:
+        if len(current_line + " " + word) < 80:
+            current_line = (current_line + " " + word).strip()
+        else:
+            lines.append(current_line)
+            current_line = word
+    if current_line:
+        lines.append(current_line)
+    
+    for line in lines[:10]:
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+    
+    y -= 0.5*cm
+    
+    # Outcome section
+    if report.get('outcome'):
+        c.setFillColor(PRIMARY_COLOR)
+        c.setFont(FONT_BOLD, 12)
+        c.drawString(2*cm, y, "SONUÇ")
+        y -= 0.8*cm
+        
+        c.setFillColor(SUCCESS_COLOR)
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(2*cm, y, report.get('outcome', ''))
+        y -= 1*cm
+    
+    # Next action section
+    if report.get('next_action'):
+        c.setFillColor(PRIMARY_COLOR)
+        c.setFont(FONT_BOLD, 12)
+        c.drawString(2*cm, y, "BİR SONRAKİ ADIM")
+        y -= 0.8*cm
+        
+        c.setFillColor(ACCENT_COLOR)
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(2*cm, y, report.get('next_action', ''))
+    
+    # Footer
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()

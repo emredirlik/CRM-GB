@@ -23,7 +23,7 @@ from urllib.parse import quote
 import base64
 
 # Import PDF utilities
-from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf
+from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf, generate_daily_report_pdf
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -1298,12 +1298,15 @@ async def download_specification_pdf(spec_id: str):
         raise HTTPException(status_code=404, detail="Specification not found")
     
     if spec.get('pdf_data'):
-        # Return uploaded PDF
+        # Return uploaded PDF with inline display for preview
         content = base64.b64decode(spec['pdf_data'])
         return Response(
             content=content,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename={spec.get('filename', 'specification.pdf')}"}
+            headers={
+                "Content-Disposition": f"inline; filename={spec.get('filename', 'specification.pdf')}",
+                "Access-Control-Allow-Origin": "*"
+            }
         )
     else:
         # Generate PDF if no upload
@@ -1312,7 +1315,10 @@ async def download_specification_pdf(spec_id: str):
         return Response(
             content=pdf_content,
             media_type="application/pdf",
-            headers={"Content-Disposition": f"attachment; filename=specification_{spec_id[:8]}.pdf"}
+            headers={
+                "Content-Disposition": f"inline; filename=specification_{spec_id[:8]}.pdf",
+                "Access-Control-Allow-Origin": "*"
+            }
         )
 
 @api_router.post("/specifications/upload")
@@ -1888,17 +1894,10 @@ async def duplicate_recipe(recipe_id: str, new_lead_id: str):
 
 @api_router.post("/leads/search")
 async def search_for_leads(request: SearchLeadsRequest):
-    """Search for potential leads using Kimi K2.5 AI-powered search"""
-    from lead_finder import LeadFinderService, SEARCH_TEMPLATES
+    """Search for potential leads using Gemini AI-powered search"""
+    from lead_finder import LeadFinder
     
-    # Use Kimi API key first, fallback to Emergent key
-    api_key = os.environ.get('KIMI_API_KEY')
-    if not api_key:
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
-    if not api_key:
-        raise HTTPException(status_code=500, detail="AI API key not configured")
-    
-    finder = LeadFinderService(api_key)
+    finder = LeadFinder()
     
     try:
         # Search for leads
@@ -1914,14 +1913,15 @@ async def search_for_leads(request: SearchLeadsRequest):
         for lead in found_leads:
             leads_data.append({
                 "company_name": lead.company_name,
+                "contact_person": lead.contact_person,
                 "email": lead.email,
                 "phone": lead.phone,
                 "address": lead.address,
                 "city": lead.city,
                 "country": lead.country,
                 "website": lead.website,
-                "description": lead.description,
-                "source": lead.source
+                "business_type": lead.business_type,
+                "notes": lead.notes
             })
         
         # Save search result to database
@@ -1949,8 +1949,12 @@ async def search_for_leads(request: SearchLeadsRequest):
 @api_router.get("/leads/search/templates")
 async def get_search_templates():
     """Get predefined search templates for common industries"""
-    from lead_finder import SEARCH_TEMPLATES
-    return SEARCH_TEMPLATES
+    return [
+        {"name": "Döner Fabrikaları", "keywords": ["döner", "kebab", "meat processing"], "category": "meat"},
+        {"name": "Gyros Üreticileri", "keywords": ["gyros", "souvlaki", "greek food"], "category": "meat"},
+        {"name": "Et İşleme", "keywords": ["meat processing", "food manufacturer"], "category": "meat"},
+        {"name": "Baharat Tedarikçileri", "keywords": ["spice", "seasoning", "wholesale"], "category": "spice"}
+    ]
 
 @api_router.get("/leads/search/history")
 async def get_search_history():
@@ -2071,7 +2075,7 @@ async def check_auth(request: Request):
 
 @api_router.get("/orders/{order_id}/whatsapp")
 async def get_order_whatsapp_link(order_id: str):
-    """Generate WhatsApp share link for an order"""
+    """Generate WhatsApp share link for an order with PDF link"""
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
@@ -2080,23 +2084,26 @@ async def get_order_whatsapp_link(order_id: str):
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
     company_name = settings.get('company_name', 'Gewürzberg GmbH') if settings else 'Gewürzberg GmbH'
     
-    # Format order details for WhatsApp
+    # Get backend URL for PDF link
+    backend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://customer-agent-2.preview.emergentagent.com')
+    pdf_url = f"{backend_url}/api/orders/{order_id}/pdf/public"
+    
+    # Format order details for WhatsApp with PDF link
     pieces = order.get('pieces', 1)
     amount = order.get('amount', order.get('quantity', 1))
     unit = order.get('unit', 'kg')
     
-    message = f"""🧾 *SİPARİŞ BİLGİLERİ*
-    
+    message = f"""🧾 *SİPARİŞ - {company_name}*
+
 📦 *Ürün:* {order['product_name']}
-🏷️ *Ürün Kodu:* {order['product_code']}
+🏷️ *Kod:* {order['product_code']}
 🏢 *Müşteri:* {order['company_name']}
-👤 *Kişi:* {order.get('lead_name', '-')}
 
 📊 *Miktar:* {pieces} × {amount} {unit}
-💰 *Birim Fiyat:* €{order['unit_price']:.2f}/{unit}
-💵 *Toplam:* €{order['total_price']:.2f}
+💰 *Fiyat:* €{order['unit_price']:.2f}/{unit}
 
-📋 *Durum:* {order['status'].upper()}
+📄 *PDF Sipariş Formu:*
+{pdf_url}
 
 ---
 _{company_name}_"""
@@ -2105,7 +2112,23 @@ _{company_name}_"""
     encoded_message = quote(message)
     whatsapp_url = f"https://wa.me/?text={encoded_message}"
     
-    return {"whatsapp_url": whatsapp_url, "message": message}
+    return {"whatsapp_url": whatsapp_url, "message": message, "pdf_url": pdf_url}
+
+@api_router.get("/orders/{order_id}/pdf/public")
+async def get_public_order_pdf(order_id: str):
+    """Public endpoint for order PDF (for WhatsApp sharing)"""
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_order_pdf(order, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=siparis_{order_id[:8]}.pdf"}
+    )
 
 # ===================== PROFESSIONAL PDF GENERATION =====================
 
@@ -2503,6 +2526,98 @@ async def delete_agenda_task(task_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"message": "Task deleted successfully"}
+
+# ===================== DAILY REPORTS ENDPOINTS =====================
+
+class DailyReportCreate(BaseModel):
+    date: str  # YYYY-MM-DD format
+    lead_id: str
+    visit_type: str  # meeting, delivery, support, etc
+    notes: str
+    outcome: Optional[str] = None
+    next_action: Optional[str] = None
+
+class DailyReportUpdate(BaseModel):
+    visit_type: Optional[str] = None
+    notes: Optional[str] = None
+    outcome: Optional[str] = None
+    next_action: Optional[str] = None
+
+@api_router.get("/daily-reports")
+async def get_daily_reports(date: Optional[str] = None):
+    """Get all daily reports, optionally filtered by date"""
+    query = {}
+    if date:
+        query["date"] = date
+    reports = await db.daily_reports.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return reports
+
+@api_router.get("/daily-reports/by-date/{date}")
+async def get_reports_by_date(date: str):
+    """Get all reports for a specific date"""
+    reports = await db.daily_reports.find({"date": date}, {"_id": 0}).to_list(100)
+    return reports
+
+@api_router.post("/daily-reports")
+async def create_daily_report(report: DailyReportCreate):
+    """Create a new daily report"""
+    # Get lead info
+    lead = await db.leads.find_one({"id": report.lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    doc = {
+        "id": str(uuid.uuid4()),
+        "date": report.date,
+        "lead_id": report.lead_id,
+        "company_name": lead.get("company_name", ""),
+        "city": lead.get("city", ""),
+        "visit_type": report.visit_type,
+        "notes": report.notes,
+        "outcome": report.outcome,
+        "next_action": report.next_action,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.daily_reports.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != '_id'}
+
+@api_router.put("/daily-reports/{report_id}")
+async def update_daily_report(report_id: str, report: DailyReportUpdate):
+    """Update a daily report"""
+    existing = await db.daily_reports.find_one({"id": report_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    update_data = {k: v for k, v in report.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.daily_reports.update_one({"id": report_id}, {"$set": update_data})
+    
+    updated = await db.daily_reports.find_one({"id": report_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/daily-reports/{report_id}")
+async def delete_daily_report(report_id: str):
+    """Delete a daily report"""
+    result = await db.daily_reports.delete_one({"id": report_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return {"message": "Report deleted successfully"}
+
+@api_router.get("/daily-reports/{report_id}/pdf")
+async def get_daily_report_pdf(report_id: str):
+    """Generate PDF for a daily report"""
+    report = await db.daily_reports.find_one({"id": report_id}, {"_id": 0})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_daily_report_pdf(report, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=daily_report_{report['date']}.pdf"}
+    )
 
 # Include the router in the main app
 app.include_router(api_router)

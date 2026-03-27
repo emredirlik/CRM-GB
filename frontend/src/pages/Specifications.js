@@ -458,55 +458,46 @@ const Specifications = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog */}
+      {/* Preview Dialog - PDF Viewer */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Specification Details</DialogTitle>
+            <DialogTitle className="font-['Manrope']">PDF Preview - {selectedSpec?.name || selectedSpec?.filename}</DialogTitle>
           </DialogHeader>
           {selectedSpec && (
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
-                <File className="w-10 h-10 text-red-600" />
-                <div>
-                  <h3 className="font-semibold">{selectedSpec.name || selectedSpec.filename}</h3>
-                  <p className="text-sm text-muted-foreground">{formatFileSize(selectedSpec.size)}</p>
-                </div>
+              {/* PDF Embed */}
+              <div className="w-full h-[60vh] border rounded-lg overflow-hidden bg-gray-100">
+                <iframe
+                  src={`${API}/specifications/${selectedSpec.id}/download#toolbar=1`}
+                  className="w-full h-full"
+                  title="PDF Preview"
+                />
               </div>
               
-              {selectedSpec.filename && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Original Filename</Label>
-                  <p className="text-sm">{selectedSpec.filename}</p>
+              {/* File Info */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <File className="w-6 h-6 text-red-600" />
+                  <div>
+                    <p className="font-medium text-sm">{selectedSpec.filename}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(selectedSpec.size)}</p>
+                  </div>
                 </div>
-              )}
-              
-              {selectedSpec.description && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Description</Label>
-                  <p className="text-sm">{selectedSpec.description}</p>
-                </div>
-              )}
-              
-              {selectedSpec.notes && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Notes</Label>
-                  <p className="text-sm">{selectedSpec.notes}</p>
-                </div>
-              )}
-              
-              {selectedSpec.created_at && (
-                <div>
-                  <Label className="text-xs text-muted-foreground">Uploaded</Label>
-                  <p className="text-sm">{new Date(selectedSpec.created_at).toLocaleString()}</p>
-                </div>
-              )}
+                {selectedSpec.description && (
+                  <p className="text-sm text-muted-foreground max-w-md truncate">{selectedSpec.description}</p>
+                )}
+              </div>
             </div>
           )}
           <DialogFooter>
+            <Button variant="outline" onClick={() => openEditDialog(selectedSpec)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit Details
+            </Button>
             <Button variant="outline" onClick={() => downloadPdf(selectedSpec?.id)}>
               <FileDown className="w-4 h-4 mr-2" />
-              Download PDF
+              Download
             </Button>
             <Button onClick={() => setIsPreviewOpen(false)}>Close</Button>
           </DialogFooter>

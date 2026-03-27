@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -172,6 +172,16 @@ const Leads = () => {
     }
   };
 
+  const openGoogleMaps = (lead) => {
+    const address = `${lead.address || ''} ${lead.city || ''} ${lead.country || ''}`.trim();
+    if (!address) {
+      toast.error('Hata', { description: 'Adres bilgisi yok' });
+      return;
+    }
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
+    window.open(url, '_blank');
+  };
+
   const filteredLeads = leads.filter(lead => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -251,6 +261,15 @@ const Leads = () => {
                       <td>{lead.country}</td>
                       <td>
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openGoogleMaps(lead)}
+                            title="Google Maps'te Aç"
+                            data-testid={`navigate-${lead.id}`}
+                          >
+                            <Navigation className="w-4 h-4 text-orange-600" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

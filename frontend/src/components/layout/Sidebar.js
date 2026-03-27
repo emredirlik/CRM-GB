@@ -15,7 +15,8 @@ import {
   Package,
   MapPin,
   LogOut,
-  ClipboardList
+  ClipboardList,
+  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -33,6 +34,7 @@ const Sidebar = () => {
     { path: '/products', icon: Package, label: 'products' },
     { path: '/specifications', icon: ClipboardList, label: 'specifications' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
+    { path: '/daily-reports', icon: Calendar, label: 'dailyReports' },
     { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/compose', icon: Mail, label: 'emailComposer' },

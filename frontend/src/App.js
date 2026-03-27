@@ -16,6 +16,7 @@ import EmailHistory from "@/pages/EmailHistory";
 import Settings from "@/pages/Settings";
 import RoutePlanner from "@/pages/RoutePlanner";
 import Specifications from "@/pages/Specifications";
+import DailyReports from "@/pages/DailyReports";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -90,6 +91,7 @@ function AppRoutes() {
                 <Route path="/history" element={<EmailHistory />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/route-planner" element={<RoutePlanner />} />
+                <Route path="/daily-reports" element={<DailyReports />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

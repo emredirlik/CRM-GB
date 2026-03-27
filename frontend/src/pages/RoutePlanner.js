@@ -95,24 +95,64 @@ const RoutePlanner = () => {
     setGeocoding(true);
     const results = {};
     
+    // Predefined coordinates for common cities to avoid rate limiting
+    const cityCoords = {
+      'Athens': { lat: 37.9838, lng: 23.7275 },
+      'Thessaloniki': { lat: 40.6401, lng: 22.9444 },
+      'Berlin': { lat: 52.5200, lng: 13.4050 },
+      'Munich': { lat: 48.1351, lng: 11.5820 },
+      'Hamburg': { lat: 53.5511, lng: 9.9937 },
+      'Istanbul': { lat: 41.0082, lng: 28.9784 },
+      'Ankara': { lat: 39.9334, lng: 32.8597 },
+      'Izmir': { lat: 38.4237, lng: 27.1428 },
+      'Amsterdam': { lat: 52.3676, lng: 4.9041 },
+      'Rotterdam': { lat: 51.9244, lng: 4.4777 },
+      'Warsaw': { lat: 52.2297, lng: 21.0122 },
+      'Krakow': { lat: 50.0647, lng: 19.9450 },
+      'Vienna': { lat: 48.2082, lng: 16.3738 },
+      'Paris': { lat: 48.8566, lng: 2.3522 },
+      'London': { lat: 51.5074, lng: -0.1278 },
+      'Rethymno': { lat: 35.3661, lng: 24.4765 },
+      'Koufalia': { lat: 40.7767, lng: 22.5750 },
+      'Oss': { lat: 51.7650, lng: 5.5183 },
+      'Peristeri': { lat: 38.0167, lng: 23.6833 },
+      'Metamorfosi': { lat: 38.0667, lng: 23.7667 },
+      'Rentis': { lat: 37.9667, lng: 23.6667 },
+      'Marousi': { lat: 38.0500, lng: 23.8000 },
+    };
+    
     for (const lead of leadsList) {
-      if (lead.city && lead.country) {
-        try {
-          const response = await axios.get(`${API}/geocode`, {
-            params: { city: lead.city, country: lead.country }
-          });
-          if (response.data && response.data.lat) {
-            // Add small random offset to prevent overlapping
-            results[lead.id] = {
-              lat: response.data.lat + (Math.random() - 0.5) * 0.01,
-              lng: response.data.lng + (Math.random() - 0.5) * 0.01
-            };
+      if (lead.city) {
+        // Check predefined coordinates first
+        const cityName = lead.city.split('(')[0].trim();
+        const predefined = Object.entries(cityCoords).find(([key]) => 
+          cityName.toLowerCase().includes(key.toLowerCase()) || 
+          key.toLowerCase().includes(cityName.toLowerCase())
+        );
+        
+        if (predefined) {
+          // Add small offset to prevent overlap
+          results[lead.id] = {
+            lat: predefined[1].lat + (Math.random() - 0.5) * 0.02,
+            lng: predefined[1].lng + (Math.random() - 0.5) * 0.02
+          };
+        } else if (lead.country) {
+          // Try API for unknown cities
+          try {
+            const response = await axios.get(`${API}/geocode`, {
+              params: { city: lead.city, country: lead.country }
+            });
+            if (response.data && response.data.lat) {
+              results[lead.id] = {
+                lat: response.data.lat + (Math.random() - 0.5) * 0.01,
+                lng: response.data.lng + (Math.random() - 0.5) * 0.01
+              };
+            }
+          } catch (error) {
+            console.error(`Geocoding failed for ${lead.company_name}:`, error);
           }
-        } catch (error) {
-          console.error(`Geocoding failed for ${lead.company_name}:`, error);
+          await new Promise(r => setTimeout(r, 500));
         }
-        // Small delay between requests
-        await new Promise(r => setTimeout(r, 300));
       }
     }
     
