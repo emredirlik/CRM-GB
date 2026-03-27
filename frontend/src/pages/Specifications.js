@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Search, FileText, FileDown, Mail, Eye, Upload, File, Loader2, X, FileUp } from 'lucide-react';
+import { Pencil, Trash2, Search, FileText, FileDown, Mail, Eye, Upload, File, Loader2, X, FileUp, Save, RefreshCw, Type, FileOutput } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -48,12 +49,19 @@ const Specifications = () => {
   const [selectedSpec, setSelectedSpec] = useState(null);
   const [saving, setSaving] = useState(false);
   
+  // Text editing states
+  const [editedText, setEditedText] = useState('');
+  const [loadingText, setLoadingText] = useState(false);
+  const [savingText, setSavingText] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [activeTab, setActiveTab] = useState('preview');
+  
   // File upload states
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
   
-  // Edit form
+  // Edit form (metadata)
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editNotes, setEditNotes] = useState('');
@@ -139,7 +147,12 @@ const Specifications = () => {
         
         // Add to specs list
         setSpecs(prev => [response.data, ...prev]);
-        toast.success(`Uploaded: ${file.name}`);
+        
+        if (response.data.has_text) {
+          toast.success(`Uploaded: ${file.name} - Text extracted successfully!`);
+        } else {
+          toast.success(`Uploaded: ${file.name}`);
+        }
       } catch (error) {
         console.error('Upload error:', error);
         toast.error(`Failed to upload ${file.name}`);
@@ -169,9 +182,22 @@ const Specifications = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const openPreview = (spec) => {
+  const openPreview = async (spec) => {
     setSelectedSpec(spec);
+    setActiveTab('preview');
     setIsPreviewOpen(true);
+    
+    // Load text content
+    setLoadingText(true);
+    try {
+      const response = await axios.get(`${API}/specifications/${spec.id}/text`);
+      setEditedText(response.data.edited_text || response.data.extracted_text || '');
+    } catch (error) {
+      console.error('Failed to load text:', error);
+      setEditedText('');
+    } finally {
+      setLoadingText(false);
+    }
   };
 
   const openEmailDialog = (spec) => {
@@ -206,6 +232,65 @@ const Specifications = () => {
       toast.error('Failed to update specification');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveText = async () => {
+    if (!selectedSpec) return;
+    
+    setSavingText(true);
+    try {
+      const formData = new FormData();
+      formData.append('edited_text', editedText);
+      
+      await axios.put(`${API}/specifications/${selectedSpec.id}/text`, formData);
+      toast.success('Text saved successfully!');
+    } catch (error) {
+      toast.error('Failed to save text');
+      console.error(error);
+    } finally {
+      setSavingText(false);
+    }
+  };
+
+  const handleGenerateEditedPdf = async () => {
+    if (!selectedSpec) return;
+    
+    // First save the text
+    setSavingText(true);
+    try {
+      const formData = new FormData();
+      formData.append('edited_text', editedText);
+      await axios.put(`${API}/specifications/${selectedSpec.id}/text`, formData);
+    } catch (error) {
+      toast.error('Failed to save text before generating PDF');
+      setSavingText(false);
+      return;
+    }
+    setSavingText(false);
+    
+    // Then generate PDF
+    setGeneratingPdf(true);
+    try {
+      const response = await axios.get(`${API}/specifications/${selectedSpec.id}/regenerate-pdf`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${selectedSpec.name || 'specification'}_edited.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Edited PDF downloaded!');
+    } catch (error) {
+      toast.error('Failed to generate PDF');
+      console.error(error);
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -285,7 +370,7 @@ const Specifications = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Product Specifications</h1>
-          <p className="text-muted-foreground mt-1">{specs.length} PDF documents</p>
+          <p className="text-muted-foreground mt-1">{specs.length} PDF documents - Upload, Edit & Share</p>
         </div>
       </div>
 
@@ -315,14 +400,15 @@ const Specifications = () => {
             {uploadingFile ? (
               <div className="flex items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-                <span className="text-lg">Uploading...</span>
+                <span className="text-lg">Uploading & Extracting Text...</span>
               </div>
             ) : (
               <>
                 <FileUp className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                 <h3 className="text-xl font-semibold mb-2">Upload PDF Specifications</h3>
                 <p className="text-muted-foreground mb-4">
-                  Drag and drop PDF files here, or click to browse
+                  Drag and drop PDF files here, or click to browse.<br />
+                  <span className="text-sm text-orange-600 font-medium">Text will be automatically extracted for editing!</span>
                 </p>
                 <Button
                   variant="outline"
@@ -378,6 +464,13 @@ const Specifications = () => {
                   </div>
                 </div>
                 
+                {spec.has_text && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-700 mb-2">
+                    <Type className="w-3 h-3 mr-1" />
+                    Editable
+                  </Badge>
+                )}
+                
                 {spec.description && (
                   <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{spec.description}</p>
                 )}
@@ -389,10 +482,10 @@ const Specifications = () => {
                 )}
                 
                 <div className="flex items-center justify-end gap-1 pt-3 border-t">
-                  <Button variant="ghost" size="sm" onClick={() => openPreview(spec)} title="Preview Info">
+                  <Button variant="ghost" size="sm" onClick={() => openPreview(spec)} title="View & Edit">
                     <Eye className="w-4 h-4 text-blue-600" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => downloadPdf(spec.id)} title="Download PDF">
+                  <Button variant="ghost" size="sm" onClick={() => downloadPdf(spec.id)} title="Download Original">
                     <FileDown className="w-4 h-4 text-green-600" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => openEmailDialog(spec)} title="Send Email">
@@ -411,11 +504,11 @@ const Specifications = () => {
         </div>
       )}
 
-      {/* Edit Dialog */}
+      {/* Edit Metadata Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Edit Specification</DialogTitle>
+            <DialogTitle className="font-['Manrope']">Edit Specification Details</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -458,46 +551,128 @@ const Specifications = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog - PDF Viewer */}
+      {/* Preview & Edit Dialog - Full Screen with Tabs */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle className="font-['Manrope']">PDF Preview - {selectedSpec?.name || selectedSpec?.filename}</DialogTitle>
+        <DialogContent className="max-w-6xl max-h-[95vh] p-0">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle className="font-['Manrope'] flex items-center gap-2">
+              <File className="w-5 h-5 text-red-600" />
+              {selectedSpec?.name || selectedSpec?.filename}
+            </DialogTitle>
           </DialogHeader>
-          {selectedSpec && (
-            <div className="space-y-4">
-              {/* PDF Embed */}
-              <div className="w-full h-[60vh] border rounded-lg overflow-hidden bg-gray-100">
-                <iframe
-                  src={`${API}/specifications/${selectedSpec.id}/download#toolbar=1`}
-                  className="w-full h-full"
-                  title="PDF Preview"
-                />
-              </div>
-              
-              {/* File Info */}
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <File className="w-6 h-6 text-red-600" />
-                  <div>
-                    <p className="font-medium text-sm">{selectedSpec.filename}</p>
-                    <p className="text-xs text-muted-foreground">{formatFileSize(selectedSpec.size)}</p>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+            <TabsList className="mx-4">
+              <TabsTrigger value="preview" className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                PDF Preview
+              </TabsTrigger>
+              <TabsTrigger value="edit" className="flex items-center gap-2">
+                <Type className="w-4 h-4" />
+                Edit Text Content
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="preview" className="px-4 pb-4 mt-0">
+              {selectedSpec && (
+                <div className="space-y-4">
+                  {/* PDF Embed */}
+                  <div className="w-full h-[55vh] border rounded-lg overflow-hidden bg-gray-100">
+                    <iframe
+                      src={`${API}/specifications/${selectedSpec.id}/download#toolbar=1`}
+                      className="w-full h-full"
+                      title="PDF Preview"
+                    />
+                  </div>
+                  
+                  {/* File Info */}
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <File className="w-6 h-6 text-red-600" />
+                      <div>
+                        <p className="font-medium text-sm">{selectedSpec.filename}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(selectedSpec.size)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => downloadPdf(selectedSpec?.id)}>
+                        <FileDown className="w-4 h-4 mr-2" />
+                        Download Original
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                {selectedSpec.description && (
-                  <p className="text-sm text-muted-foreground max-w-md truncate">{selectedSpec.description}</p>
-                )}
-              </div>
-            </div>
-          )}
-          <DialogFooter>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="edit" className="px-4 pb-4 mt-0">
+              {selectedSpec && (
+                <div className="space-y-4">
+                  {loadingText ? (
+                    <div className="flex items-center justify-center h-[55vh] bg-muted/30 rounded-lg">
+                      <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                      <span className="ml-3">Loading extracted text...</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Info Banner */}
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                        <strong>Edit Mode:</strong> Modify the text below and generate a new PDF with your changes. 
+                        The original PDF is preserved.
+                      </div>
+                      
+                      {/* Text Editor */}
+                      <Textarea
+                        value={editedText}
+                        onChange={(e) => setEditedText(e.target.value)}
+                        className="h-[45vh] font-mono text-sm resize-none"
+                        placeholder="No text could be extracted from this PDF. The PDF might be image-based or encrypted."
+                        data-testid="pdf-text-editor"
+                      />
+                      
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {editedText.length} characters • "---PAGE BREAK---" marks page separations
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            onClick={handleSaveText}
+                            disabled={savingText}
+                          >
+                            {savingText ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4 mr-2" />
+                            )}
+                            Save Text
+                          </Button>
+                          <Button 
+                            onClick={handleGenerateEditedPdf}
+                            disabled={generatingPdf || !editedText}
+                            className="bg-orange-600 hover:bg-orange-700"
+                          >
+                            {generatingPdf ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <FileOutput className="w-4 h-4 mr-2" />
+                            )}
+                            Generate Edited PDF
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+          
+          <DialogFooter className="p-4 pt-0">
             <Button variant="outline" onClick={() => openEditDialog(selectedSpec)}>
               <Pencil className="w-4 h-4 mr-2" />
               Edit Details
-            </Button>
-            <Button variant="outline" onClick={() => downloadPdf(selectedSpec?.id)}>
-              <FileDown className="w-4 h-4 mr-2" />
-              Download
             </Button>
             <Button onClick={() => setIsPreviewOpen(false)}>Close</Button>
           </DialogFooter>

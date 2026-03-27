@@ -898,9 +898,83 @@ async def geocode_address(city: str, country: str):
         logger.error(f"Geocoding error: {e}")
     return None
 
+# Predefined city coordinates for fast geocoding without API calls
+CITY_COORDS = {
+    # Germany
+    'berlin': (52.5200, 13.4050),
+    'munich': (48.1351, 11.5820),
+    'hamburg': (53.5511, 9.9937),
+    'frankfurt': (50.1109, 8.6821),
+    'cologne': (50.9375, 6.9603),
+    'düsseldorf': (51.2277, 6.7735),
+    'stuttgart': (48.7758, 9.1829),
+    # Turkey
+    'istanbul': (41.0082, 28.9784),
+    'ankara': (39.9334, 32.8597),
+    'izmir': (38.4237, 27.1428),
+    'bursa': (40.1885, 29.0610),
+    'antalya': (36.8969, 30.7133),
+    # Greece
+    'athens': (37.9838, 23.7275),
+    'thessaloniki': (40.6401, 22.9444),
+    'piraeus': (37.9425, 23.6469),
+    'rethymno': (35.3661, 24.4765),
+    'heraklion': (35.3387, 25.1442),
+    # Netherlands
+    'amsterdam': (52.3676, 4.9041),
+    'rotterdam': (51.9244, 4.4777),
+    'the hague': (52.0705, 4.3007),
+    'oss': (51.7650, 5.5183),
+    # Poland
+    'warsaw': (52.2297, 21.0122),
+    'krakow': (50.0647, 19.9450),
+    'gdansk': (54.3520, 18.6466),
+    # Austria
+    'vienna': (48.2082, 16.3738),
+    'salzburg': (47.8095, 13.0550),
+    # France
+    'paris': (48.8566, 2.3522),
+    'lyon': (45.7640, 4.8357),
+    'marseille': (43.2965, 5.3698),
+    # UK
+    'london': (51.5074, -0.1278),
+    'manchester': (53.4808, -2.2426),
+    # Belgium
+    'brussels': (50.8503, 4.3517),
+    'antwerp': (51.2213, 4.4051),
+    # Switzerland
+    'zurich': (47.3769, 8.5417),
+    'geneva': (46.2044, 6.1432),
+}
+
+def get_predefined_coords(query: str):
+    """Check if we have predefined coordinates for a city"""
+    query_lower = query.lower().strip()
+    for city, coords in CITY_COORDS.items():
+        if city in query_lower or query_lower.startswith(city):
+            return {"lat": coords[0], "lng": coords[1], "display_name": query}
+    return None
+
 @api_router.get("/geocode/search")
 async def search_address(q: str):
     """Search for addresses and return autocomplete suggestions"""
+    if len(q) < 3:
+        return []
+    
+    # Check predefined coordinates first
+    predefined = get_predefined_coords(q)
+    if predefined:
+        return [{
+            "lat": str(predefined["lat"]),
+            "lon": str(predefined["lng"]),
+            "display_name": f"{q.title()} (cached)",
+            "type": "city"
+        }]
+    
+    # Add small delay to avoid rate limiting
+    import asyncio
+    await asyncio.sleep(0.3)
+    
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -911,19 +985,51 @@ async def search_address(q: str):
                     "limit": 5,
                     "addressdetails": 1
                 },
-                headers={"User-Agent": "GewurzbergCRM/1.0"},
+                headers={
+                    "User-Agent": "GewurzbergCRM/1.0 (contact@gewurzberg.de)",
+                    "Accept-Language": "en,de,tr"
+                },
                 timeout=15.0
             )
             if response.status_code == 200:
-                return response.json()
+                results = response.json()
+                # Add predefined results for common cities if API returns empty
+                if not results:
+                    predefined = get_predefined_coords(q)
+                    if predefined:
+                        return [{
+                            "lat": str(predefined["lat"]),
+                            "lon": str(predefined["lng"]),
+                            "display_name": f"{q.title()}",
+                            "type": "city"
+                        }]
+                return results
             elif response.status_code == 429:
-                logger.warning("Nominatim rate limit reached")
+                logger.warning("Nominatim rate limit reached, using fallback")
+                # Return predefined if available
+                predefined = get_predefined_coords(q)
+                if predefined:
+                    return [{
+                        "lat": str(predefined["lat"]),
+                        "lon": str(predefined["lng"]),
+                        "display_name": f"{q.title()} (fallback)",
+                        "type": "city"
+                    }]
                 return []
             else:
                 logger.error(f"Nominatim error: {response.status_code}")
                 return []
     except Exception as e:
         logger.error(f"Address search error: {e}")
+        # Return predefined if available
+        predefined = get_predefined_coords(q)
+        if predefined:
+            return [{
+                "lat": str(predefined["lat"]),
+                "lon": str(predefined["lng"]),
+                "display_name": f"{q.title()} (fallback)",
+                "type": "city"
+            }]
         return []
 
 @api_router.post("/geocode/batch")
@@ -1265,16 +1371,44 @@ async def delete_specification(spec_id: str):
         raise HTTPException(status_code=404, detail="Specification not found")
     return {"message": "Specification deleted successfully"}
 
+def extract_text_from_pdf(pdf_bytes: bytes) -> str:
+    """Extract text from PDF using pdfplumber"""
+    import pdfplumber
+    text_parts = []
+    
+    try:
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+    except Exception as e:
+        logger.error(f"PDF text extraction error: {e}")
+        # Fallback to PyMuPDF
+        try:
+            import fitz
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            for page in doc:
+                text_parts.append(page.get_text())
+            doc.close()
+        except Exception as e2:
+            logger.error(f"PyMuPDF fallback error: {e2}")
+    
+    return "\n\n---PAGE BREAK---\n\n".join(text_parts)
+
 @api_router.post("/specifications/upload-pdf")
 async def upload_specification_pdf(file: UploadFile = File(...)):
-    """Upload a PDF specification document"""
+    """Upload a PDF specification document and extract text for editing"""
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
     content = await file.read()
     spec_id = str(uuid.uuid4())
     
-    # Store specification with PDF data
+    # Extract text from PDF for editing
+    extracted_text = extract_text_from_pdf(content)
+    
+    # Store specification with PDF data and extracted text
     doc = {
         "id": spec_id,
         "filename": file.filename,
@@ -1284,11 +1418,130 @@ async def upload_specification_pdf(file: UploadFile = File(...)):
         "content_type": "application/pdf",
         "size": len(content),
         "pdf_data": base64.b64encode(content).decode('utf-8'),
+        "extracted_text": extracted_text,
+        "edited_text": extracted_text,  # Initially same as extracted
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.specifications.insert_one(doc)
     
-    return {k: v for k, v in doc.items() if k not in ['_id', 'pdf_data']}
+    return {
+        **{k: v for k, v in doc.items() if k not in ['_id', 'pdf_data']},
+        "has_text": bool(extracted_text)
+    }
+
+@api_router.get("/specifications/{spec_id}/text")
+async def get_specification_text(spec_id: str):
+    """Get extracted/edited text from a specification"""
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0, "pdf_data": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    return {
+        "id": spec_id,
+        "name": spec.get("name", ""),
+        "filename": spec.get("filename", ""),
+        "extracted_text": spec.get("extracted_text", ""),
+        "edited_text": spec.get("edited_text", spec.get("extracted_text", "")),
+        "has_original_pdf": bool(spec.get("pdf_data"))
+    }
+
+@api_router.put("/specifications/{spec_id}/text")
+async def update_specification_text(spec_id: str, edited_text: str = Form(...)):
+    """Update the edited text of a specification"""
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    await db.specifications.update_one(
+        {"id": spec_id},
+        {"$set": {
+            "edited_text": edited_text,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"message": "Text updated successfully", "id": spec_id}
+
+@api_router.get("/specifications/{spec_id}/regenerate-pdf")
+async def regenerate_specification_pdf(spec_id: str):
+    """Generate a new PDF from the edited text"""
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    edited_text = spec.get("edited_text", spec.get("extracted_text", ""))
+    
+    # Generate PDF from edited text using ReportLab
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import cm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Register DejaVu font for UTF-8 support
+    try:
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        font_name = 'DejaVu'
+        font_bold = 'DejaVu-Bold'
+    except:
+        font_name = 'Helvetica'
+        font_bold = 'Helvetica-Bold'
+    
+    y = height - 2*cm
+    
+    # Title
+    c.setFont(font_bold, 14)
+    c.drawString(2*cm, y, spec.get("name", "Specification"))
+    y -= 1*cm
+    
+    # Content
+    c.setFont(font_name, 10)
+    lines = edited_text.split('\n')
+    
+    for line in lines:
+        if line.strip() == "---PAGE BREAK---":
+            c.showPage()
+            y = height - 2*cm
+            c.setFont(font_name, 10)
+            continue
+        
+        # Word wrap long lines
+        while len(line) > 90:
+            c.drawString(2*cm, y, line[:90])
+            line = line[90:]
+            y -= 0.5*cm
+            if y < 2*cm:
+                c.showPage()
+                y = height - 2*cm
+                c.setFont(font_name, 10)
+        
+        c.drawString(2*cm, y, line)
+        y -= 0.5*cm
+        
+        if y < 2*cm:
+            c.showPage()
+            y = height - 2*cm
+            c.setFont(font_name, 10)
+    
+    # Footer
+    c.setFont(font_name, 8)
+    c.drawString(2*cm, 1*cm, f"Generated: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    
+    c.save()
+    buffer.seek(0)
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={spec.get('name', 'specification')}_edited.pdf"
+        }
+    )
 
 @api_router.get("/specifications/{spec_id}/download")
 async def download_specification_pdf(spec_id: str):
@@ -2481,26 +2734,55 @@ class AgendaTask(BaseModel):
     title: str
     due_date: Optional[str] = None
     completed: bool = False
+    # Visit Planning fields
+    event_type: Optional[str] = "task"  # task, visit, meeting, call, delivery
+    lead_id: Optional[str] = None
+    lead_name: Optional[str] = None
+    company_name: Optional[str] = None
+    time: Optional[str] = None  # HH:MM format
+    notes: Optional[str] = None
 
 class AgendaTaskUpdate(BaseModel):
     title: Optional[str] = None
     due_date: Optional[str] = None
     completed: Optional[bool] = None
+    event_type: Optional[str] = None
+    lead_id: Optional[str] = None
+    lead_name: Optional[str] = None
+    company_name: Optional[str] = None
+    time: Optional[str] = None
+    notes: Optional[str] = None
 
 @api_router.get("/agenda")
 async def get_agenda():
     """Get all agenda tasks"""
-    tasks = await db.agenda.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    tasks = await db.agenda.find({}, {"_id": 0}).sort("due_date", 1).to_list(500)
     return tasks
 
 @api_router.post("/agenda")
 async def create_agenda_task(task: AgendaTask):
-    """Create a new agenda task"""
+    """Create a new agenda task or visit"""
+    # If lead_id provided, fetch lead details
+    lead_name = task.lead_name
+    company_name = task.company_name
+    
+    if task.lead_id and not task.lead_name:
+        lead = await db.leads.find_one({"id": task.lead_id}, {"_id": 0})
+        if lead:
+            lead_name = f"{lead.get('first_name', '')} {lead.get('last_name', '')}"
+            company_name = lead.get('company_name', '')
+    
     doc = {
         "id": str(uuid.uuid4()),
         "title": task.title,
         "due_date": task.due_date,
         "completed": task.completed,
+        "event_type": task.event_type or "task",
+        "lead_id": task.lead_id,
+        "lead_name": lead_name,
+        "company_name": company_name,
+        "time": task.time,
+        "notes": task.notes,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.agenda.insert_one(doc)
