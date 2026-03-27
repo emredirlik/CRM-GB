@@ -776,45 +776,68 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
 
 
 
-def generate_combined_daily_report_pdf(reports: list, date: str, company_settings: dict = None) -> bytes:
-    """Generate a combined PDF for all daily reports on a specific date - Modern Design"""
+def generate_combined_daily_report_pdf(reports: list, date: str, company_settings: dict = None, lang: str = 'en') -> bytes:
+    """Generate a combined PDF for all daily reports on a specific date - Clean Minimal Design"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    # Language-specific labels
+    labels = {
+        'en': {
+            'title': 'Daily Activity Report',
+            'total_visits': 'Total Visits',
+            'meeting': 'Meeting', 'delivery': 'Delivery', 'support': 'Support',
+            'sales': 'Sales', 'follow_up': 'Follow-up', 'other': 'Other',
+            'customer': 'Customer', 'city': 'City', 'notes': 'Notes',
+            'outcome': 'Outcome', 'next_step': 'Next Step', 'page': 'Page'
+        },
+        'tr': {
+            'title': 'Günlük Aktivite Raporu',
+            'total_visits': 'Toplam Ziyaret',
+            'meeting': 'Toplantı', 'delivery': 'Teslimat', 'support': 'Destek',
+            'sales': 'Satış', 'follow_up': 'Takip', 'other': 'Diğer',
+            'customer': 'Müşteri', 'city': 'Şehir', 'notes': 'Notlar',
+            'outcome': 'Sonuç', 'next_step': 'Sonraki Adım', 'page': 'Sayfa'
+        },
+        'de': {
+            'title': 'Tagesaktivitätsbericht',
+            'total_visits': 'Gesamtbesuche',
+            'meeting': 'Besprechung', 'delivery': 'Lieferung', 'support': 'Support',
+            'sales': 'Verkauf', 'follow_up': 'Nachverfolgung', 'other': 'Sonstige',
+            'customer': 'Kunde', 'city': 'Stadt', 'notes': 'Notizen',
+            'outcome': 'Ergebnis', 'next_step': 'Nächster Schritt', 'page': 'Seite'
+        },
+        'pl': {
+            'title': 'Raport dzienny',
+            'total_visits': 'Łączne wizyty',
+            'meeting': 'Spotkanie', 'delivery': 'Dostawa', 'support': 'Wsparcie',
+            'sales': 'Sprzedaż', 'follow_up': 'Kontynuacja', 'other': 'Inne',
+            'customer': 'Klient', 'city': 'Miasto', 'notes': 'Notatki',
+            'outcome': 'Wynik', 'next_step': 'Następny krok', 'page': 'Strona'
+        }
+    }
+    L = labels.get(lang, labels['en'])
     
-    # Header with gradient-like effect
-    c.setFillColor(HexColor('#1a1a2e'))
-    c.rect(0, height - 5*cm, width, 5*cm, fill=True, stroke=False)
+    # Clean minimal header
+    c.setFillColor(HexColor('#374151'))
+    c.setFont(FONT_BOLD, 22)
+    c.drawString(2*cm, height - 2*cm, L['title'])
     
-    # Accent bar
-    c.setFillColor(ACCENT_COLOR)
-    c.rect(0, height - 5.2*cm, width, 0.2*cm, fill=True, stroke=False)
+    # Date
+    c.setFillColor(HexColor('#6b7280'))
+    c.setFont(FONT_REGULAR, 12)
+    c.drawString(2*cm, height - 2.8*cm, date)
     
-    # Company logo area
-    c.setFillColor(white)
-    c.setFont(FONT_BOLD, 28)
-    c.drawString(2*cm, height - 2.5*cm, company_name)
+    # Horizontal line
+    c.setStrokeColor(HexColor('#e5e7eb'))
+    c.setLineWidth(1)
+    c.line(2*cm, height - 3.2*cm, width - 2*cm, height - 3.2*cm)
     
-    # Document title
-    c.setFont(FONT_REGULAR, 14)
-    c.drawString(2*cm, height - 3.5*cm, "GÜNLÜK AKTİVİTE RAPORU")
-    
-    # Date badge
-    c.setFillColor(ACCENT_COLOR)
-    c.roundRect(width - 6*cm, height - 3.5*cm, 4*cm, 1.2*cm, 5, fill=True, stroke=False)
-    c.setFillColor(white)
-    c.setFont(FONT_BOLD, 12)
-    c.drawCentredString(width - 4*cm, height - 3.1*cm, date)
-    
-    # Summary stats
-    c.setFillColor(HexColor('#f8f9fa'))
-    c.roundRect(1.5*cm, height - 7.5*cm, width - 3*cm, 1.8*cm, 5, fill=True, stroke=False)
-    
-    c.setFillColor(PRIMARY_COLOR)
+    # Summary stats in a simple row
+    c.setFillColor(HexColor('#374151'))
     c.setFont(FONT_BOLD, 11)
-    c.drawString(2*cm, height - 6.5*cm, f"Toplam Ziyaret: {len(reports)}")
+    c.drawString(2*cm, height - 4*cm, f"{L['total_visits']}: {len(reports)}")
     
     # Count by type
     visit_counts = {}
@@ -822,40 +845,41 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
         vtype = r.get('visit_type', 'other')
         visit_counts[vtype] = visit_counts.get(vtype, 0) + 1
     
-    type_labels = {'meeting': 'Toplantı', 'delivery': 'Teslimat', 'support': 'Destek', 
-                   'sales': 'Satış', 'follow_up': 'Takip', 'other': 'Diğer'}
-    
     x_pos = 7*cm
     for vtype, count in visit_counts.items():
-        label = type_labels.get(vtype, vtype)
-        c.setFillColor(TEXT_MUTED)
-        c.setFont(FONT_REGULAR, 9)
-        c.drawString(x_pos, height - 6.5*cm, f"{label}: {count}")
-        x_pos += 3*cm
+        label = L.get(vtype, vtype)
+        c.setFillColor(HexColor('#6b7280'))
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(x_pos, height - 4*cm, f"{label}: {count}")
+        x_pos += 3.5*cm
     
-    y = height - 9*cm
+    y = height - 5.5*cm
+    page_num = 1
     
     # Reports
     for i, report in enumerate(reports):
         if y < 4*cm:
+            # Footer with page number
+            c.setFillColor(HexColor('#9ca3af'))
+            c.setFont(FONT_REGULAR, 9)
+            c.drawCentredString(width / 2, 1.5*cm, f"{L['page']} {page_num}")
+            
             c.showPage()
-            # Mini header on new pages
-            c.setFillColor(PRIMARY_COLOR)
-            c.rect(0, height - 2*cm, width, 2*cm, fill=True, stroke=False)
-            c.setFillColor(white)
-            c.setFont(FONT_BOLD, 12)
-            c.drawString(2*cm, height - 1.3*cm, f"{company_name} - Günlük Rapor {date}")
-            y = height - 4*cm
+            page_num += 1
+            # Simple header on new pages
+            c.setFillColor(HexColor('#374151'))
+            c.setFont(FONT_BOLD, 14)
+            c.drawString(2*cm, height - 1.5*cm, f"{L['title']} - {date}")
+            c.setStrokeColor(HexColor('#e5e7eb'))
+            c.line(2*cm, height - 2*cm, width - 2*cm, height - 2*cm)
+            y = height - 3.5*cm
         
-        # Report card
-        card_height = 3.5*cm
+        # Report card - clean minimal style
+        card_height = 3*cm
         
-        # Card background with subtle shadow
-        c.setFillColor(HexColor('#f0f0f0'))
-        c.roundRect(1.6*cm, y - card_height - 0.1*cm, width - 3.2*cm, card_height, 5, fill=True, stroke=False)
-        
-        c.setFillColor(white)
-        c.roundRect(1.5*cm, y - card_height, width - 3*cm, card_height, 5, fill=True, stroke=False)
+        # Light background
+        c.setFillColor(HexColor('#f9fafb'))
+        c.roundRect(2*cm, y - card_height, width - 4*cm, card_height, 3, fill=True, stroke=False)
         
         # Left accent bar based on visit type
         type_colors = {
@@ -866,55 +890,54 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             'follow_up': HexColor('#eab308'),
             'other': HexColor('#6b7280')
         }
-        c.setFillColor(type_colors.get(report.get('visit_type', 'other'), TEXT_MUTED))
-        c.rect(1.5*cm, y - card_height, 0.3*cm, card_height, fill=True, stroke=False)
+        c.setFillColor(type_colors.get(report.get('visit_type', 'other'), HexColor('#6b7280')))
+        c.rect(2*cm, y - card_height, 0.2*cm, card_height, fill=True, stroke=False)
         
         # Card number
-        c.setFillColor(PRIMARY_COLOR)
-        c.setFont(FONT_BOLD, 16)
-        c.drawString(2.2*cm, y - 1*cm, f"#{i+1}")
+        c.setFillColor(HexColor('#374151'))
+        c.setFont(FONT_BOLD, 12)
+        c.drawString(2.5*cm, y - 0.8*cm, f"#{i+1}")
         
         # Company name
-        c.setFillColor(black)
-        c.setFont(FONT_BOLD, 12)
-        c.drawString(3.5*cm, y - 1*cm, report.get('company_name', 'Müşteri'))
+        c.setFillColor(HexColor('#111827'))
+        c.setFont(FONT_BOLD, 11)
+        c.drawString(3.3*cm, y - 0.8*cm, report.get('company_name', L['customer']))
         
         # Visit type badge
         vtype = report.get('visit_type', 'other')
-        c.setFillColor(type_colors.get(vtype, TEXT_MUTED))
-        badge_text = type_labels.get(vtype, vtype)
-        c.roundRect(width - 5*cm, y - 1.3*cm, 3*cm, 0.8*cm, 3, fill=True, stroke=False)
+        c.setFillColor(type_colors.get(vtype, HexColor('#6b7280')))
+        badge_text = L.get(vtype, vtype)
+        c.roundRect(width - 5.5*cm, y - 1.1*cm, 3*cm, 0.7*cm, 3, fill=True, stroke=False)
         c.setFillColor(white)
         c.setFont(FONT_REGULAR, 8)
-        c.drawCentredString(width - 3.5*cm, y - 1*cm, badge_text)
+        c.drawCentredString(width - 4*cm, y - 0.8*cm, badge_text)
         
         # City
-        c.setFillColor(TEXT_MUTED)
+        c.setFillColor(HexColor('#6b7280'))
         c.setFont(FONT_REGULAR, 9)
-        c.drawString(3.5*cm, y - 1.8*cm, f"📍 {report.get('city', 'N/A')}")
+        c.drawString(3.3*cm, y - 1.5*cm, f"{report.get('city', 'N/A')}")
         
         # Notes (truncated)
         notes = report.get('notes', '')[:100]
         if len(report.get('notes', '')) > 100:
             notes += '...'
-        c.setFillColor(black)
+        c.setFillColor(HexColor('#374151'))
         c.setFont(FONT_REGULAR, 9)
-        c.drawString(2.2*cm, y - 2.6*cm, notes)
+        c.drawString(2.5*cm, y - 2.2*cm, notes)
         
         # Outcome if exists
         if report.get('outcome'):
-            c.setFillColor(SUCCESS_COLOR)
+            c.setFillColor(HexColor('#059669'))
             c.setFont(FONT_REGULAR, 8)
-            c.drawString(2.2*cm, y - 3.2*cm, f"✓ {report.get('outcome', '')[:50]}")
+            outcome_text = report.get('outcome', '')[:50]
+            c.drawString(2.5*cm, y - 2.7*cm, f"✓ {outcome_text}")
         
-        y -= (card_height + 0.5*cm)
+        y -= (card_height + 0.4*cm)
     
-    # Footer
-    c.setFillColor(TEXT_MUTED)
+    # Footer - clean
+    c.setFillColor(HexColor('#9ca3af'))
     c.setFont(FONT_REGULAR, 8)
-    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
-    c.drawCentredString(width/2, 1.5*cm, f"Sayfa 1")
-    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    c.drawCentredString(width/2, 1.5*cm, f"{L['page']} {page_num}")
     
     c.save()
     buffer.seek(0)

@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase } from 'lucide-react';
+import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { tr, de, enUS, pl } from 'date-fns/locale';
 import axios from 'axios';
@@ -70,6 +70,10 @@ const Dashboard = () => {
     notes: ''
   });
   const [saving, setSaving] = useState(false);
+  
+  // Sales Forecast
+  const [forecast, setForecast] = useState(null);
+  const [loadingForecast, setLoadingForecast] = useState(false);
 
   const periods = [
     { value: 'all', label: 'All' },
@@ -92,6 +96,7 @@ const Dashboard = () => {
     fetchStats(period);
     fetchEvents();
     fetchLeads();
+    fetchForecast();
   }, [period]);
 
   const fetchStats = async (selectedPeriod) => {
@@ -103,6 +108,18 @@ const Dashboard = () => {
       console.error('Failed to fetch stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchForecast = async () => {
+    setLoadingForecast(true);
+    try {
+      const response = await axios.get(`${API}/sales/forecast`);
+      setForecast(response.data);
+    } catch (error) {
+      console.error('Failed to fetch forecast:', error);
+    } finally {
+      setLoadingForecast(false);
     }
   };
 
@@ -337,6 +354,91 @@ const Dashboard = () => {
               </Badge>
             </div>
             <Progress value={revenueProgress} className="h-3" />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Sales Forecast */}
+      {forecast && forecast.forecast && (
+        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              AI Sales Forecast
+              <Badge variant="outline" className="ml-2 text-xs">
+                {forecast.forecast.confidence}% confidence
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Prediction */}
+              <div className="p-4 bg-white rounded-lg border border-purple-100">
+                <p className="text-sm text-muted-foreground mb-1">{forecast.forecast.next_month_name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-2xl font-bold text-purple-700">
+                    {formatCurrency(forecast.forecast.predicted_revenue)}
+                  </p>
+                  {forecast.forecast.trend === 'up' ? (
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                  ) : forecast.forecast.trend === 'down' ? (
+                    <TrendingDown className="w-5 h-5 text-red-500" />
+                  ) : (
+                    <ArrowRight className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ~{forecast.forecast.predicted_orders} orders expected
+                </p>
+              </div>
+              
+              {/* Summary */}
+              <div className="p-4 bg-white rounded-lg border border-purple-100">
+                <p className="text-sm text-muted-foreground mb-1">Monthly Average</p>
+                <p className="text-xl font-semibold text-gray-700">
+                  {formatCurrency(forecast.summary?.avg_monthly_revenue || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {forecast.summary?.avg_monthly_orders || 0} orders/month
+                </p>
+              </div>
+              
+              {/* Total */}
+              <div className="p-4 bg-white rounded-lg border border-purple-100">
+                <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
+                <p className="text-xl font-semibold text-gray-700">
+                  {formatCurrency(forecast.summary?.total_revenue || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {forecast.summary?.total_orders || 0} orders total
+                </p>
+              </div>
+            </div>
+            
+            {/* Mini Chart - Historical Data */}
+            {forecast.historical_data && forecast.historical_data.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-purple-100">
+                <p className="text-xs text-muted-foreground mb-2">Revenue History (Last 6 months)</p>
+                <div className="flex items-end gap-1 h-16">
+                  {forecast.historical_data.slice(-6).map((month, idx) => {
+                    const maxRev = Math.max(...forecast.historical_data.slice(-6).map(m => m.revenue));
+                    const height = maxRev > 0 ? (month.revenue / maxRev) * 100 : 0;
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center">
+                        <div 
+                          className="w-full bg-purple-400 rounded-t transition-all hover:bg-purple-500"
+                          style={{ height: `${Math.max(height, 5)}%` }}
+                          title={`${month.month}: ${formatCurrency(month.revenue)}`}
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {month.month.slice(5)}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

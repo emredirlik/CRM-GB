@@ -2902,20 +2902,157 @@ async def get_daily_report_pdf(report_id: str):
     )
 
 @api_router.get("/daily-reports/date/{date}/pdf")
-async def get_daily_reports_by_date_pdf(date: str):
+async def get_daily_reports_by_date_pdf(date: str, lang: str = 'en'):
     """Generate combined PDF for all reports on a specific date"""
     reports = await db.daily_reports.find({"date": date}, {"_id": 0}).to_list(100)
     if not reports:
         raise HTTPException(status_code=404, detail="No reports found for this date")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_combined_daily_report_pdf(reports, date, settings)
+    pdf_content = generate_combined_daily_report_pdf(reports, date, settings, lang)
     
     return Response(
         content=pdf_content,
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=daily_reports_{date}.pdf"}
     )
+
+class DailyReportEmailRequest(BaseModel):
+    to_email: str
+    subject: Optional[str] = None
+    message: Optional[str] = None
+
+@api_router.post("/daily-reports/date/{date}/email")
+async def email_daily_reports(date: str, request: DailyReportEmailRequest):
+    """Send daily reports PDF via email"""
+    reports = await db.daily_reports.find({"date": date}, {"_id": 0}).to_list(100)
+    if not reports:
+        raise HTTPException(status_code=404, detail="No reports found for this date")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_combined_daily_report_pdf(reports, date, settings, 'en')
+    
+    # In production, integrate with email service (SendGrid, etc.)
+    # For now, we'll log and return success
+    logger.info(f"Email would be sent to {request.to_email} with {len(reports)} reports for {date}")
+    
+    # Store email record
+    await db.email_log.insert_one({
+        "id": str(uuid.uuid4()),
+        "type": "daily_reports",
+        "to_email": request.to_email,
+        "subject": request.subject or f"Daily Reports - {date}",
+        "date": date,
+        "report_count": len(reports),
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "status": "logged"
+    })
+    
+    return {"message": "Email logged successfully", "report_count": len(reports)}
+
+# ===================== AI SALES FORECAST =====================
+
+@api_router.get("/sales/forecast")
+async def get_sales_forecast():
+    """AI-powered sales forecast based on historical orders"""
+    from datetime import timedelta
+    from calendar import monthrange
+    
+    # Get historical orders
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    
+    if not orders:
+        return {
+            "forecast": None,
+            "message": "Not enough historical data for forecast",
+            "historical_data": [],
+            "next_month_prediction": 0
+        }
+    
+    # Group orders by month
+    monthly_data = {}
+    for order in orders:
+        created = order.get('created_at', '')
+        if created:
+            try:
+                if isinstance(created, str):
+                    dt = datetime.fromisoformat(created.replace('Z', '+00:00'))
+                else:
+                    dt = created
+                month_key = dt.strftime('%Y-%m')
+                
+                if month_key not in monthly_data:
+                    monthly_data[month_key] = {'revenue': 0, 'orders': 0}
+                
+                # Calculate order value
+                amount = float(order.get('amount', 0) or 0)
+                unit_price = float(order.get('unit_price', 0) or 0)
+                order_value = amount * unit_price
+                
+                monthly_data[month_key]['revenue'] += order_value
+                monthly_data[month_key]['orders'] += 1
+            except Exception as e:
+                logger.error(f"Error parsing order date: {e}")
+                continue
+    
+    # Sort by month
+    sorted_months = sorted(monthly_data.keys())
+    historical = [
+        {
+            "month": m,
+            "revenue": round(monthly_data[m]['revenue'], 2),
+            "orders": monthly_data[m]['orders']
+        }
+        for m in sorted_months
+    ]
+    
+    # Simple forecast: average of last 3 months with trend
+    if len(historical) >= 2:
+        recent = historical[-3:] if len(historical) >= 3 else historical
+        avg_revenue = sum(h['revenue'] for h in recent) / len(recent)
+        avg_orders = sum(h['orders'] for h in recent) / len(recent)
+        
+        # Calculate trend
+        if len(recent) >= 2:
+            trend = (recent[-1]['revenue'] - recent[0]['revenue']) / len(recent)
+            predicted_revenue = avg_revenue + trend
+        else:
+            predicted_revenue = avg_revenue
+        
+        # Get next month
+        now = datetime.now(timezone.utc)
+        next_month = now.replace(day=1) + timedelta(days=32)
+        next_month = next_month.replace(day=1)
+        next_month_str = next_month.strftime('%Y-%m')
+        next_month_name = next_month.strftime('%B %Y')
+        
+        # Confidence level based on data points
+        confidence = min(95, 50 + len(historical) * 5)
+        
+        return {
+            "forecast": {
+                "next_month": next_month_str,
+                "next_month_name": next_month_name,
+                "predicted_revenue": round(max(0, predicted_revenue), 2),
+                "predicted_orders": round(avg_orders),
+                "confidence": confidence,
+                "trend": "up" if trend > 0 else "down" if trend < 0 else "stable"
+            },
+            "historical_data": historical[-12:],  # Last 12 months
+            "summary": {
+                "total_revenue": round(sum(h['revenue'] for h in historical), 2),
+                "total_orders": sum(h['orders'] for h in historical),
+                "avg_monthly_revenue": round(sum(h['revenue'] for h in historical) / len(historical), 2),
+                "avg_monthly_orders": round(sum(h['orders'] for h in historical) / len(historical))
+            }
+        }
+    else:
+        return {
+            "forecast": None,
+            "message": "Need at least 2 months of data for forecast",
+            "historical_data": historical,
+            "next_month_prediction": 0
+        }
 
 # Include the router in the main app
 app.include_router(api_router)
