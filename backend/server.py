@@ -1032,6 +1032,38 @@ async def search_address(q: str):
             }]
         return []
 
+@api_router.get("/geocode/reverse")
+async def reverse_geocode(lat: float, lon: float):
+    """Reverse geocode coordinates to address"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "format": "json",
+                    "lat": lat,
+                    "lon": lon,
+                    "zoom": 18
+                },
+                headers={
+                    "User-Agent": "GewurzbergCRM/1.0 (contact@gewurzberg.de)",
+                    "Accept-Language": "en,de,tr"
+                },
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "display_name": data.get("display_name", f"{lat}, {lon}"),
+                    "lat": lat,
+                    "lon": lon
+                }
+            else:
+                return {"display_name": f"{lat:.4f}, {lon:.4f}", "lat": lat, "lon": lon}
+    except Exception as e:
+        logger.error(f"Reverse geocoding error: {e}")
+        return {"display_name": f"{lat:.4f}, {lon:.4f}", "lat": lat, "lon": lon}
+
 @api_router.post("/geocode/batch")
 async def geocode_batch(leads: List[dict]):
     """Geocode multiple leads at once"""

@@ -9,6 +9,9 @@ from reportlab.lib.units import cm
 from reportlab.lib.colors import HexColor, white, black
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Paragraph
+from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
 # Register DejaVu fonts for Turkish character support
 try:
@@ -31,6 +34,60 @@ BLUE_COLOR = HexColor('#3b82f6')
 PURPLE_COLOR = HexColor('#8b5cf6')
 GREEN_COLOR = HexColor('#22c55e')
 GRAY_COLOR = HexColor('#6b7280')
+
+
+def wrap_text(text: str, max_width: int, font_name: str, font_size: int, canvas_obj) -> list:
+    """
+    Wrap text to fit within a given width.
+    Returns a list of lines.
+    """
+    if not text:
+        return []
+    
+    words = text.split()
+    lines = []
+    current_line = ""
+    
+    for word in words:
+        test_line = f"{current_line} {word}".strip() if current_line else word
+        text_width = canvas_obj.stringWidth(test_line, font_name, font_size)
+        
+        if text_width <= max_width:
+            current_line = test_line
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+    
+    if current_line:
+        lines.append(current_line)
+    
+    return lines
+
+
+def draw_wrapped_text(c, text: str, x: float, y: float, max_width: float, 
+                      font_name: str, font_size: int, line_height: float = None,
+                      color=None) -> float:
+    """
+    Draw wrapped text on canvas and return the new Y position.
+    """
+    if not text:
+        return y
+    
+    if color:
+        c.setFillColor(color)
+    c.setFont(font_name, font_size)
+    
+    if line_height is None:
+        line_height = font_size * 1.3
+    
+    lines = wrap_text(text, max_width, font_name, font_size, c)
+    
+    for line in lines:
+        c.drawString(x, y, line)
+        y -= line_height
+    
+    return y
 
 
 def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
@@ -855,10 +912,17 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
     
     y = height - 5.5*cm
     page_num = 1
+    max_text_width = width - 6*cm  # Available width for text
     
     # Reports
     for i, report in enumerate(reports):
-        if y < 4*cm:
+        # Calculate dynamic card height based on notes length
+        notes = report.get('notes', '')
+        notes_lines = wrap_text(notes, max_text_width, FONT_REGULAR, 9, c) if notes else []
+        extra_height = max(0, (len(notes_lines) - 2) * 0.4*cm)
+        card_height = 3*cm + extra_height
+        
+        if y < 4*cm + card_height:
             # Footer with page number
             c.setFillColor(HexColor('#9ca3af'))
             c.setFont(FONT_REGULAR, 9)
@@ -875,8 +939,6 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             y = height - 3.5*cm
         
         # Report card - clean minimal style
-        card_height = 3*cm
-        
         # Light background
         c.setFillColor(HexColor('#f9fafb'))
         c.roundRect(2*cm, y - card_height, width - 4*cm, card_height, 3, fill=True, stroke=False)
@@ -901,7 +963,10 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
         # Company name
         c.setFillColor(HexColor('#111827'))
         c.setFont(FONT_BOLD, 11)
-        c.drawString(3.3*cm, y - 0.8*cm, report.get('company_name', L['customer']))
+        company = report.get('company_name', L['customer'])
+        if len(company) > 40:
+            company = company[:37] + '...'
+        c.drawString(3.3*cm, y - 0.8*cm, company)
         
         # Visit type badge
         vtype = report.get('visit_type', 'other')
@@ -917,20 +982,26 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
         c.setFont(FONT_REGULAR, 9)
         c.drawString(3.3*cm, y - 1.5*cm, f"{report.get('city', 'N/A')}")
         
-        # Notes (truncated)
-        notes = report.get('notes', '')[:100]
-        if len(report.get('notes', '')) > 100:
-            notes += '...'
-        c.setFillColor(HexColor('#374151'))
-        c.setFont(FONT_REGULAR, 9)
-        c.drawString(2.5*cm, y - 2.2*cm, notes)
+        # Notes - properly wrapped
+        notes_y = y - 2.2*cm
+        if notes_lines:
+            c.setFillColor(HexColor('#374151'))
+            c.setFont(FONT_REGULAR, 9)
+            for line in notes_lines[:5]:  # Max 5 lines
+                c.drawString(2.5*cm, notes_y, line)
+                notes_y -= 0.4*cm
+            if len(notes_lines) > 5:
+                c.drawString(2.5*cm, notes_y, "...")
+                notes_y -= 0.4*cm
         
         # Outcome if exists
         if report.get('outcome'):
             c.setFillColor(HexColor('#059669'))
             c.setFont(FONT_REGULAR, 8)
-            outcome_text = report.get('outcome', '')[:50]
-            c.drawString(2.5*cm, y - 2.7*cm, f"✓ {outcome_text}")
+            outcome_text = report.get('outcome', '')
+            if len(outcome_text) > 60:
+                outcome_text = outcome_text[:57] + '...'
+            c.drawString(2.5*cm, notes_y - 0.2*cm, f"✓ {outcome_text}")
         
         y -= (card_height + 0.4*cm)
     

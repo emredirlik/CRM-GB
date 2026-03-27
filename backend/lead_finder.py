@@ -292,6 +292,117 @@ FACTORY_DATABASE = {
             {"company_name": "ROMANDIE KEBAB SA", "business_type": "Kebab Production", "phone": "+41 22 5678901", "website": "N/A", "address": "Carouge"},
         ],
     },
+    "Romania": {
+        "Bucharest": [
+            {"company_name": "ALDIS S.R.L.", "business_type": "Meat Processing Factory", "phone": "+40 21 3456789", "website": "www.aldis.ro", "address": "Bucharest Industrial Zone"},
+            {"company_name": "CAROLI FOODS GROUP", "business_type": "Meat & Deli Factory", "phone": "+40 21 4567890", "website": "www.caroli.ro", "address": "Bucharest-Militari"},
+            {"company_name": "CRIS-TIM S.A.", "business_type": "Meat Processing", "phone": "+40 21 5678901", "website": "www.cristim.ro", "address": "Bucharest-Pipera"},
+            {"company_name": "ANGST S.R.L.", "business_type": "Meat Production Factory", "phone": "+40 21 6789012", "website": "www.angst.ro", "address": "Bucharest-Baneasa"},
+            {"company_name": "UNICARM S.A.", "business_type": "Meat Factory", "phone": "+40 21 7890123", "website": "www.unicarm.ro", "address": "Bucharest Industrial"},
+            {"company_name": "REINERT ROMANIA", "business_type": "Meat & Sausage Factory", "phone": "+40 21 8901234", "website": "www.reinert.ro", "address": "Chiajna, Ilfov"},
+            {"company_name": "ELIT S.R.L.", "business_type": "Gyros & Döner Factory", "phone": "+40 21 9012345", "website": "N/A", "address": "Bucharest-Voluntari"},
+            {"company_name": "MEDA PROD S.R.L.", "business_type": "Kebab Production", "phone": "+40 21 0123456", "website": "www.medaprod.ro", "address": "Bucharest-Pantelimon"},
+        ],
+        "Cluj-Napoca": [
+            {"company_name": "CARNE DE VIS TRANSILVANIA", "business_type": "Meat Factory", "phone": "+40 264 345678", "website": "N/A", "address": "Cluj Industrial Zone"},
+            {"company_name": "TRANSYLVANIAN MEAT WORKS", "business_type": "Meat Processing", "phone": "+40 264 456789", "website": "www.transmeat.ro", "address": "Cluj-Napoca"},
+            {"company_name": "ARDEAL KEBAB FACTORY", "business_type": "Kebab & Gyros Production", "phone": "+40 264 567890", "website": "N/A", "address": "Floresti, Cluj"},
+            {"company_name": "NORD VEST CARNE", "business_type": "Meat Production", "phone": "+40 264 678901", "website": "www.nordvestcarne.ro", "address": "Apahida, Cluj"},
+        ],
+        "Timisoara": [
+            {"company_name": "BANAT MEAT INDUSTRIES", "business_type": "Meat Factory", "phone": "+40 256 345678", "website": "www.banatmeat.ro", "address": "Timisoara Industrial"},
+            {"company_name": "WESTERN ROMANIA FOODS", "business_type": "Food Processing", "phone": "+40 256 456789", "website": "N/A", "address": "Timisoara-Giroc"},
+            {"company_name": "TIMIS KEBAB FACTORY", "business_type": "Kebab Production", "phone": "+40 256 567890", "website": "N/A", "address": "Dumbravita"},
+        ],
+        "Iasi": [
+            {"company_name": "MOLDOVA MEAT S.R.L.", "business_type": "Meat Processing", "phone": "+40 232 345678", "website": "www.moldovameat.ro", "address": "Iasi Industrial"},
+            {"company_name": "NORTHEASTERN FOODS", "business_type": "Food Factory", "phone": "+40 232 456789", "website": "N/A", "address": "Iasi-Miroslava"},
+            {"company_name": "IASI GYROS PRODUCTION", "business_type": "Gyros Factory", "phone": "+40 232 567890", "website": "N/A", "address": "Iasi"},
+        ],
+        "Constanta": [
+            {"company_name": "BLACK SEA MEAT FACTORY", "business_type": "Meat Processing", "phone": "+40 241 345678", "website": "www.blackseameat.ro", "address": "Constanta Port Area"},
+            {"company_name": "DOBROGEA FOODS", "business_type": "Food Factory", "phone": "+40 241 456789", "website": "www.dobrogeafoods.ro", "address": "Constanta Industrial"},
+            {"company_name": "COASTAL KEBAB S.R.L.", "business_type": "Kebab Production", "phone": "+40 241 567890", "website": "N/A", "address": "Navodari"},
+        ],
+        "Brasov": [
+            {"company_name": "CARPATHIAN MEAT WORKS", "business_type": "Meat Factory", "phone": "+40 268 345678", "website": "www.carpathianmeat.ro", "address": "Brasov Industrial"},
+            {"company_name": "TRANSILVANIA DÖNER FACTORY", "business_type": "Döner Production", "phone": "+40 268 456789", "website": "N/A", "address": "Sacele, Brasov"},
+        ],
+    },
+    "Bulgaria": {
+        "Sofia": [
+            {"company_name": "TANDEM FOODS AD", "business_type": "Meat Processing Factory", "phone": "+359 2 9456789", "website": "www.tandem.bg", "address": "Sofia Industrial Zone"},
+            {"company_name": "BELLA BULGARIA", "business_type": "Meat & Deli Factory", "phone": "+359 2 8567890", "website": "www.bellabulgaria.bg", "address": "Sofia-Gorublyane"},
+            {"company_name": "COMPASS AD", "business_type": "Meat Factory", "phone": "+359 2 7678901", "website": "www.compass-bg.com", "address": "Sofia-Druzhba"},
+            {"company_name": "PRESTIGE 96 AD", "business_type": "Meat Processing", "phone": "+359 2 6789012", "website": "www.prestige96.bg", "address": "Novi Iskar"},
+            {"company_name": "KEN AD", "business_type": "Meat & Sausage Factory", "phone": "+359 2 5890123", "website": "www.ken.bg", "address": "Sofia-Slatina"},
+            {"company_name": "BALKAN GYROS FACTORY", "business_type": "Gyros Production", "phone": "+359 2 4901234", "website": "N/A", "address": "Sofia Industrial"},
+            {"company_name": "BULGARIAN DÖNER S.R.L.", "business_type": "Döner & Kebab Factory", "phone": "+359 2 3012345", "website": "N/A", "address": "Sofia-Mladost"},
+        ],
+        "Plovdiv": [
+            {"company_name": "KARLOVO MESO AD", "business_type": "Meat Factory", "phone": "+359 32 456789", "website": "www.karlovomeso.bg", "address": "Plovdiv Industrial"},
+            {"company_name": "THRACIAN MEAT WORKS", "business_type": "Meat Processing", "phone": "+359 32 567890", "website": "www.thracianmeat.bg", "address": "Plovdiv-Trakia"},
+            {"company_name": "MARITSA KEBAB FACTORY", "business_type": "Kebab Production", "phone": "+359 32 678901", "website": "N/A", "address": "Plovdiv-Rodopi"},
+            {"company_name": "PLOVDIV GYROS AD", "business_type": "Gyros Factory", "phone": "+359 32 789012", "website": "N/A", "address": "Plovdiv Industrial Zone"},
+        ],
+        "Varna": [
+            {"company_name": "BLACK SEA FOODS AD", "business_type": "Food Processing", "phone": "+359 52 456789", "website": "www.blackseafoods.bg", "address": "Varna Port Area"},
+            {"company_name": "VARNA MEAT FACTORY", "business_type": "Meat Processing", "phone": "+359 52 567890", "website": "N/A", "address": "Varna-Asparuhovo"},
+            {"company_name": "SEASIDE KEBAB S.R.L.", "business_type": "Kebab Production", "phone": "+359 52 678901", "website": "N/A", "address": "Varna Industrial"},
+        ],
+        "Burgas": [
+            {"company_name": "BURGAS MEAT INDUSTRIES", "business_type": "Meat Factory", "phone": "+359 56 456789", "website": "www.burgasmeat.bg", "address": "Burgas Industrial"},
+            {"company_name": "SOUTHERN BULGARIA FOODS", "business_type": "Food Processing", "phone": "+359 56 567890", "website": "N/A", "address": "Burgas-Meden Rudnik"},
+        ],
+        "Ruse": [
+            {"company_name": "DANUBE MEAT WORKS", "business_type": "Meat Factory", "phone": "+359 82 456789", "website": "www.danubemeat.bg", "address": "Ruse Industrial"},
+            {"company_name": "RUSE DÖNER FACTORY", "business_type": "Döner Production", "phone": "+359 82 567890", "website": "N/A", "address": "Ruse-West"},
+        ],
+    },
+    "Saudi Arabia": {
+        "Riyadh": [
+            {"company_name": "ALMARAI COMPANY", "business_type": "Food & Dairy Factory", "phone": "+966 11 4700005", "website": "www.almarai.com", "address": "Riyadh Industrial City"},
+            {"company_name": "HALWANI BROS.", "business_type": "Meat & Food Factory", "phone": "+966 11 4734444", "website": "www.halwanibrothers.com", "address": "Riyadh Second Industrial"},
+            {"company_name": "SADIA ARABIA", "business_type": "Meat Processing Factory", "phone": "+966 11 4789000", "website": "www.sadia-arabia.com", "address": "Riyadh Third Industrial"},
+            {"company_name": "FAKIEH POULTRY FARMS", "business_type": "Poultry & Meat Factory", "phone": "+966 11 4567890", "website": "www.fakieh.com.sa", "address": "Riyadh Industrial"},
+            {"company_name": "SAUDI DÖNER FACTORY", "business_type": "Döner & Kebab Production", "phone": "+966 11 4890123", "website": "N/A", "address": "Riyadh Industrial City"},
+            {"company_name": "ARABIAN GYROS COMPANY", "business_type": "Gyros Production", "phone": "+966 11 4901234", "website": "N/A", "address": "Riyadh Second Industrial"},
+            {"company_name": "AL WATANIA POULTRY", "business_type": "Poultry Processing", "phone": "+966 11 5012345", "website": "www.alwatania.com", "address": "Riyadh"},
+        ],
+        "Jeddah": [
+            {"company_name": "JEDDAH MEAT FACTORY", "business_type": "Meat Processing", "phone": "+966 12 6789012", "website": "N/A", "address": "Jeddah Industrial"},
+            {"company_name": "RED SEA FOODS", "business_type": "Food & Meat Factory", "phone": "+966 12 6890123", "website": "www.redseafoods.com.sa", "address": "Jeddah Second Industrial"},
+            {"company_name": "WESTERN ARABIA DÖNER", "business_type": "Döner Production", "phone": "+966 12 6901234", "website": "N/A", "address": "Jeddah"},
+            {"company_name": "AL BAIK PRODUCTION", "business_type": "Food Manufacturing", "phone": "+966 12 7012345", "website": "www.albaik.com", "address": "Jeddah Industrial"},
+        ],
+        "Dammam": [
+            {"company_name": "EASTERN PROVINCE MEAT", "business_type": "Meat Factory", "phone": "+966 13 8123456", "website": "N/A", "address": "Dammam Industrial City"},
+            {"company_name": "ARABIAN GULF FOODS", "business_type": "Food Processing", "phone": "+966 13 8234567", "website": "www.arabiangulffoods.com", "address": "Dammam Second Industrial"},
+            {"company_name": "DAMMAM KEBAB FACTORY", "business_type": "Kebab Production", "phone": "+966 13 8345678", "website": "N/A", "address": "Dammam"},
+        ],
+        "Mecca": [
+            {"company_name": "HOLY CITY HALAL FOODS", "business_type": "Halal Meat Factory", "phone": "+966 12 5456789", "website": "www.holycityfoods.com.sa", "address": "Mecca Industrial"},
+            {"company_name": "MAKKAH MEAT INDUSTRIES", "business_type": "Meat Processing", "phone": "+966 12 5567890", "website": "N/A", "address": "Mecca"},
+        ],
+        "Medina": [
+            {"company_name": "AL MADINAH FOODS", "business_type": "Food & Meat Factory", "phone": "+966 14 8456789", "website": "www.almadinahfoods.com", "address": "Medina Industrial"},
+            {"company_name": "PROPHET'S CITY HALAL MEAT", "business_type": "Halal Meat Processing", "phone": "+966 14 8567890", "website": "N/A", "address": "Medina"},
+        ],
+    },
+    "UAE": {
+        "Dubai": [
+            {"company_name": "AL ISLAMI FOODS", "business_type": "Halal Meat Factory", "phone": "+971 4 3456789", "website": "www.al-islami.com", "address": "Dubai Industrial City"},
+            {"company_name": "EMIRATES NATIONAL FACTORY", "business_type": "Meat Processing", "phone": "+971 4 4567890", "website": "www.enf-uae.com", "address": "Jebel Ali Free Zone"},
+            {"company_name": "GULF FOOD INDUSTRIES", "business_type": "Food & Meat Factory", "phone": "+971 4 5678901", "website": "www.gulffoodindustries.com", "address": "Dubai Investment Park"},
+            {"company_name": "DUBAI DÖNER FACTORY", "business_type": "Döner Production", "phone": "+971 4 6789012", "website": "N/A", "address": "Al Quoz Industrial"},
+            {"company_name": "ARABIAN SHAWARMA CO.", "business_type": "Shawarma & Kebab Factory", "phone": "+971 4 7890123", "website": "N/A", "address": "Dubai Industrial City"},
+        ],
+        "Abu Dhabi": [
+            {"company_name": "AGTHIA GROUP", "business_type": "Food & Meat Factory", "phone": "+971 2 5961000", "website": "www.agthia.com", "address": "Abu Dhabi Industrial City"},
+            {"company_name": "CAPITAL MEAT FACTORY", "business_type": "Meat Processing", "phone": "+971 2 5567890", "website": "N/A", "address": "Mussafah Industrial"},
+            {"company_name": "ABU DHABI KEBAB WORKS", "business_type": "Kebab Production", "phone": "+971 2 5678901", "website": "N/A", "address": "Abu Dhabi"},
+        ],
+    },
 }
 
 

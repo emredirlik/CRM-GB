@@ -1,84 +1,143 @@
-# Gewürzberg GmbH - B2B CRM PRD
+# Gewürzberg CRM - Product Requirements Document
 
-## Original Problem Statement
-B2B CRM application for a spice/binder factory based in Berlin (Gewürzberg GmbH). Target customers are Döner, Gyros, and Kebab factories across Europe.
-
-## Core Features (COMPLETED)
-1. **Authentication System** - Login with username/password (JWT)
-2. **Dashboard** - Stats, Calendar, clickable cards, revenue target
-3. **Lead Management** - CRUD with Google Maps navigation, bulk email
-4. **Order Management** - Orders with PDF, WhatsApp PDF sharing
-5. **Recipe Management** - Custom recipes with PDF, email sending
-6. **Product Management** - Product catalog
-7. **Specifications** - PDF upload, preview, edit, email
-8. **Route Planner** - Map-based with address autocomplete
-9. **Email Composer** - SMTP integration, attachments
-10. **Lead Finder** - SUPER FAST with local factory database + Gemini AI
-11. **Daily Reports** - Visit reports by date with combined PDF export
-12. **Bulk Email Campaign** - Send promotions to multiple customers
-13. **Multi-language** - EN, TR, DE, PL support
-
-## Recent Updates (March 27, 2026)
-- **Lead Finder MEGA UPDATE** - Local factory database for instant results (0.2s)
-- **Factory Database** - 50+ real factories in Greece, Germany, Turkey, Netherlands, Poland
-- **Bulk Email Campaign** - Select multiple leads and send promotional emails
-- **Daily Reports Combined PDF** - Download all reports for a date in one PDF
-- **Modern PDF Design** - Colorful cards with visit type badges
-- **Quick Search Buttons** - 🇬🇷 Athens, 🇩🇪 Berlin, 🇹🇷 Istanbul etc.
+## Project Overview
+B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin. The system manages leads, orders, recipes, product specifications, and daily reports with AI-powered features.
 
 ## Tech Stack
-- **Frontend**: React 18, TailwindCSS, Shadcn UI
-- **Backend**: FastAPI (Python), Motor (async MongoDB)
-- **Database**: MongoDB
-- **APIs**: Gemini (lead finding), Nominatim (geocoding)
-- **PDF**: ReportLab with DejaVu fonts
+- **Frontend**: React.js, TailwindCSS, Shadcn UI
+- **Backend**: FastAPI (Python)
+- **Database**: MongoDB (motor async)
+- **AI Integration**: Gemini API
+- **PDF Generation**: ReportLab with DejaVu fonts (UTF-8 support)
+
+## Core Modules
+
+### 1. Authentication
+- JWT-based authentication
+- Admin user: `admin` / `190371`
+
+### 2. Dashboard
+- Stats cards (leads, orders, revenue, emails)
+- Revenue target progress
+- AI Sales Forecast widget
+- Calendar with Visit Planning
+- Upcoming Visits sidebar
+
+### 3. Leads Management
+- CRUD operations for leads
+- Bulk email campaigns
+- Google Maps navigation
+- Import from Lead Finder
+
+### 4. Lead Finder (AI-Powered)
+- 60+ countries with major cities
+- Region filters (Europe, Middle East, Asia, Africa, Americas, Oceania)
+- Keyword filters (Gyros, Döner, Meat Processing, Halal, etc.)
+- Predefined factory database + Gemini AI enhancement
+- Quick search buttons
+
+### 5. Orders
+- Single product per order (TODO: Multiple products)
+- WhatsApp sharing with PDF
+- PDF generation with UTF-8 support
+
+### 6. Recipes
+- Recipe management
+- Email sharing capability
+
+### 7. Specifications
+- PDF upload with automatic text extraction (pdfplumber/PyMuPDF)
+- In-browser text editing
+- PDF regeneration from edited text
+
+### 8. Route Planner
+- Interactive Leaflet map
+- "Use My Location" GPS feature
+- Auto-optimize route (nearest neighbor algorithm)
+- Address autocomplete
+- Google Maps integration
+
+### 9. Daily Reports
+- Multi-language support (EN, TR, DE, PL)
+- Visit types (Meeting, Delivery, Support, Sales, Follow-up)
+- Full day PDF download (clean minimal design)
+- Email reports feature (MOCKED)
+
+## Implemented Features (March 2026)
+
+### Phase 1 - Completed
+- [x] Lead Finder with 60+ countries
+- [x] Route Planner GPS location
+- [x] Route auto-optimization
+- [x] Daily Reports multi-language
+- [x] PDF text wrapping fix
+- [x] AI Sales Forecast
+- [x] Visit Planning on Dashboard
+
+### Phase 2 - Pending
+- [ ] AI Email Assistant (Gemini)
+- [ ] AI Churn Prediction
+- [ ] AI Recipe Optimization
+- [ ] AI Chatbot
+- [ ] AI Route Optimization (advanced)
+- [ ] Multiple products per order
 
 ## API Endpoints
-- `/api/auth/*` - Authentication
-- `/api/leads/*` - Lead CRUD
-- `/api/leads/search` - Factory search (Gemini + local DB)
-- `/api/orders/*` - Order CRUD + WhatsApp PDF
-- `/api/recipes/*` - Recipe CRUD + email
-- `/api/specifications/*` - PDF upload, preview, download
-- `/api/daily-reports/*` - Visit reports + combined PDF
-- `/api/daily-reports/date/{date}/pdf` - Combined daily PDF
-- `/api/route/*` - Route calculation
-- `/api/geocode/*` - Address geocoding
-- `/api/agenda/*` - Calendar events
+
+### Authentication
+- `POST /api/auth/login`
+- `POST /api/auth/register`
+
+### Leads
+- `GET/POST /api/leads`
+- `GET/PUT/DELETE /api/leads/{id}`
+- `POST /api/leads/search` (Lead Finder)
+- `POST /api/leads/bulk-email`
+
+### Orders
+- `GET/POST /api/orders`
+- `GET/PUT/DELETE /api/orders/{id}`
+- `GET /api/orders/{id}/pdf`
+
+### Specifications
+- `GET/POST /api/specifications`
+- `POST /api/specifications/upload-pdf`
+- `GET /api/specifications/{id}/text`
+- `PUT /api/specifications/{id}/text`
+- `GET /api/specifications/{id}/regenerate-pdf`
+
+### Daily Reports
+- `GET/POST /api/daily-reports`
+- `GET /api/daily-reports/date/{date}/pdf`
+- `POST /api/daily-reports/date/{date}/email` (MOCKED)
+
+### Route Planner
+- `GET /api/geocode/search`
+- `GET /api/geocode/reverse`
+- `POST /api/route/calculate`
+- `POST /api/route/pdf`
+
+### Analytics
+- `GET /api/dashboard/stats`
+- `GET /api/sales/forecast`
 
 ## Database Collections
-- `users` - Authentication
-- `leads` - Customer data
-- `orders` - Order records
-- `recipes` - Production recipes
-- `specifications` - PDF specifications
-- `daily_reports` - Visit reports
-- `agenda` - Calendar events
-- `company_settings` - Company info
-- `search_history` - Lead search history
+- `users`
+- `leads`
+- `orders`
+- `recipes`
+- `products`
+- `specifications`
+- `daily_reports`
+- `agenda`
+- `email_log`
+- `company_settings`
 
-## Completed Tasks
-- [x] Authentication system (admin/190371)
-- [x] Dashboard with calendar
-- [x] PDF generation with Turkish characters
-- [x] Lead finder with local database + Gemini
-- [x] Specifications PDF upload & preview
-- [x] Recipes email functionality
-- [x] Route planner with geocoding
-- [x] Daily Reports with combined PDF
-- [x] WhatsApp PDF sharing
-- [x] Google Maps navigation
-- [x] Bulk email campaign
+## Known Issues
+- Email features are MOCKED (logged to database, not sent)
+- Orders support single product only
 
-## Factory Database Coverage
-- **Greece**: Athens (10), Thessaloniki (5)
-- **Germany**: Berlin (5), Munich (3), Hamburg (2)
-- **Turkey**: Istanbul (6), Ankara (2)
-- **Netherlands**: Amsterdam (2), Rotterdam (2)
-- **Poland**: Warsaw (2), Krakow (1)
-
-## Potential Future Enhancements
-- AI Sales Forecast using order history
-- Visit scheduling in calendar
+## Future Enhancements
 - WhatsApp Business API integration
-- PDF content editing
+- Real email integration (SendGrid/Resend)
+- Advanced AI features
