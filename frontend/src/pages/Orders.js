@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -246,6 +246,16 @@ const Orders = () => {
     }
   };
 
+  const sendWhatsApp = async (orderId) => {
+    try {
+      const response = await axios.get(`${API}/orders/${orderId}/whatsapp`);
+      window.open(response.data.whatsapp_url, '_blank');
+      toast.success('Başarılı', { description: 'WhatsApp açılıyor...' });
+    } catch (error) {
+      toast.error('Hata', { description: 'WhatsApp linki oluşturulamadı' });
+    }
+  };
+
   const filteredOrders = orders.filter(order => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -375,6 +385,15 @@ const Orders = () => {
                       </td>
                       <td>
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => sendWhatsApp(order.id)}
+                            title="WhatsApp'tan Gönder"
+                            data-testid={`whatsapp-${order.id}`}
+                          >
+                            <MessageCircle className="w-4 h-4 text-green-600" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

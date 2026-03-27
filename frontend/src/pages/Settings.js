@@ -6,14 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Settings as SettingsIcon, Mail, TestTube, Save, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, TestTube, Save, Loader2, CheckCircle, XCircle, Building2, Target, Euro } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const Settings = () => {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [savingCompany, setSavingCompany] = useState(false);
+  
+  // SMTP Settings
   const [formData, setFormData] = useState({
     host: '',
     port: 587,
@@ -24,8 +32,16 @@ const Settings = () => {
     use_tls: true
   });
 
+  // Company Settings
+  const [companySettings, setCompanySettings] = useState({
+    company_name: 'Gewürzberg GmbH',
+    yearly_target: 0,
+    current_revenue: 0
+  });
+
   useEffect(() => {
     fetchSettings();
+    fetchCompanySettings();
   }, []);
 
   const fetchSettings = async () => {
@@ -49,9 +65,29 @@ const Settings = () => {
     }
   };
 
+  const fetchCompanySettings = async () => {
+    try {
+      const response = await axios.get(`${API}/company-settings`);
+      if (response.data) {
+        setCompanySettings({
+          company_name: response.data.company_name || 'Gewürzberg GmbH',
+          yearly_target: response.data.yearly_target || 0,
+          current_revenue: response.data.current_revenue || 0
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch company settings:', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCompanyInputChange = (e) => {
+    const { name, value } = e.target;
+    setCompanySettings(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSave = async () => {
@@ -66,6 +102,21 @@ const Settings = () => {
       toast.error(t('error'), { description: 'Failed to save settings' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveCompanySettings = async () => {
+    setSavingCompany(true);
+    try {
+      await axios.post(`${API}/company-settings`, {
+        company_name: companySettings.company_name,
+        yearly_target: parseFloat(companySettings.yearly_target) || 0
+      });
+      toast.success('Başarılı', { description: 'Şirket ayarları kaydedildi' });
+    } catch (error) {
+      toast.error('Hata', { description: 'Ayarlar kaydedilemedi' });
+    } finally {
+      setSavingCompany(false);
     }
   };
 
@@ -91,6 +142,14 @@ const Settings = () => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount || 0);
+  };
+
+  const revenueProgress = companySettings.yearly_target > 0 
+    ? Math.min(100, (companySettings.current_revenue / companySettings.yearly_target) * 100) 
+    : 0;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" data-testid="settings-loading">
@@ -104,8 +163,106 @@ const Settings = () => {
       {/* Header */}
       <div>
         <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('settings')}</h1>
-        <p className="text-muted-foreground mt-1">Configure your email sending preferences</p>
+        <p className="text-muted-foreground mt-1">Şirket ve e-posta ayarlarınızı yapılandırın</p>
       </div>
+
+      {/* Company Settings Card */}
+      <Card data-testid="company-settings-card">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary" />
+            <div>
+              <CardTitle className="font-['Manrope']">Şirket Ayarları</CardTitle>
+              <CardDescription>Şirket bilgilerinizi ve yıllık hedeflerinizi belirleyin</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Company Name */}
+          <div className="space-y-2">
+            <Label htmlFor="company_name">Şirket Adı</Label>
+            <Input
+              id="company_name"
+              name="company_name"
+              value={companySettings.company_name}
+              onChange={handleCompanyInputChange}
+              placeholder="Gewürzberg GmbH"
+              data-testid="input-company-name"
+            />
+          </div>
+
+          {/* Yearly Revenue Target */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-green-600" />
+              <Label htmlFor="yearly_target" className="text-base font-medium">Yıllık Hedef Ciro</Label>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="yearly_target" className="text-sm text-muted-foreground">Hedef (€)</Label>
+                <div className="relative">
+                  <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="yearly_target"
+                    name="yearly_target"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={companySettings.yearly_target}
+                    onChange={handleCompanyInputChange}
+                    placeholder="500000"
+                    className="pl-10"
+                    data-testid="input-yearly-target"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Mevcut Gelir</Label>
+                <div className="h-10 flex items-center px-3 bg-muted/50 rounded-md">
+                  <span className="font-semibold text-green-600">{formatCurrency(companySettings.current_revenue)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            {companySettings.yearly_target > 0 && (
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-green-700">Hedefe İlerleme</span>
+                  <span className="font-medium text-green-900">{revenueProgress.toFixed(1)}%</span>
+                </div>
+                <Progress value={revenueProgress} className="h-3 bg-green-200" />
+                <div className="flex justify-between text-xs mt-2 text-green-600">
+                  <span>{formatCurrency(companySettings.current_revenue)}</span>
+                  <span>{formatCurrency(companySettings.yearly_target)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Save Button */}
+          <div className="pt-4 border-t">
+            <Button 
+              onClick={handleSaveCompanySettings}
+              disabled={savingCompany}
+              data-testid="save-company-settings-btn"
+            >
+              {savingCompany ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Kaydediliyor...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  Şirket Ayarlarını Kaydet
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* SMTP Settings Card */}
       <Card data-testid="smtp-settings-card">
@@ -114,7 +271,7 @@ const Settings = () => {
             <Mail className="w-5 h-5 text-primary" />
             <div>
               <CardTitle className="font-['Manrope']">{t('smtpSettings')}</CardTitle>
-              <CardDescription>Configure your SMTP server to send emails</CardDescription>
+              <CardDescription>E-posta göndermek için SMTP sunucunuzu yapılandırın (Gmail, Kurumsal, vb.)</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -128,7 +285,7 @@ const Settings = () => {
                 name="host"
                 value={formData.host}
                 onChange={handleInputChange}
-                placeholder="smtp.gmail.com"
+                placeholder="smtp.gmail.com veya mail.sirketiniz.com"
                 data-testid="input-smtp-host"
               />
             </div>
@@ -155,7 +312,7 @@ const Settings = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleInputChange}
-                placeholder="your-email@gmail.com"
+                placeholder="email@sirketiniz.com"
                 data-testid="input-smtp-username"
               />
             </div>
@@ -167,7 +324,7 @@ const Settings = () => {
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="App password"
+                placeholder="Şifre veya App Password"
                 data-testid="input-smtp-password"
               />
             </div>
@@ -183,7 +340,7 @@ const Settings = () => {
                 type="email"
                 value={formData.from_email}
                 onChange={handleInputChange}
-                placeholder="info@yourcompany.com"
+                placeholder="info@sirketiniz.com"
                 data-testid="input-from-email"
               />
             </div>
@@ -194,7 +351,7 @@ const Settings = () => {
                 name="from_name"
                 value={formData.from_name}
                 onChange={handleInputChange}
-                placeholder="Berlin Spice Factory"
+                placeholder="Gewürzberg GmbH"
                 data-testid="input-from-name"
               />
             </div>
@@ -204,7 +361,7 @@ const Settings = () => {
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
             <div>
               <Label htmlFor="use_tls" className="text-base font-medium">{t('useTLS')}</Label>
-              <p className="text-sm text-muted-foreground">Use TLS encryption for secure connection</p>
+              <p className="text-sm text-muted-foreground">Güvenli bağlantı için TLS şifreleme kullan</p>
             </div>
             <Switch
               id="use_tls"
@@ -225,7 +382,7 @@ const Settings = () => {
               {testing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Testing...
+                  Test Ediliyor...
                 </>
               ) : (
                 <>
@@ -242,7 +399,7 @@ const Settings = () => {
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  Kaydediliyor...
                 </>
               ) : (
                 <>
@@ -258,19 +415,40 @@ const Settings = () => {
       {/* Help Card */}
       <Card data-testid="help-card">
         <CardContent className="p-6">
-          <h3 className="font-semibold font-['Manrope'] mb-3">Gmail SMTP Setup</h3>
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p>To use Gmail SMTP, you need to:</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>Enable 2-Step Verification in your Google Account</li>
-              <li>Generate an App Password at: <code className="text-xs bg-muted px-1 py-0.5 rounded">myaccount.google.com/apppasswords</code></li>
-              <li>Use the following settings:</li>
-            </ol>
-            <div className="bg-muted p-3 rounded-md mt-2 font-mono text-xs">
-              <p>Host: smtp.gmail.com</p>
-              <p>Port: 587</p>
-              <p>TLS: Enabled</p>
+          <h3 className="font-semibold font-['Manrope'] mb-3">E-posta Sunucusu Ayarları</h3>
+          <div className="text-sm text-muted-foreground space-y-4">
+            
+            {/* Gmail */}
+            <div>
+              <p className="font-medium text-foreground mb-2">Gmail SMTP:</p>
+              <div className="bg-muted p-3 rounded-md font-mono text-xs">
+                <p>Host: smtp.gmail.com</p>
+                <p>Port: 587</p>
+                <p>TLS: Açık</p>
+                <p className="text-orange-600 mt-2">Not: Gmail için App Password gereklidir</p>
+              </div>
             </div>
+
+            {/* Corporate */}
+            <div>
+              <p className="font-medium text-foreground mb-2">Kurumsal E-posta (Örnek):</p>
+              <div className="bg-muted p-3 rounded-md font-mono text-xs">
+                <p>Host: mail.sirketiniz.com</p>
+                <p>Port: 587 veya 465 (SSL için)</p>
+                <p>TLS: Açık (veya SSL için 465 portu)</p>
+              </div>
+            </div>
+
+            {/* Outlook/Microsoft 365 */}
+            <div>
+              <p className="font-medium text-foreground mb-2">Outlook / Microsoft 365:</p>
+              <div className="bg-muted p-3 rounded-md font-mono text-xs">
+                <p>Host: smtp.office365.com</p>
+                <p>Port: 587</p>
+                <p>TLS: Açık</p>
+              </div>
+            </div>
+
           </div>
         </CardContent>
       </Card>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -8,16 +9,20 @@ import {
   Mail, 
   History, 
   Settings,
-  Sparkles,
   Search,
   ShoppingCart,
   BookOpen,
-  Package
+  Package,
+  MapPin,
+  LogOut
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Sidebar = () => {
   const { t, language, setLanguage } = useLanguage();
+  const { logout, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'dashboard' },
@@ -26,6 +31,7 @@ const Sidebar = () => {
     { path: '/orders', icon: ShoppingCart, label: 'orders' },
     { path: '/products', icon: Package, label: 'products' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
+    { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/compose', icon: Mail, label: 'emailComposer' },
     { path: '/history', icon: History, label: 'emailHistory' },
@@ -35,6 +41,11 @@ const Sidebar = () => {
   const isActive = (path) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
 
   return (
@@ -55,7 +66,7 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -86,6 +97,30 @@ const Sidebar = () => {
               {lang.toUpperCase()}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* User Info & Logout */}
+      <div className="p-4 border-t border-slate-700">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-white text-sm font-bold">
+              {user?.name?.charAt(0) || 'A'}
+            </div>
+            <div>
+              <p className="text-sm text-white font-medium">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-slate-400">{user?.role || 'admin'}</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleLogout}
+            className="text-slate-400 hover:text-white hover:bg-slate-700"
+            data-testid="logout-btn"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </aside>

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Response
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Response, Request, Depends
 from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -15,9 +15,17 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+import bcrypt
+import jwt
+from urllib.parse import quote
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+# JWT Configuration
+JWT_SECRET = os.environ.get('JWT_SECRET', 'default-secret-key-change-in-production')
+JWT_ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -36,6 +44,60 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# ===================== AUTH HELPERS =====================
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed.decode("utf-8")
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+
+def create_access_token(user_id: str, username: str) -> str:
+    payload = {
+        "sub": user_id, 
+        "username": username, 
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        "type": "access"
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def get_current_user(request: Request) -> dict:
+    # Check cookie first
+    token = request.cookies.get("access_token")
+    # Then check Authorization header
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=401, detail="Invalid token type")
+        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# ===================== AUTH MODELS =====================
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    name: str
+    role: str
 
 # ===================== MODELS =====================
 
@@ -697,6 +759,115 @@ async def get_dashboard_stats(period: str = "all"):
         "period": period
     }
 
+# ===================== COMPANY SETTINGS ENDPOINTS =====================
+
+class CompanySettingsUpdate(BaseModel):
+    company_name: Optional[str] = None
+    yearly_target: Optional[float] = None
+
+@api_router.get("/company-settings")
+async def get_company_settings():
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    if not settings:
+        # Return defaults
+        settings = {
+            "id": "company_settings",
+            "company_name": "Gewürzberg GmbH",
+            "yearly_target": 0,
+            "current_revenue": 0
+        }
+    
+    # Calculate current revenue from all confirmed/shipped/delivered orders
+    pipeline = [
+        {"$match": {"status": {"$in": ["delivered", "shipped", "confirmed"]}}},
+        {"$group": {"_id": None, "total": {"$sum": "$total_price"}}}
+    ]
+    revenue_result = await db.orders.aggregate(pipeline).to_list(1)
+    settings["current_revenue"] = revenue_result[0]["total"] if revenue_result else 0
+    
+    return settings
+
+@api_router.post("/company-settings")
+async def save_company_settings(settings: CompanySettingsUpdate):
+    existing = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    
+    update_data = {k: v for k, v in settings.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    if existing:
+        await db.company_settings.update_one(
+            {"id": "company_settings"}, 
+            {"$set": update_data}
+        )
+    else:
+        doc = {
+            "id": "company_settings",
+            "company_name": settings.company_name or "Gewürzberg GmbH",
+            "yearly_target": settings.yearly_target or 0,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.company_settings.insert_one(doc)
+    
+    return {"status": "success", "message": "Company settings saved"}
+
+# ===================== GEOCODING ENDPOINT =====================
+
+import httpx
+
+@api_router.get("/geocode")
+async def geocode_address(city: str, country: str):
+    """Geocode a city/country to lat/lng coordinates"""
+    try:
+        query = f"{city}, {country}"
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"format": "json", "q": query, "limit": 1},
+                headers={"User-Agent": "GewurzbergCRM/1.0"},
+                timeout=10.0
+            )
+            data = response.json()
+            if data and len(data) > 0:
+                return {
+                    "lat": float(data[0]["lat"]),
+                    "lng": float(data[0]["lon"]),
+                    "display_name": data[0].get("display_name", query)
+                }
+    except Exception as e:
+        logger.error(f"Geocoding error: {e}")
+    return None
+
+@api_router.post("/geocode/batch")
+async def geocode_batch(leads: List[dict]):
+    """Geocode multiple leads at once"""
+    results = {}
+    async with httpx.AsyncClient() as client:
+        for lead in leads:
+            if lead.get("city") and lead.get("country"):
+                try:
+                    query = f"{lead['city']}, {lead['country']}"
+                    response = await client.get(
+                        "https://nominatim.openstreetmap.org/search",
+                        params={"format": "json", "q": query, "limit": 1},
+                        headers={"User-Agent": "GewurzbergCRM/1.0"},
+                        timeout=10.0
+                    )
+                    data = response.json()
+                    if data and len(data) > 0:
+                        # Add small random offset to prevent overlapping
+                        import random
+                        results[lead["id"]] = {
+                            "lat": float(data[0]["lat"]) + (random.random() - 0.5) * 0.01,
+                            "lng": float(data[0]["lon"]) + (random.random() - 0.5) * 0.01
+                        }
+                    # Rate limiting - wait a bit between requests
+                    import asyncio
+                    await asyncio.sleep(0.5)
+                except Exception as e:
+                    logger.error(f"Geocoding error for {lead.get('id')}: {e}")
+    return results
+
 # ===================== PRODUCT ENDPOINTS =====================
 
 @api_router.post("/products", response_model=Product)
@@ -851,21 +1022,7 @@ async def get_order_pdf(order_id: str):
         raise HTTPException(status_code=404, detail="Order not found")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    
-    data = {
-        "Sipariş No": order['id'][:8].upper(),
-        "Müşteri": order['company_name'],
-        "Kişi": order.get('lead_name', ''),
-        "Ürün": order['product_name'],
-        "Ürün Kodu": order['product_code'],
-        "Miktar": f"{order.get('pieces', 1)} x {order.get('amount', order.get('quantity', 1))} {order.get('unit', 'kg')}",
-        "Birim Fiyat": f"€{order['unit_price']:.2f}",
-        "Toplam": f"€{order['total_price']:.2f}",
-        "Durum": order['status'].upper(),
-        "Notlar": order.get('notes', '')
-    }
-    
-    pdf_content = generate_pdf_content(f"Sipariş - {order['product_name']}", data, settings)
+    pdf_content = generate_professional_order_pdf(order, settings)
     
     return Response(
         content=pdf_content,
@@ -930,32 +1087,7 @@ async def get_recipe_pdf(recipe_id: str):
         raise HTTPException(status_code=404, detail="Recipe not found")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    
-    data = {
-        "Reçete Adı": recipe['name'],
-        "Ürün Kodu": recipe['product_code'],
-        "Müşteri": recipe['company_name'],
-        "---": "--- ANA MALZEMELER ---",
-        "Et Miktarı": f"{recipe['meat_amount']} kg",
-        "Su Miktarı": f"{recipe['water_amount']} L",
-        "Baharat Miktarı": f"{recipe['spice_amount']} kg",
-        "Binding Miktarı": f"{recipe['binding_amount']} kg",
-        "----": "--- ÜRETİM PARAMETRELERİ ---",
-        "Karışım Süresi": f"{recipe['mixing_time']} dakika",
-        "Motor Hızı": f"{recipe['motor_speed']} rpm",
-    }
-    
-    # Add additional ingredients
-    if recipe.get('additional_ingredients'):
-        data["-----"] = "--- EK MALZEMELER ---"
-        for i, ing in enumerate(recipe['additional_ingredients'], 1):
-            data[f"Malzeme {i}"] = f"{ing['name']}: {ing['amount']} {ing['unit']}"
-    
-    if recipe.get('instructions'):
-        data["------"] = "--- TALİMATLAR ---"
-        data["Talimatlar"] = recipe['instructions']
-    
-    pdf_content = generate_pdf_content(f"Reçete - {recipe['name']}", data, settings)
+    pdf_content = generate_professional_recipe_pdf(recipe, settings)
     
     return Response(
         content=pdf_content,
@@ -1323,16 +1455,497 @@ async def import_found_leads(leads: List[dict]):
         "skipped": skipped
     }
 
+# ===================== AUTH ENDPOINTS =====================
+
+@api_router.post("/auth/login")
+async def login(request: LoginRequest, response: Response):
+    admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+    admin_password = os.environ.get('ADMIN_PASSWORD', '190371')
+    
+    if request.username != admin_username or request.password != admin_password:
+        raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
+    
+    user_id = "admin-user-id"
+    access_token = create_access_token(user_id, admin_username)
+    
+    # Set cookie
+    response.set_cookie(
+        key="access_token", 
+        value=access_token, 
+        httponly=True, 
+        secure=False, 
+        samesite="lax", 
+        max_age=86400,
+        path="/"
+    )
+    
+    return {
+        "id": user_id,
+        "username": admin_username,
+        "name": "Emre Dirlik",
+        "role": "admin",
+        "token": access_token
+    }
+
+@api_router.post("/auth/logout")
+async def logout(response: Response):
+    response.delete_cookie(key="access_token", path="/")
+    return {"message": "Logged out successfully"}
+
+@api_router.get("/auth/me")
+async def get_me(request: Request):
+    try:
+        user = await get_current_user(request)
+        return user
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+@api_router.get("/auth/check")
+async def check_auth(request: Request):
+    """Check if user is authenticated"""
+    token = request.cookies.get("access_token")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        return {"authenticated": False}
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return {"authenticated": True, "user": {"username": payload.get("username"), "name": "Emre Dirlik"}}
+    except:
+        return {"authenticated": False}
+
+# ===================== WHATSAPP ENDPOINTS =====================
+
+@api_router.get("/orders/{order_id}/whatsapp")
+async def get_order_whatsapp_link(order_id: str):
+    """Generate WhatsApp share link for an order"""
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Get company settings
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    company_name = settings.get('company_name', 'Gewürzberg GmbH') if settings else 'Gewürzberg GmbH'
+    
+    # Format order details for WhatsApp
+    pieces = order.get('pieces', 1)
+    amount = order.get('amount', order.get('quantity', 1))
+    unit = order.get('unit', 'kg')
+    
+    message = f"""🧾 *SİPARİŞ BİLGİLERİ*
+    
+📦 *Ürün:* {order['product_name']}
+🏷️ *Ürün Kodu:* {order['product_code']}
+🏢 *Müşteri:* {order['company_name']}
+👤 *Kişi:* {order.get('lead_name', '-')}
+
+📊 *Miktar:* {pieces} × {amount} {unit}
+💰 *Birim Fiyat:* €{order['unit_price']:.2f}/{unit}
+💵 *Toplam:* €{order['total_price']:.2f}
+
+📋 *Durum:* {order['status'].upper()}
+
+---
+_{company_name}_"""
+    
+    # URL encode the message
+    encoded_message = quote(message)
+    whatsapp_url = f"https://wa.me/?text={encoded_message}"
+    
+    return {"whatsapp_url": whatsapp_url, "message": message}
+
+# ===================== PROFESSIONAL PDF GENERATION =====================
+
+def generate_professional_order_pdf(order: dict, company_settings: dict = None) -> bytes:
+    """Generate a professionally styled order PDF"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import cm, mm
+    from reportlab.lib.colors import HexColor, white, black
+    from reportlab.lib import colors
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Colors matching the app design
+    primary_color = HexColor('#1e293b')  # slate-800
+    accent_color = HexColor('#f97316')   # orange-500
+    bg_light = HexColor('#f8fafc')       # slate-50
+    text_muted = HexColor('#64748b')     # slate-500
+    success_color = HexColor('#22c55e')  # green-500
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header background
+    c.setFillColor(primary_color)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    # Company name
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, height - 3.2*cm, "Emre Dirlik")
+    
+    # Document title
+    c.setFont("Helvetica-Bold", 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, "SİPARİŞ FORMU")
+    c.setFont("Helvetica", 10)
+    c.drawRightString(width - 2*cm, height - 3.2*cm, f"#{order['id'][:8].upper()}")
+    
+    y = height - 5.5*cm
+    
+    # Customer info card
+    c.setFillColor(bg_light)
+    c.roundRect(1.5*cm, y - 3*cm, width - 3*cm, 3*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(text_muted)
+    c.setFont("Helvetica", 9)
+    c.drawString(2*cm, y - 0.7*cm, "MÜŞTERİ")
+    c.setFillColor(black)
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(2*cm, y - 1.4*cm, order['company_name'])
+    c.setFont("Helvetica", 10)
+    c.setFillColor(text_muted)
+    c.drawString(2*cm, y - 2.1*cm, order.get('lead_name', ''))
+    
+    c.setFillColor(text_muted)
+    c.setFont("Helvetica", 9)
+    c.drawString(10*cm, y - 0.7*cm, "TARİH")
+    c.setFillColor(black)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(10*cm, y - 1.4*cm, datetime.now().strftime('%d.%m.%Y'))
+    
+    y -= 4*cm
+    
+    # Product details header
+    c.setFillColor(accent_color)
+    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y - 0.7*cm, "ÜRÜN DETAYLARI")
+    
+    y -= 1.5*cm
+    
+    # Product info
+    pieces = order.get('pieces', 1)
+    amount = order.get('amount', order.get('quantity', 1))
+    unit = order.get('unit', 'kg')
+    
+    items = [
+        ("Ürün Adı", order['product_name']),
+        ("Ürün Kodu", order['product_code']),
+        ("Miktar", f"{pieces} × {amount} {unit}"),
+        ("Birim Fiyat", f"€{order['unit_price']:.2f}/{unit}"),
+    ]
+    
+    for label, value in items:
+        c.setFillColor(text_muted)
+        c.setFont("Helvetica", 9)
+        c.drawString(2*cm, y, label)
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(6*cm, y, str(value))
+        y -= 0.8*cm
+    
+    y -= 0.5*cm
+    
+    # Total box
+    c.setFillColor(success_color)
+    c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont("Helvetica", 12)
+    c.drawString(2*cm, y - 0.8*cm, "TOPLAM TUTAR")
+    c.setFont("Helvetica-Bold", 24)
+    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{order['total_price']:.2f}")
+    
+    y -= 3*cm
+    
+    # Status badge
+    status_colors = {
+        'pending': HexColor('#eab308'),
+        'confirmed': HexColor('#3b82f6'),
+        'shipped': HexColor('#8b5cf6'),
+        'delivered': HexColor('#22c55e'),
+        'cancelled': HexColor('#ef4444')
+    }
+    status_labels = {
+        'pending': 'BEKLEMEDE',
+        'confirmed': 'ONAYLANDI',
+        'shipped': 'GÖNDERİLDİ',
+        'delivered': 'TESLİM EDİLDİ',
+        'cancelled': 'İPTAL'
+    }
+    
+    status = order.get('status', 'pending')
+    c.setFillColor(status_colors.get(status, text_muted))
+    c.roundRect(2*cm, y - 1*cm, 4*cm, 1*cm, 3, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawCentredString(4*cm, y - 0.7*cm, status_labels.get(status, status.upper()))
+    
+    # Notes
+    if order.get('notes'):
+        y -= 2*cm
+        c.setFillColor(text_muted)
+        c.setFont("Helvetica", 9)
+        c.drawString(2*cm, y, "NOTLAR")
+        c.setFillColor(black)
+        c.setFont("Helvetica", 10)
+        c.drawString(2*cm, y - 0.6*cm, order['notes'][:100])
+    
+    # Footer
+    c.setFillColor(text_muted)
+    c.setFont("Helvetica", 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+def generate_professional_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
+    """Generate a professionally styled recipe PDF matching the UI design"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.units import cm
+    from reportlab.lib.colors import HexColor, white, black
+    
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    # Colors
+    primary_color = HexColor('#1e293b')
+    accent_color = HexColor('#f97316')
+    red_color = HexColor('#ef4444')
+    blue_color = HexColor('#3b82f6')
+    orange_color = HexColor('#f97316')
+    purple_color = HexColor('#8b5cf6')
+    green_color = HexColor('#22c55e')
+    gray_color = HexColor('#6b7280')
+    bg_light = HexColor('#f8fafc')
+    text_muted = HexColor('#64748b')
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header
+    c.setFillColor(primary_color)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont("Helvetica", 10)
+    c.drawString(2*cm, height - 3.2*cm, "Üretim Reçetesi")
+    
+    c.setFont("Helvetica-Bold", 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, recipe['product_code'])
+    
+    y = height - 5.5*cm
+    
+    # Recipe title card
+    c.setFillColor(bg_light)
+    c.roundRect(1.5*cm, y - 2.5*cm, width - 3*cm, 2.5*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(black)
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(2*cm, y - 1*cm, recipe['name'])
+    c.setFillColor(text_muted)
+    c.setFont("Helvetica", 11)
+    c.drawString(2*cm, y - 1.8*cm, f"Müşteri: {recipe['company_name']}")
+    
+    y -= 4*cm
+    
+    # Main ingredients header
+    c.setFillColor(accent_color)
+    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y - 0.7*cm, "ANA MALZEMELER")
+    
+    y -= 1.8*cm
+    
+    # Ingredient boxes (2x2 grid like in UI)
+    box_width = (width - 4*cm) / 2
+    box_height = 1.8*cm
+    
+    ingredients = [
+        (red_color, "Et Miktarı", f"{recipe['meat_amount']} kg"),
+        (blue_color, "Su Miktarı", f"{recipe['water_amount']} L"),
+        (orange_color, "Baharat Miktarı", f"{recipe['spice_amount']} kg"),
+        (purple_color, "Binding Miktarı", f"{recipe['binding_amount']} kg"),
+    ]
+    
+    for i, (color, label, value) in enumerate(ingredients):
+        col = i % 2
+        row = i // 2
+        x = 1.5*cm + col * (box_width + 0.5*cm)
+        box_y = y - row * (box_height + 0.3*cm)
+        
+        # Light colored background
+        c.setFillColor(HexColor('#fef2f2') if i == 0 else HexColor('#eff6ff') if i == 1 else HexColor('#fff7ed') if i == 2 else HexColor('#faf5ff'))
+        c.roundRect(x, box_y - box_height, box_width - 0.3*cm, box_height, 5, fill=True, stroke=False)
+        
+        c.setFillColor(color)
+        c.setFont("Helvetica", 9)
+        c.drawString(x + 0.4*cm, box_y - 0.6*cm, label)
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(x + 0.4*cm, box_y - 1.3*cm, value)
+    
+    y -= 4.5*cm
+    
+    # Production parameters header
+    c.setFillColor(green_color)
+    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(white)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(2*cm, y - 0.7*cm, "ÜRETİM PARAMETRELERİ")
+    
+    y -= 1.8*cm
+    
+    params = [
+        (green_color, "Karışım Süresi", f"{recipe['mixing_time']} dakika"),
+        (gray_color, "Motor Hızı", f"{recipe['motor_speed']} rpm"),
+    ]
+    
+    for i, (color, label, value) in enumerate(params):
+        x = 1.5*cm + i * (box_width + 0.5*cm)
+        
+        c.setFillColor(HexColor('#f0fdf4') if i == 0 else HexColor('#f3f4f6'))
+        c.roundRect(x, y - box_height, box_width - 0.3*cm, box_height, 5, fill=True, stroke=False)
+        
+        c.setFillColor(color)
+        c.setFont("Helvetica", 9)
+        c.drawString(x + 0.4*cm, y - 0.6*cm, label)
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(x + 0.4*cm, y - 1.3*cm, value)
+    
+    y -= 3*cm
+    
+    # Additional ingredients
+    if recipe.get('additional_ingredients'):
+        c.setFillColor(text_muted)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y, "EK MALZEMELER")
+        y -= 0.6*cm
+        
+        c.setFont("Helvetica", 10)
+        for ing in recipe['additional_ingredients']:
+            c.setFillColor(black)
+            c.drawString(2*cm, y, f"• {ing['name']}: {ing['amount']} {ing['unit']}")
+            y -= 0.5*cm
+    
+    y -= 0.5*cm
+    
+    # Instructions
+    if recipe.get('instructions'):
+        c.setFillColor(text_muted)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y, "ÜRETİM TALİMATLARI")
+        y -= 0.6*cm
+        
+        c.setFillColor(bg_light)
+        c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
+        c.setFillColor(black)
+        c.setFont("Helvetica", 9)
+        # Word wrap instructions
+        instructions = recipe['instructions'][:200]
+        c.drawString(2*cm, y - 0.5*cm, instructions[:80])
+        if len(instructions) > 80:
+            c.drawString(2*cm, y - 1*cm, instructions[80:160])
+    
+    # Footer
+    c.setFillColor(text_muted)
+    c.setFont("Helvetica", 8)
+    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()
+
+# Update PDF endpoints to use professional versions
+@api_router.get("/orders/{order_id}/pdf/professional")
+async def get_order_pdf_professional(order_id: str):
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_professional_order_pdf(order, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=siparis_{order_id[:8]}.pdf"}
+    )
+
+@api_router.get("/recipes/{recipe_id}/pdf/professional")
+async def get_recipe_pdf_professional(recipe_id: str):
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_professional_recipe_pdf(recipe, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=recete_{recipe_id[:8]}.pdf"}
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
+
+# Get frontend URL for CORS
+frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://customer-agent-2.preview.emergentagent.com')
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*", frontend_url],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    # Create admin user if not exists
+    admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+    existing = await db.users.find_one({"username": admin_username}, {"_id": 0})
+    if not existing:
+        await db.users.insert_one({
+            "id": "admin-user-id",
+            "username": admin_username,
+            "name": "Emre Dirlik",
+            "role": "admin",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        logger.info(f"Admin user created: {admin_username}")
+    
+    # Write test credentials
+    creds_path = Path('/app/memory/test_credentials.md')
+    creds_path.parent.mkdir(parents=True, exist_ok=True)
+    creds_path.write_text(f"""# Test Credentials
+
+## Admin User
+- Username: {admin_username}
+- Password: {os.environ.get('ADMIN_PASSWORD', '190371')}
+- Role: admin
+
+## Auth Endpoints
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+- GET /api/auth/check
+""")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
