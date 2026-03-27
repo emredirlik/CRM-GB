@@ -1,6 +1,6 @@
 """
 Lead Finder Service - Automatically finds potential B2B leads
-Uses web search to find businesses matching criteria
+Uses Kimi K2.5 AI to find businesses matching criteria
 """
 import os
 import re
@@ -9,8 +9,7 @@ import asyncio
 import logging
 from typing import List, Dict, Optional
 from dataclasses import dataclass
-import aiohttp
-from urllib.parse import quote_plus
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +26,12 @@ class FoundLead:
     source: Optional[str] = None
 
 class LeadFinderService:
-    """Service to find potential B2B leads using AI-powered search"""
+    """Service to find potential B2B leads using Kimi K2.5 AI"""
     
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://api.emergentintegrations.ai/v1"
+        # Moonshot AI base URL for Kimi K2.5
+        self.base_url = "https://api.moonshot.cn/v1"
         
     async def search_leads(
         self, 
@@ -43,11 +43,10 @@ class LeadFinderService:
         """
         Search for potential leads based on keywords and location
         """
-        # Tüm keywordleri birleştirip tek sorgu yap (daha hızlı)
         combined_query = ", ".join(keywords)
         query = f"{combined_query} manufacturers producers suppliers in {location} {country}"
         
-        leads = await self._search_with_ai(query, country, location, limit)
+        leads = await self._search_with_kimi(query, country, location, limit)
         
         # Deduplicate by company name
         seen = set()
@@ -61,9 +60,8 @@ class LeadFinderService:
         
         return unique_leads[:limit]
     
-    async def _search_with_ai(self, query: str, country: str, location: str, limit: int) -> List[FoundLead]:
-        """Use AI to search and extract business information"""
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+    async def _search_with_kimi(self, query: str, country: str, location: str, limit: int) -> List[FoundLead]:
+        """Use Kimi K2.5 to search and extract business information"""
         
         system_prompt = f"""You are an expert B2B lead researcher specializing in the food manufacturing industry.
 Your task is to provide real business names for companies that manufacture gyros, döner, kebab, souvlaki, and similar meat products.
@@ -72,17 +70,15 @@ Your task is to provide real business names for companies that manufacture gyros
 - The user is searching for businesses in **{location}** city in **{country}**.
 - You MUST ONLY return companies that are physically located in or very near **{location}** city.
 - Do NOT include companies from other cities or regions within {country}.
-- If the user says "Berlin", only return Berlin-based companies. NOT companies from Munich, Hamburg, or other German cities.
-- If the user says "Athens", only return Athens-based companies. NOT companies from Thessaloniki, Patras, or other Greek cities.
 
-IMPORTANT: Return AT LEAST 10-15 companies from {location} specifically. Quality over quantity - only companies actually in {location}.
+IMPORTANT: Return AT LEAST 10-15 companies from {location} specifically.
 
 You must return a JSON array with real companies. Each company MUST have:
 - company_name: The actual name of the company (REQUIRED, cannot be null)
 - email: Business email address if known (can be null)
 - phone: Business phone number if known (can be null)
 - address: Physical address if known (should include {location} city)
-- city: MUST be "{location}" or nearby suburb of {location} (REQUIRED)
+- city: MUST be "{location}" or nearby suburb (REQUIRED)
 - country: "{country}" (REQUIRED)
 - website: Company website URL if known (can be null)
 - description: Brief description of what they produce
@@ -98,10 +94,8 @@ Include companies from these categories (ONLY if they are in {location}):
 
 IMPORTANT RULES:
 1. company_name is REQUIRED - never return null for company_name
-2. **ONLY include companies physically located in {location} city or its immediate suburbs**
-3. city field MUST be "{location}" or a nearby suburb - NOT other cities in {country}
-4. Focus on B2B manufacturers and suppliers, NOT restaurants
-5. If you don't know enough companies in {location}, return fewer results rather than including companies from other cities
+2. ONLY include companies physically located in {location} city
+3. Focus on B2B manufacturers and suppliers, NOT restaurants
 """
         
         user_prompt = f"""Find ALL businesses you know that match this search: "{query}"
@@ -109,27 +103,99 @@ IMPORTANT RULES:
 **LOCATION FILTER: {location}, {country} ONLY**
 
 List gyros, döner, kebab, souvlaki, or meat processing companies that are physically located in {location} city.
-Do NOT include companies from other cities in {country} - ONLY {location}!
 
-Include manufacturers, producers, wholesale suppliers, meat processing plants, and food factories BASED IN {location}.
-
-Return as a JSON array. Remember: 
+Return as a JSON array with at least 10-15 companies. Remember: 
 - company_name is REQUIRED
-- city MUST be {location} (or immediate suburb)
-- Do NOT include companies from other cities"""
+- city MUST be {location}"""
+
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "kimi-k2-0711-preview",
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 4096
+                    }
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Kimi API error: {response.status_code} - {response.text}")
+                    # Fallback to emergent integrations if Kimi fails
+                    return await self._fallback_search(query, country, location, limit)
+                
+                result = response.json()
+                content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                
+                logger.info(f"Kimi K2.5 Response: {content[:500] if content else 'None'}")
+                
+                # Parse JSON response
+                response_text = content.strip() if content else ""
+                if response_text.startswith("```json"):
+                    response_text = response_text[7:]
+                if response_text.startswith("```"):
+                    response_text = response_text[3:]
+                if response_text.endswith("```"):
+                    response_text = response_text[:-3]
+                
+                # Find JSON array in response
+                json_match = re.search(r'\[[\s\S]*\]', response_text)
+                if json_match:
+                    data = json.loads(json_match.group())
+                    leads = []
+                    for item in data:
+                        if not item.get("company_name"):
+                            continue
+                        lead = FoundLead(
+                            company_name=item.get("company_name"),
+                            email=item.get("email"),
+                            phone=item.get("phone"),
+                            address=item.get("address"),
+                            city=item.get("city", location),
+                            country=item.get("country", country),
+                            website=item.get("website"),
+                            description=item.get("description"),
+                            source="Kimi K2.5 AI Search"
+                        )
+                        leads.append(lead)
+                    return leads
+                
+                return []
+                
+        except Exception as e:
+            logger.error(f"Kimi K2.5 search failed: {str(e)}")
+            # Fallback to emergent integrations
+            return await self._fallback_search(query, country, location, limit)
+    
+    async def _fallback_search(self, query: str, country: str, location: str, limit: int) -> List[FoundLead]:
+        """Fallback to Emergent Integrations if Kimi fails"""
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        
+        emergent_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not emergent_key:
+            return []
+            
+        system_prompt = f"""You are a B2B lead researcher. Find companies in {location}, {country} that manufacture gyros, döner, kebab, or meat products. Return a JSON array with company_name, email, phone, address, city, country, website, description."""
+        
+        user_prompt = f"""Find businesses: "{query}" in {location}, {country}. Return JSON array."""
 
         try:
             chat = LlmChat(
-                api_key=self.api_key,
-                session_id=f"lead-search-{hash(query)}",
+                api_key=emergent_key,
+                session_id=f"lead-search-fallback-{hash(query)}",
                 system_message=system_prompt
             ).with_model("openai", "gpt-5.2")
             
             response = await chat.send_message(UserMessage(text=user_prompt))
             
-            logger.info(f"AI Response: {response[:500] if response else 'None'}")
-            
-            # Parse JSON response
             response_text = response.strip() if response else ""
             if response_text.startswith("```json"):
                 response_text = response_text[7:]
@@ -138,13 +204,11 @@ Return as a JSON array. Remember:
             if response_text.endswith("```"):
                 response_text = response_text[:-3]
             
-            # Find JSON array in response
             json_match = re.search(r'\[[\s\S]*\]', response_text)
             if json_match:
                 data = json.loads(json_match.group())
                 leads = []
                 for item in data:
-                    # Skip entries without company_name
                     if not item.get("company_name"):
                         continue
                     lead = FoundLead(
@@ -152,11 +216,11 @@ Return as a JSON array. Remember:
                         email=item.get("email"),
                         phone=item.get("phone"),
                         address=item.get("address"),
-                        city=item.get("city", ""),
+                        city=item.get("city", location),
                         country=item.get("country", country),
                         website=item.get("website"),
                         description=item.get("description"),
-                        source="AI Search"
+                        source="AI Search (Fallback)"
                     )
                     leads.append(lead)
                 return leads
@@ -164,15 +228,13 @@ Return as a JSON array. Remember:
             return []
             
         except Exception as e:
-            logger.error(f"AI search failed: {str(e)}")
+            logger.error(f"Fallback search failed: {str(e)}")
             return []
 
     async def enrich_lead(self, lead: FoundLead) -> FoundLead:
-        """Try to find additional information for a lead"""
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
-        
+        """Try to find additional information for a lead using Kimi K2.5"""
         if lead.email and lead.phone:
-            return lead  # Already has contact info
+            return lead
             
         prompt = f"""Find contact information for this company:
 Company: {lead.company_name}
@@ -185,24 +247,37 @@ Return as JSON:
 If you can't find specific info, return null for those fields."""
 
         try:
-            chat = LlmChat(
-                api_key=self.api_key,
-                session_id=f"enrich-{hash(lead.company_name)}",
-                system_message="You are a business information researcher. Find accurate contact details."
-            ).with_model("openai", "gpt-5.2")
-            
-            response = await chat.send_message(UserMessage(text=prompt))
-            
-            # Parse response
-            json_match = re.search(r'\{[\s\S]*\}', response)
-            if json_match:
-                data = json.loads(json_match.group())
-                if data.get("email") and not lead.email:
-                    lead.email = data["email"]
-                if data.get("phone") and not lead.phone:
-                    lead.phone = data["phone"]
-                if data.get("address") and not lead.address:
-                    lead.address = data["address"]
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "kimi-k2-0711-preview",
+                        "messages": [
+                            {"role": "system", "content": "You are a business information researcher. Find accurate contact details."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": 0.3,
+                        "max_tokens": 500
+                    }
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    
+                    json_match = re.search(r'\{[\s\S]*\}', content)
+                    if json_match:
+                        data = json.loads(json_match.group())
+                        if data.get("email") and not lead.email:
+                            lead.email = data["email"]
+                        if data.get("phone") and not lead.phone:
+                            lead.phone = data["phone"]
+                        if data.get("address") and not lead.address:
+                            lead.address = data["address"]
             
             return lead
             

@@ -15,6 +15,7 @@ import EmailComposer from "@/pages/EmailComposer";
 import EmailHistory from "@/pages/EmailHistory";
 import Settings from "@/pages/Settings";
 import RoutePlanner from "@/pages/RoutePlanner";
+import Specifications from "@/pages/Specifications";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -83,6 +84,7 @@ function AppRoutes() {
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/recipes" element={<Recipes />} />
+                <Route path="/specifications" element={<Specifications />} />
                 <Route path="/templates" element={<Templates />} />
                 <Route path="/compose" element={<EmailComposer />} />
                 <Route path="/history" element={<EmailHistory />} />

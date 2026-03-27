@@ -516,3 +516,155 @@ def generate_route_pdf(route_data: dict, company_settings: dict = None) -> bytes
     c.save()
     buffer.seek(0)
     return buffer.getvalue()
+
+
+
+def generate_specification_pdf(spec: dict, company_settings: dict = None) -> bytes:
+    """Generate a professionally styled product specification PDF"""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    
+    company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Header
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 24)
+    c.drawString(2*cm, height - 2.5*cm, company_name)
+    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2*cm, height - 3.2*cm, "Product Specification")
+    
+    c.setFont(FONT_BOLD, 12)
+    c.drawRightString(width - 2*cm, height - 2.5*cm, spec.get('product_code', ''))
+    c.setFont(FONT_REGULAR, 10)
+    c.drawRightString(width - 2*cm, height - 3.2*cm, datetime.now().strftime('%d.%m.%Y'))
+    
+    y = height - 5.5*cm
+    
+    # Product title card
+    c.setFillColor(BG_LIGHT)
+    c.roundRect(1.5*cm, y - 2.5*cm, width - 3*cm, 2.5*cm, 5, fill=True, stroke=False)
+    
+    c.setFillColor(ACCENT_COLOR)
+    c.setFont(FONT_BOLD, 20)
+    c.drawString(2*cm, y - 1*cm, spec.get('name', ''))
+    
+    if spec.get('category'):
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_REGULAR, 11)
+        c.drawString(2*cm, y - 1.8*cm, f"Category: {spec['category']}")
+    
+    y -= 4*cm
+    
+    # Description
+    if spec.get('description'):
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y, "DESCRIPTION")
+        y -= 0.6*cm
+        c.setFillColor(black)
+        c.setFont(FONT_REGULAR, 10)
+        desc = spec['description'][:200]
+        c.drawString(2*cm, y, desc[:80])
+        if len(desc) > 80:
+            y -= 0.5*cm
+            c.drawString(2*cm, y, desc[80:160])
+        y -= 1*cm
+    
+    # Ingredients
+    ingredients = spec.get('ingredients', [])
+    if ingredients:
+        c.setFillColor(ACCENT_COLOR)
+        c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+        c.setFillColor(white)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y - 0.7*cm, f"INGREDIENTS ({len(ingredients)})")
+        
+        y -= 1.5*cm
+        
+        # Table header
+        c.setFillColor(BG_LIGHT)
+        c.rect(1.5*cm, y - 0.6*cm, width - 3*cm, 0.6*cm, fill=True, stroke=False)
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 9)
+        c.drawString(2*cm, y - 0.4*cm, "Ingredient")
+        c.drawString(8*cm, y - 0.4*cm, "%")
+        c.drawString(10*cm, y - 0.4*cm, "Description")
+        
+        y -= 0.8*cm
+        
+        for ing in ingredients[:10]:
+            c.setFillColor(black)
+            c.setFont(FONT_REGULAR, 9)
+            c.drawString(2*cm, y, str(ing.get('name', ''))[:30])
+            c.drawString(8*cm, y, str(ing.get('percentage', '-')))
+            c.setFillColor(TEXT_MUTED)
+            c.drawString(10*cm, y, str(ing.get('description', ''))[:35])
+            y -= 0.5*cm
+            
+            if y < 6*cm:
+                break
+        
+        y -= 0.5*cm
+    
+    # Additional info grid
+    info_items = []
+    if spec.get('allergens'):
+        info_items.append(("Allergens", spec['allergens']))
+    if spec.get('shelf_life'):
+        info_items.append(("Shelf Life", spec['shelf_life']))
+    if spec.get('storage_instructions'):
+        info_items.append(("Storage", spec['storage_instructions']))
+    if spec.get('certifications'):
+        info_items.append(("Certifications", spec['certifications']))
+    
+    if info_items:
+        c.setFillColor(GREEN_COLOR)
+        c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+        c.setFillColor(white)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y - 0.7*cm, "ADDITIONAL INFORMATION")
+        
+        y -= 1.5*cm
+        
+        for label, value in info_items:
+            c.setFillColor(TEXT_MUTED)
+            c.setFont(FONT_BOLD, 9)
+            c.drawString(2*cm, y, label)
+            c.setFillColor(black)
+            c.setFont(FONT_REGULAR, 9)
+            c.drawString(5*cm, y, str(value)[:60])
+            y -= 0.6*cm
+            
+            if y < 3*cm:
+                break
+    
+    # Nutritional info
+    if spec.get('nutritional_info') and y > 4*cm:
+        y -= 0.5*cm
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT_BOLD, 10)
+        c.drawString(2*cm, y, "NUTRITIONAL INFORMATION")
+        y -= 0.6*cm
+        
+        c.setFillColor(BG_LIGHT)
+        c.roundRect(1.5*cm, y - 1.5*cm, width - 3*cm, 1.5*cm, 5, fill=True, stroke=False)
+        c.setFillColor(black)
+        c.setFont(FONT_REGULAR, 9)
+        nutri = spec['nutritional_info'][:150]
+        c.drawString(2*cm, y - 0.5*cm, nutri[:70])
+        if len(nutri) > 70:
+            c.drawString(2*cm, y - 1*cm, nutri[70:140])
+    
+    # Footer
+    c.setFillColor(TEXT_MUTED)
+    c.setFont(FONT_REGULAR, 8)
+    c.drawString(2*cm, 1.5*cm, f"Generated: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer.getvalue()

@@ -23,7 +23,7 @@ from urllib.parse import quote
 import base64
 
 # Import PDF utilities
-from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf
+from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -1161,6 +1161,146 @@ async def send_email_with_attachment(
         await db.email_history.insert_one(history)
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
+# ===================== SPECIFICATIONS ENDPOINTS =====================
+
+class SpecificationIngredient(BaseModel):
+    name: str
+    percentage: Optional[str] = None
+    description: Optional[str] = None
+
+class SpecificationCreate(BaseModel):
+    name: str
+    product_code: str
+    category: Optional[str] = None
+    description: Optional[str] = None
+    ingredients: Optional[List[SpecificationIngredient]] = []
+    nutritional_info: Optional[str] = None
+    allergens: Optional[str] = None
+    storage_instructions: Optional[str] = None
+    shelf_life: Optional[str] = None
+    certifications: Optional[str] = None
+
+class Specification(SpecificationCreate):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+@api_router.post("/specifications")
+async def create_specification(spec_data: SpecificationCreate):
+    spec = Specification(**spec_data.model_dump())
+    doc = spec.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    doc['updated_at'] = doc['updated_at'].isoformat()
+    # Convert ingredients to dicts
+    if doc.get('ingredients'):
+        doc['ingredients'] = [ing if isinstance(ing, dict) else ing.model_dump() for ing in doc['ingredients']]
+    await db.specifications.insert_one(doc)
+    return {"id": spec.id, "message": "Specification created successfully"}
+
+@api_router.get("/specifications")
+async def get_specifications():
+    specs = await db.specifications.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    for s in specs:
+        deserialize_datetime(s)
+    return specs
+
+@api_router.get("/specifications/{spec_id}")
+async def get_specification(spec_id: str):
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    deserialize_datetime(spec)
+    return spec
+
+@api_router.put("/specifications/{spec_id}")
+async def update_specification(spec_id: str, spec_data: SpecificationCreate):
+    existing = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    update_data = spec_data.model_dump()
+    update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+    # Convert ingredients to dicts
+    if update_data.get('ingredients'):
+        update_data['ingredients'] = [ing if isinstance(ing, dict) else ing for ing in update_data['ingredients']]
+    
+    await db.specifications.update_one({"id": spec_id}, {"$set": update_data})
+    return {"message": "Specification updated successfully"}
+
+@api_router.delete("/specifications/{spec_id}")
+async def delete_specification(spec_id: str):
+    result = await db.specifications.delete_one({"id": spec_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    return {"message": "Specification deleted successfully"}
+
+@api_router.get("/specifications/{spec_id}/pdf")
+async def get_specification_pdf(spec_id: str):
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_specification_pdf(spec, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=specification_{spec_id[:8]}.pdf"}
+    )
+
+class SpecEmailRequest(BaseModel):
+    lead_id: str
+    subject: str
+    body: str
+
+@api_router.post("/specifications/{spec_id}/email")
+async def email_specification(spec_id: str, request: SpecEmailRequest):
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    lead = await db.leads.find_one({"id": request.lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    smtp_settings = await db.smtp_settings.find_one({}, {"_id": 0})
+    if not smtp_settings:
+        raise HTTPException(status_code=400, detail="SMTP settings not configured")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_specification_pdf(spec, settings)
+    
+    try:
+        msg = MIMEMultipart()
+        msg['Subject'] = request.subject
+        msg['From'] = f"{smtp_settings['from_name']} <{smtp_settings['from_email']}>"
+        msg['To'] = lead['email']
+        
+        msg.attach(MIMEText(request.body, 'plain'))
+        
+        # Attach PDF
+        pdf_attachment = MIMEBase('application', 'pdf')
+        pdf_attachment.set_payload(pdf_content)
+        encoders.encode_base64(pdf_attachment)
+        pdf_attachment.add_header('Content-Disposition', f'attachment; filename="specification_{spec["product_code"]}.pdf"')
+        msg.attach(pdf_attachment)
+        
+        if smtp_settings.get('use_tls', True):
+            server = smtplib.SMTP(smtp_settings['host'], smtp_settings['port'])
+            server.starttls()
+        else:
+            server = smtplib.SMTP_SSL(smtp_settings['host'], smtp_settings['port'])
+        
+        server.login(smtp_settings['username'], smtp_settings['password'])
+        server.sendmail(smtp_settings['from_email'], lead['email'], msg.as_string())
+        server.quit()
+        
+        return {"success": True, "message": "Email sent successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
+
 # ===================== PRODUCT ENDPOINTS =====================
 
 @api_router.post("/products", response_model=Product)
@@ -1623,12 +1763,15 @@ async def duplicate_recipe(recipe_id: str, new_lead_id: str):
 
 @api_router.post("/leads/search")
 async def search_for_leads(request: SearchLeadsRequest):
-    """Search for potential leads using AI-powered search"""
+    """Search for potential leads using Kimi K2.5 AI-powered search"""
     from lead_finder import LeadFinderService, SEARCH_TEMPLATES
     
-    api_key = os.environ.get('EMERGENT_LLM_KEY')
+    # Use Kimi API key first, fallback to Emergent key
+    api_key = os.environ.get('KIMI_API_KEY')
     if not api_key:
-        raise HTTPException(status_code=500, detail="LLM API key not configured")
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+    if not api_key:
+        raise HTTPException(status_code=500, detail="AI API key not configured")
     
     finder = LeadFinderService(api_key)
     

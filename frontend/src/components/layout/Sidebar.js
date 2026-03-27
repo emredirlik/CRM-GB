@@ -14,7 +14,8 @@ import {
   BookOpen,
   Package,
   MapPin,
-  LogOut
+  LogOut,
+  ClipboardList
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -30,6 +31,7 @@ const Sidebar = () => {
     { path: '/leads', icon: Users, label: 'leads' },
     { path: '/orders', icon: ShoppingCart, label: 'orders' },
     { path: '/products', icon: Package, label: 'products' },
+    { path: '/specifications', icon: ClipboardList, label: 'specifications' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
     { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
     { path: '/templates', icon: FileText, label: 'templates' },
