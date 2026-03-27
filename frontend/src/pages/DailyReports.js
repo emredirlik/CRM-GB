@@ -207,6 +207,33 @@ const DailyReports = () => {
     }
   };
 
+  const downloadDailyPdf = async () => {
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const dateReports = getReportsForDate(selectedDate);
+    
+    if (dateReports.length === 0) {
+      toast.error('Hata', { description: 'Bu tarihte rapor yok' });
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API}/daily-reports/date/${dateStr}/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `gunluk_raporlar_${dateStr}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`${dateReports.length} rapor PDF olarak indirildi`);
+    } catch (error) {
+      toast.error('Hata', { description: 'PDF indirilemedi' });
+    }
+  };
+
   const getVisitTypeLabel = (value) => {
     return visitTypes.find(t => t.value === value)?.label || value;
   };
@@ -291,6 +318,12 @@ const DailyReports = () => {
                 <Clock className="w-5 h-5 text-blue-600" />
                 {format(selectedDate, 'dd MMMM yyyy', { locale: tr })} Raporları
               </CardTitle>
+              {selectedDateReports.length > 0 && (
+                <Button variant="outline" size="sm" onClick={downloadDailyPdf}>
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Tüm Günü İndir
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,13 @@ const Leads = () => {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [leadDetails, setLeadDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  
+  // Bulk email state
+  const [selectedLeads, setSelectedLeads] = useState(new Set());
+  const [isBulkEmailOpen, setIsBulkEmailOpen] = useState(false);
+  const [bulkEmailSubject, setBulkEmailSubject] = useState('');
+  const [bulkEmailBody, setBulkEmailBody] = useState('');
+  const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -182,6 +190,73 @@ const Leads = () => {
     window.open(url, '_blank');
   };
 
+  const toggleLeadSelection = (leadId) => {
+    const newSelected = new Set(selectedLeads);
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId);
+    } else {
+      newSelected.add(leadId);
+    }
+    setSelectedLeads(newSelected);
+  };
+
+  const selectAllLeads = () => {
+    if (selectedLeads.size === filteredLeads.length) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(filteredLeads.map(l => l.id)));
+    }
+  };
+
+  const openBulkEmailDialog = () => {
+    if (selectedLeads.size === 0) {
+      toast.error('Hata', { description: 'En az bir müşteri seçin' });
+      return;
+    }
+    setBulkEmailSubject('Özel Teklif - Gewürzberg GmbH');
+    setBulkEmailBody(`Sayın Yetkili,
+
+Firmamız Gewürzberg GmbH olarak, döner, gyros ve kebap üretim tesisleriniz için premium kalitede baharat ve bağlayıcı ürünler sunmaktayız.
+
+Özel fiyat teklifimiz için bizimle iletişime geçmenizi rica ederiz.
+
+Saygılarımızla,
+Gewürzberg GmbH`);
+    setIsBulkEmailOpen(true);
+  };
+
+  const sendBulkEmail = async () => {
+    setSendingBulkEmail(true);
+    let sent = 0;
+    let failed = 0;
+
+    for (const leadId of selectedLeads) {
+      const lead = leads.find(l => l.id === leadId);
+      if (lead?.email) {
+        try {
+          await axios.post(`${API}/leads/${leadId}/send-email`, {
+            subject: bulkEmailSubject,
+            body: bulkEmailBody.replace('{company_name}', lead.company_name)
+          });
+          sent++;
+        } catch (error) {
+          failed++;
+        }
+      }
+    }
+
+    setSendingBulkEmail(false);
+    setIsBulkEmailOpen(false);
+    setSelectedLeads(new Set());
+
+    if (sent > 0) {
+      toast.success('Başarılı', { description: `${sent} müşteriye email gönderildi` });
+    }
+    if (failed > 0) {
+      toast.warning('Uyarı', { description: `${failed} email gönderilemedi` });
+    }
+  };
+
   const filteredLeads = leads.filter(lead => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -205,15 +280,26 @@ const Leads = () => {
   return (
     <div className="space-y-6" data-testid="leads-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('leads')}</h1>
           <p className="text-muted-foreground mt-1">{leads.length} {t('totalLeads').toLowerCase()}</p>
         </div>
-        <Button onClick={openAddDialog} data-testid="add-lead-btn">
-          <Plus className="w-4 h-4 mr-2" />
-          {t('addLead')}
-        </Button>
+        <div className="flex gap-2">
+          {selectedLeads.size > 0 && (
+            <Button variant="outline" onClick={openBulkEmailDialog}>
+              <Mail className="w-4 h-4 mr-2" />
+              {selectedLeads.size} Müşteriye Email
+            </Button>
+          )}
+          <Button variant="outline" onClick={selectAllLeads}>
+            {selectedLeads.size === filteredLeads.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+          </Button>
+          <Button onClick={openAddDialog} data-testid="add-lead-btn">
+            <Plus className="w-4 h-4 mr-2" />
+            {t('addLead')}
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -241,6 +327,7 @@ const Leads = () => {
               <table className="data-table" data-testid="leads-table">
                 <thead>
                   <tr>
+                    <th className="w-10"></th>
                     <th>{t('companyName')}</th>
                     <th>{t('firstName')} {t('lastName')}</th>
                     <th>{t('email')}</th>
@@ -252,7 +339,13 @@ const Leads = () => {
                 </thead>
                 <tbody>
                   {filteredLeads.map((lead) => (
-                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`}>
+                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`} className={selectedLeads.has(lead.id) ? 'bg-orange-50' : ''}>
+                      <td>
+                        <Checkbox
+                          checked={selectedLeads.has(lead.id)}
+                          onCheckedChange={() => toggleLeadSelection(lead.id)}
+                        />
+                      </td>
                       <td className="font-medium">{lead.company_name}</td>
                       <td>{lead.first_name} {lead.last_name}</td>
                       <td className="text-muted-foreground">{lead.email}</td>
@@ -567,6 +660,48 @@ const Leads = () => {
               Download PDF
             </Button>
             <Button onClick={() => setIsDetailDialogOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Email Dialog */}
+      <Dialog open={isBulkEmailOpen} onOpenChange={setIsBulkEmailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-['Manrope']">Toplu Email Kampanyası</DialogTitle>
+            <DialogDescription>
+              {selectedLeads.size} müşteriye email gönder
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-orange-50 rounded-lg">
+              <p className="text-sm text-orange-700">
+                <strong>{selectedLeads.size}</strong> müşteriye aynı anda email gönderilecek
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Konu</Label>
+              <Input
+                value={bulkEmailSubject}
+                onChange={(e) => setBulkEmailSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mesaj</Label>
+              <Textarea
+                value={bulkEmailBody}
+                onChange={(e) => setBulkEmailBody(e.target.value)}
+                rows={8}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkEmailOpen(false)}>
+              İptal
+            </Button>
+            <Button onClick={sendBulkEmail} disabled={sendingBulkEmail}>
+              {sendingBulkEmail ? 'Gönderiliyor...' : `${selectedLeads.size} Email Gönder`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

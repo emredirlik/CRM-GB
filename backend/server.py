@@ -23,7 +23,7 @@ from urllib.parse import quote
 import base64
 
 # Import PDF utilities
-from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf, generate_daily_report_pdf
+from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf, generate_daily_report_pdf, generate_combined_daily_report_pdf
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -2617,6 +2617,22 @@ async def get_daily_report_pdf(report_id: str):
         content=pdf_content,
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=daily_report_{report['date']}.pdf"}
+    )
+
+@api_router.get("/daily-reports/date/{date}/pdf")
+async def get_daily_reports_by_date_pdf(date: str):
+    """Generate combined PDF for all reports on a specific date"""
+    reports = await db.daily_reports.find({"date": date}, {"_id": 0}).to_list(100)
+    if not reports:
+        raise HTTPException(status_code=404, detail="No reports found for this date")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    pdf_content = generate_combined_daily_report_pdf(reports, date, settings)
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=daily_reports_{date}.pdf"}
     )
 
 # Include the router in the main app

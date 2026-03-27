@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import { toast } from 'sonner';
 import { 
   Search, 
   Loader2, 
-  Globe, 
   Building2, 
   Mail, 
   Phone, 
@@ -25,96 +24,79 @@ import {
   ExternalLink,
   Plus,
   CheckCircle,
-  Sparkles,
-  History
+  Factory,
+  Globe
 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Pre-defined countries and cities for quick selection
+const LOCATIONS = {
+  "Greece": ["Athens", "Thessaloniki", "Patras", "Heraklion"],
+  "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne"],
+  "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya"],
+  "Netherlands": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht"],
+  "Poland": ["Warsaw", "Krakow", "Lodz", "Wroclaw", "Poznan"],
+  "Austria": ["Vienna", "Graz", "Salzburg"],
+  "France": ["Paris", "Lyon", "Marseille"],
+  "Belgium": ["Brussels", "Antwerp", "Ghent"],
+  "Italy": ["Rome", "Milan", "Naples", "Turin"],
+  "Spain": ["Madrid", "Barcelona", "Valencia"]
+};
+
 const LeadFinder = () => {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [keywords, setKeywords] = useState(['gyros producer', 'döner manufacturer']);
-  const [newKeyword, setNewKeyword] = useState('');
   const [location, setLocation] = useState('Athens');
   const [country, setCountry] = useState('Greece');
-  const [limit, setLimit] = useState(20);
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
-  const [searchHistory, setSearchHistory] = useState([]);
-  const [templates, setTemplates] = useState({});
+  const [searchTime, setSearchTime] = useState(null);
 
-  useEffect(() => {
-    fetchTemplates();
-    fetchSearchHistory();
-  }, []);
-
-  const fetchTemplates = async () => {
-    try {
-      const response = await axios.get(`${API}/leads/search/templates`);
-      setTemplates(response.data);
-    } catch (error) {
-      console.error('Failed to fetch templates:', error);
-    }
-  };
-
-  const fetchSearchHistory = async () => {
-    try {
-      const response = await axios.get(`${API}/leads/search/history`);
-      setSearchHistory(response.data);
-    } catch (error) {
-      console.error('Failed to fetch search history:', error);
-    }
-  };
-
-  const handleAddKeyword = () => {
-    if (newKeyword.trim() && !keywords.includes(newKeyword.trim())) {
-      setKeywords([...keywords, newKeyword.trim()]);
-      setNewKeyword('');
-    }
-  };
-
-  const handleRemoveKeyword = (keyword) => {
-    setKeywords(keywords.filter(k => k !== keyword));
-  };
+  const cities = LOCATIONS[country] || [];
 
   const handleSearch = async () => {
-    if (keywords.length === 0) {
-      toast.error('Error', { description: 'Please add at least one search keyword' });
+    if (!location || !country) {
+      toast.error('Hata', { description: 'Şehir ve ülke seçin' });
       return;
     }
 
     setLoading(true);
     setResults([]);
     setSelectedLeads(new Set());
+    const startTime = Date.now();
 
     try {
       const response = await axios.post(`${API}/leads/search`, {
-        keywords,
-        location,
-        country,
-        limit
-      }, { timeout: 120000 }); // 2 minute timeout
-
-      setResults(response.data.leads || []);
-      toast.success('Arama Tamamlandı', { 
-        description: `${response.data.total_found} potansiyel müşteri bulundu` 
+        keywords: ['gyros', 'döner', 'kebab', 'meat factory'],
+        location: location,
+        country: country,
+        limit: 30
       });
-      fetchSearchHistory();
+      
+      const endTime = Date.now();
+      setSearchTime(((endTime - startTime) / 1000).toFixed(1));
+      
+      if (response.data.leads && response.data.leads.length > 0) {
+        setResults(response.data.leads);
+        toast.success('Arama Tamamlandı!', { 
+          description: `${response.data.leads.length} fabrika bulundu (${((endTime - startTime) / 1000).toFixed(1)}s)` 
+        });
+      } else {
+        toast.warning('Sonuç bulunamadı', { description: 'Farklı bir lokasyon deneyin' });
+      }
     } catch (error) {
-      console.error('Search error:', error);
-      toast.error('Arama Başarısız', { 
-        description: error.response?.data?.detail || error.message || 'Arama sırasında bir hata oluştu' 
-      });
+      console.error('Search failed:', error);
+      toast.error('Arama başarısız', { description: error.response?.data?.detail || 'Bir hata oluştu' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectLead = (index) => {
+  const toggleSelection = (index) => {
     const newSelected = new Set(selectedLeads);
     if (newSelected.has(index)) {
       newSelected.delete(index);
@@ -124,7 +106,7 @@ const LeadFinder = () => {
     setSelectedLeads(newSelected);
   };
 
-  const handleSelectAll = () => {
+  const selectAll = () => {
     if (selectedLeads.size === results.length) {
       setSelectedLeads(new Set());
     } else {
@@ -132,38 +114,48 @@ const LeadFinder = () => {
     }
   };
 
-  const handleImportSelected = async () => {
+  const importSelectedLeads = async () => {
     if (selectedLeads.size === 0) {
-      toast.error('Error', { description: 'Please select leads to import' });
+      toast.error('Hata', { description: 'En az bir fabrika seçin' });
       return;
     }
 
     setImporting(true);
-    try {
-      const leadsToImport = Array.from(selectedLeads).map(i => results[i]);
-      const response = await axios.post(`${API}/leads/import`, leadsToImport);
+    let imported = 0;
+    let failed = 0;
 
-      toast.success('Import Complete', { 
-        description: `Imported ${response.data.imported_count} leads, skipped ${response.data.skipped_count} duplicates` 
-      });
-      
-      // Clear selected after import
-      setSelectedLeads(new Set());
-    } catch (error) {
-      toast.error('Import Failed', { 
-        description: error.response?.data?.detail || 'Failed to import leads' 
-      });
-    } finally {
-      setImporting(false);
+    for (const index of selectedLeads) {
+      const lead = results[index];
+      try {
+        await axios.post(`${API}/leads`, {
+          company_name: lead.company_name,
+          first_name: lead.contact_person?.split(' ')[0] || '',
+          last_name: lead.contact_person?.split(' ').slice(1).join(' ') || '',
+          email: lead.email || '',
+          phone: lead.phone || '',
+          address: lead.address || '',
+          city: lead.city || location,
+          country: lead.country || country,
+          tax_number: '',
+          notes: `${lead.business_type || 'Factory'} - ${lead.website || 'No website'}`
+        });
+        imported++;
+      } catch (error) {
+        failed++;
+      }
     }
-  };
 
-  const applyTemplate = (templateKey) => {
-    const template = templates[templateKey];
-    if (template) {
-      setKeywords(template.keywords);
-      setCountry(template.country);
-      toast.success('Template Applied', { description: `Using ${templateKey} search template` });
+    setImporting(false);
+    
+    if (imported > 0) {
+      toast.success('İçe Aktarıldı!', { description: `${imported} fabrika müşteri listesine eklendi` });
+      // Remove imported leads from results
+      const newResults = results.filter((_, i) => !selectedLeads.has(i));
+      setResults(newResults);
+      setSelectedLeads(new Set());
+    }
+    if (failed > 0) {
+      toast.warning('Uyarı', { description: `${failed} kayıt eklenemedi (muhtemelen zaten mevcut)` });
     }
   };
 
@@ -171,309 +163,247 @@ const LeadFinder = () => {
     <div className="space-y-6" data-testid="lead-finder-page">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Lead Finder</h1>
-        <p className="text-muted-foreground mt-1">Automatically discover potential B2B customers using AI</p>
+        <h1 className="text-4xl font-bold tracking-tight font-['Manrope'] flex items-center gap-3">
+          <Factory className="w-10 h-10 text-orange-600" />
+          Fabrika Bul
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Döner, Gyros ve Kebap fabrikalarını hızlıca bulun
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Search Configuration */}
-        <div className="space-y-6">
-          {/* Quick Templates */}
-          <Card data-testid="templates-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-['Manrope'] flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Quick Templates
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {Object.keys(templates).map((key) => (
-                <Button 
-                  key={key}
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full justify-start"
-                  onClick={() => applyTemplate(key)}
-                  data-testid={`template-${key}`}
+      {/* Search Form */}
+      <Card className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            {/* Country Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                Ülke
+              </Label>
+              <Select value={country} onValueChange={(val) => {
+                setCountry(val);
+                setLocation(LOCATIONS[val]?.[0] || '');
+              }}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Ülke seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(LOCATIONS).map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* City Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Şehir
+              </Label>
+              <Select value={location} onValueChange={setLocation}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="Şehir seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cities.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom City Input */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">veya Şehir Yazın</Label>
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Özel şehir..."
+                className="bg-white"
+              />
+            </div>
+
+            {/* Search Button */}
+            <Button 
+              onClick={handleSearch} 
+              disabled={loading}
+              className="bg-orange-600 hover:bg-orange-700 h-10"
+              size="lg"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Aranıyor...
+                </>
+              ) : (
+                <>
+                  <Search className="w-5 h-5 mr-2" />
+                  Fabrika Bul
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Quick Search Buttons */}
+          <div className="mt-4 pt-4 border-t border-orange-200">
+            <p className="text-sm text-muted-foreground mb-2">Hızlı Arama:</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { city: 'Athens', country: 'Greece', label: '🇬🇷 Atina' },
+                { city: 'Thessaloniki', country: 'Greece', label: '🇬🇷 Selanik' },
+                { city: 'Berlin', country: 'Germany', label: '🇩🇪 Berlin' },
+                { city: 'Istanbul', country: 'Turkey', label: '🇹🇷 İstanbul' },
+                { city: 'Amsterdam', country: 'Netherlands', label: '🇳🇱 Amsterdam' },
+                { city: 'Warsaw', country: 'Poland', label: '🇵🇱 Varşova' },
+              ].map(({ city, country: c, label }) => (
+                <Button
+                  key={`${city}-${c}`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCountry(c);
+                    setLocation(city);
+                  }}
+                  className="bg-white hover:bg-orange-100"
                 >
-                  <Globe className="w-4 h-4 mr-2" />
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  {label}
                 </Button>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Search Parameters */}
-          <Card data-testid="search-params-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-['Manrope'] flex items-center gap-2">
-                <Search className="w-5 h-5" />
-                Search Parameters
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Keywords */}
-              <div className="space-y-2">
-                <Label>Search Keywords</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={newKeyword}
-                    onChange={(e) => setNewKeyword(e.target.value)}
-                    placeholder="e.g., kebab factory"
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
-                    data-testid="keyword-input"
-                  />
-                  <Button size="sm" onClick={handleAddKeyword} data-testid="add-keyword-btn">
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {keywords.map((keyword, i) => (
-                    <Badge 
-                      key={i} 
-                      variant="secondary"
-                      className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={() => handleRemoveKeyword(keyword)}
-                    >
-                      {keyword} ×
-                    </Badge>
-                  ))}
-                </div>
+      {/* Results */}
+      {results.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-['Manrope'] flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-green-600" />
+                  Bulunan Fabrikalar
+                </CardTitle>
+                <CardDescription>
+                  {results.length} fabrika bulundu {searchTime && `(${searchTime}s)`}
+                </CardDescription>
               </div>
-
-              {/* Location */}
-              <div className="space-y-2">
-                <Label>Location / City</Label>
-                <Input
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g., Athens, Thessaloniki"
-                  data-testid="location-input"
-                />
-              </div>
-
-              {/* Country */}
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger data-testid="country-select">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Greece">Greece</SelectItem>
-                    <SelectItem value="Germany">Germany</SelectItem>
-                    <SelectItem value="Turkey">Turkey</SelectItem>
-                    <SelectItem value="Netherlands">Netherlands</SelectItem>
-                    <SelectItem value="Belgium">Belgium</SelectItem>
-                    <SelectItem value="France">France</SelectItem>
-                    <SelectItem value="Austria">Austria</SelectItem>
-                    <SelectItem value="Switzerland">Switzerland</SelectItem>
-                    <SelectItem value="Europe">All Europe</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Limit */}
-              <div className="space-y-2">
-                <Label>Max Results: {limit}</Label>
-                <Input
-                  type="range"
-                  min="5"
-                  max="50"
-                  value={limit}
-                  onChange={(e) => setLimit(parseInt(e.target.value))}
-                  className="cursor-pointer"
-                  data-testid="limit-slider"
-                />
-              </div>
-
-              {/* Search Button */}
-              <Button 
-                onClick={handleSearch} 
-                disabled={loading || keywords.length === 0}
-                className="w-full"
-                data-testid="search-btn"
-              >
-                {loading ? (
-                  <>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={selectAll}>
+                  {selectedLeads.size === results.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+                </Button>
+                <Button 
+                  onClick={importSelectedLeads} 
+                  disabled={selectedLeads.size === 0 || importing}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {importing ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Searching with AI...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Find Leads
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Recent Searches */}
-          {searchHistory.length > 0 && (
-            <Card data-testid="search-history-card">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-['Manrope'] flex items-center gap-2">
-                  <History className="w-5 h-5" />
-                  Recent Searches
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {searchHistory.slice(0, 5).map((search, i) => (
-                    <div 
-                      key={i} 
-                      className="text-sm p-2 bg-muted/50 rounded-md cursor-pointer hover:bg-muted"
-                      onClick={() => {
-                        setKeywords(search.query_keywords);
-                        setLocation(search.location);
-                        setCountry(search.country);
-                      }}
-                    >
-                      <p className="font-medium">{search.location}, {search.country}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {search.query_keywords.join(', ')}
-                      </p>
-                      <p className="text-xs text-primary mt-1">
-                        {search.leads_found?.length || 0} leads found
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Results */}
-        <div className="lg:col-span-2">
-          <Card className="h-full" data-testid="results-card">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-['Manrope'] flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Found Leads ({results.length})
-                </CardTitle>
-                {results.length > 0 && (
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleSelectAll}
-                      data-testid="select-all-btn"
-                    >
-                      {selectedLeads.size === results.length ? 'Deselect All' : 'Select All'}
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={handleImportSelected}
-                      disabled={selectedLeads.size === 0 || importing}
-                      data-testid="import-btn"
-                    >
-                      {importing ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Plus className="w-4 h-4 mr-2" />
-                      )}
-                      Import ({selectedLeads.size})
-                    </Button>
-                  </div>
-                )}
+                  ) : (
+                    <Plus className="w-4 h-4 mr-2" />
+                  )}
+                  {selectedLeads.size > 0 ? `${selectedLeads.size} Fabrikayı Ekle` : 'Seçili Değil'}
+                </Button>
               </div>
-              <CardDescription>
-                {results.length === 0 
-                  ? 'Configure search parameters and click "Find Leads" to discover potential customers'
-                  : 'Select leads to import them into your database'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
-                  <p className="font-medium">Searching for leads...</p>
-                  <p className="text-sm">AI is analyzing business data</p>
-                </div>
-              ) : results.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Globe className="w-12 h-12 mb-4 opacity-50" />
-                  <p className="font-medium">No leads found yet</p>
-                  <p className="text-sm">Start a search to find potential customers</p>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {results.map((lead, index) => (
-                    <div 
-                      key={index}
-                      className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                        selectedLeads.has(index) 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => handleSelectLead(index)}
-                      data-testid={`lead-card-${index}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <Checkbox 
-                          checked={selectedLeads.has(index)}
-                          className="mt-1"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold truncate">{lead.company_name}</h3>
-                            {selectedLeads.has(index) && (
-                              <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
-                            )}
-                          </div>
-                          
-                          {lead.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {lead.description}
-                            </p>
-                          )}
-                          
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
-                            {lead.email && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <Mail className="w-3 h-3" />
-                                {lead.email}
-                              </span>
-                            )}
-                            {lead.phone && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <Phone className="w-3 h-3" />
-                                {lead.phone}
-                              </span>
-                            )}
-                            {(lead.city || lead.country) && (
-                              <span className="flex items-center gap-1 text-muted-foreground">
-                                <MapPin className="w-3 h-3" />
-                                {[lead.city, lead.country].filter(Boolean).join(', ')}
-                              </span>
-                            )}
-                            {lead.website && (
-                              <a 
-                                href={lead.website} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1 text-primary hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                                Website
-                              </a>
-                            )}
-                          </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {results.map((lead, index) => (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                    selectedLeads.has(index) 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-gray-200 hover:border-orange-300 bg-white'
+                  }`}
+                  onClick={() => toggleSelection(index)}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                      selectedLeads.has(index) ? 'bg-green-500 border-green-500' : 'border-gray-300'
+                    }`}>
+                      {selectedLeads.has(index) && <CheckCircle className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate">{lead.company_name}</h3>
+                      <Badge variant="secondary" className="text-xs mt-1 mb-2">
+                        <Factory className="w-3 h-3 mr-1" />
+                        {lead.business_type || 'Factory'}
+                      </Badge>
+                      
+                      <div className="space-y-1 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">{lead.city}, {lead.country}</span>
                         </div>
+                        {lead.phone && (
+                          <div className="flex items-center gap-1">
+                            <Phone className="w-3 h-3" />
+                            <span>{lead.phone}</span>
+                          </div>
+                        )}
+                        {lead.address && (
+                          <div className="flex items-center gap-1">
+                            <Building2 className="w-3 h-3" />
+                            <span className="truncate">{lead.address}</span>
+                          </div>
+                        )}
+                        {lead.website && lead.website !== 'N/A' && (
+                          <a 
+                            href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-blue-600 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            <span>Website</span>
+                          </a>
+                        )}
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty State */}
+      {!loading && results.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="py-16 text-center">
+            <Factory className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-xl font-semibold mb-2">Fabrika Aramaya Başlayın</h3>
+            <p className="text-muted-foreground mb-4">
+              Yukarıdan ülke ve şehir seçip "Fabrika Bul" butonuna tıklayın
+            </p>
+            <div className="flex justify-center gap-2">
+              <Badge variant="outline">Gyros Fabrikaları</Badge>
+              <Badge variant="outline">Döner Üreticileri</Badge>
+              <Badge variant="outline">Et İşleme Tesisleri</Badge>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <Loader2 className="w-12 h-12 mx-auto mb-4 text-orange-600 animate-spin" />
+            <h3 className="text-xl font-semibold mb-2">Fabrikalar Aranıyor...</h3>
+            <p className="text-muted-foreground">
+              {location}, {country} bölgesinde fabrikalar taranıyor
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
