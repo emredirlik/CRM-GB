@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Users, Mail, AlertTriangle, TrendingUp, ShoppingCart, Euro, Target, Calendar, Clock, Plus, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
-import { format, addDays, isToday, isTomorrow, isPast } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X } from 'lucide-react';
+import { format, isSameDay } from 'date-fns';
 import { tr, de, enUS, pl } from 'date-fns/locale';
 import axios from 'axios';
 import { toast } from 'sonner';
@@ -28,9 +29,12 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState('all');
-  const [agenda, setAgenda] = useState([]);
-  const [newTask, setNewTask] = useState('');
-  const [showTaskInput, setShowTaskInput] = useState(false);
+  
+  // Calendar & Agenda state
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [events, setEvents] = useState([]);
+  const [showEventInput, setShowEventInput] = useState(false);
+  const [newEventTitle, setNewEventTitle] = useState('');
 
   const periods = [
     { value: 'all', label: 'All' },
@@ -51,7 +55,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchStats(period);
-    fetchAgenda();
+    fetchEvents();
   }, [period]);
 
   const fetchStats = async (selectedPeriod) => {
@@ -66,55 +70,65 @@ const Dashboard = () => {
     }
   };
 
-  const fetchAgenda = async () => {
+  const fetchEvents = async () => {
     try {
       const response = await axios.get(`${API}/agenda`);
-      setAgenda(response.data || []);
+      setEvents(response.data || []);
     } catch (error) {
-      // Agenda may not exist yet
-      setAgenda([]);
+      setEvents([]);
     }
   };
 
-  const addTask = async () => {
-    if (!newTask.trim()) return;
+  const addEvent = async () => {
+    if (!newEventTitle.trim()) return;
     try {
       const response = await axios.post(`${API}/agenda`, {
-        title: newTask,
-        due_date: new Date().toISOString(),
+        title: newEventTitle,
+        due_date: selectedDate.toISOString(),
         completed: false
       });
-      setAgenda([response.data, ...agenda]);
-      setNewTask('');
-      setShowTaskInput(false);
-      toast.success('Task added');
+      setEvents([response.data, ...events]);
+      setNewEventTitle('');
+      setShowEventInput(false);
+      toast.success('Event added');
     } catch (error) {
-      toast.error('Failed to add task');
+      toast.error('Failed to add event');
     }
   };
 
-  const toggleTask = async (taskId) => {
+  const toggleEvent = async (eventId) => {
     try {
-      const task = agenda.find(t => t.id === taskId);
-      await axios.put(`${API}/agenda/${taskId}`, {
-        completed: !task.completed
+      const event = events.find(e => e.id === eventId);
+      await axios.put(`${API}/agenda/${eventId}`, {
+        completed: !event.completed
       });
-      setAgenda(agenda.map(t => 
-        t.id === taskId ? { ...t, completed: !t.completed } : t
+      setEvents(events.map(e => 
+        e.id === eventId ? { ...e, completed: !e.completed } : e
       ));
     } catch (error) {
-      toast.error('Failed to update task');
+      toast.error('Failed to update event');
     }
   };
 
-  const deleteTask = async (taskId) => {
+  const deleteEvent = async (eventId) => {
     try {
-      await axios.delete(`${API}/agenda/${taskId}`);
-      setAgenda(agenda.filter(t => t.id !== taskId));
+      await axios.delete(`${API}/agenda/${eventId}`);
+      setEvents(events.filter(e => e.id !== eventId));
     } catch (error) {
-      toast.error('Failed to delete task');
+      toast.error('Failed to delete event');
     }
   };
+
+  // Get events for selected date
+  const selectedDateEvents = events.filter(event => {
+    if (!event.due_date) return false;
+    return isSameDay(new Date(event.due_date), selectedDate);
+  });
+
+  // Get dates that have events for calendar highlighting
+  const eventDates = events
+    .filter(e => e.due_date)
+    .map(e => new Date(e.due_date));
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -183,7 +197,7 @@ const Dashboard = () => {
         
         {/* Period Filter */}
         <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg" data-testid="period-filter">
-          <Calendar className="w-4 h-4 text-muted-foreground ml-2" />
+          <CalendarIcon className="w-4 h-4 text-muted-foreground ml-2" />
           {periods.map((p) => (
             <Button
               key={p.value}
@@ -259,81 +273,107 @@ const Dashboard = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Agenda / Tasks */}
-        <Card className="lg:col-span-1" data-testid="agenda-card">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold font-['Manrope'] flex items-center gap-2">
-                <Clock className="w-5 h-5 text-orange-600" />
-                Agenda
-              </CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowTaskInput(!showTaskInput)}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+        {/* Calendar Section */}
+        <Card className="lg:col-span-1" data-testid="calendar-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-semibold font-['Manrope'] flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-orange-600" />
+              Calendar
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Add Task Input */}
-            {showTaskInput && (
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  placeholder="New task..."
-                  className="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  onKeyPress={(e) => e.key === 'Enter' && addTask()}
-                  data-testid="new-task-input"
-                />
-                <Button size="sm" onClick={addTask}>Add</Button>
-              </div>
-            )}
+          <CardContent className="space-y-4">
+            {/* Calendar Component */}
+            <div className="flex justify-center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                locale={getLocale()}
+                className="rounded-md border"
+                modifiers={{
+                  hasEvent: eventDates
+                }}
+                modifiersStyles={{
+                  hasEvent: { 
+                    backgroundColor: '#fed7aa',
+                    borderRadius: '50%'
+                  }
+                }}
+              />
+            </div>
             
-            {/* Task List */}
-            {agenda.length === 0 ? (
-              <div className="text-center py-6 text-muted-foreground">
-                <Clock className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No tasks yet</p>
-                <p className="text-xs">Click + to add a task</p>
+            {/* Events for Selected Date */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-medium">
+                  {format(selectedDate, 'PPP', { locale: getLocale() })}
+                </p>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowEventInput(!showEventInput)}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
               </div>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {agenda.map((task) => (
-                  <div 
-                    key={task.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                      task.completed 
-                        ? 'bg-green-50 border border-green-200' 
-                        : 'bg-muted/50 hover:bg-muted'
-                    }`}
-                  >
-                    <button 
-                      onClick={() => toggleTask(task.id)}
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        task.completed 
-                          ? 'bg-green-500 border-green-500' 
-                          : 'border-gray-300 hover:border-orange-500'
+              
+              {/* Add Event Input */}
+              {showEventInput && (
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newEventTitle}
+                    onChange={(e) => setNewEventTitle(e.target.value)}
+                    placeholder="New event..."
+                    className="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    onKeyPress={(e) => e.key === 'Enter' && addEvent()}
+                    data-testid="new-event-input"
+                  />
+                  <Button size="sm" onClick={addEvent}>Add</Button>
+                </div>
+              )}
+              
+              {/* Event List */}
+              {selectedDateEvents.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No events</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {selectedDateEvents.map((event) => (
+                    <div 
+                      key={event.id}
+                      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                        event.completed 
+                          ? 'bg-green-50 border border-green-200' 
+                          : 'bg-muted/50 hover:bg-muted'
                       }`}
                     >
-                      {task.completed && <CheckCircle className="w-4 h-4 text-white" />}
-                    </button>
-                    <span className={`flex-1 text-sm ${task.completed ? 'line-through text-muted-foreground' : ''}`}>
-                      {task.title}
-                    </span>
-                    <button
-                      onClick={() => deleteTask(task.id)}
-                      className="text-gray-400 hover:text-red-500 text-xs"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <button 
+                        onClick={() => toggleEvent(event.id)}
+                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          event.completed 
+                            ? 'bg-green-500 border-green-500' 
+                            : 'border-gray-300 hover:border-orange-500'
+                        }`}
+                      >
+                        {event.completed && <CheckCircle className="w-4 h-4 text-white" />}
+                      </button>
+                      <span className={`flex-1 text-sm ${event.completed ? 'line-through text-muted-foreground' : ''}`}>
+                        {event.title}
+                      </span>
+                      <button
+                        onClick={() => deleteEvent(event.id)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, BookOpen, Copy, ChefHat, Droplets, Timer, Gauge, Package, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, BookOpen, Copy, ChefHat, Droplets, Timer, Gauge, Package, FileDown, Mail } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -62,10 +62,15 @@ const Recipes = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [formData, setFormData] = useState(initialFormData);
   const [newIngredient, setNewIngredient] = useState({ name: '', amount: '', unit: 'kg' });
   const [saving, setSaving] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -224,6 +229,39 @@ const Recipes = () => {
     }
   };
 
+  const openEmailDialog = (recipe) => {
+    setSelectedRecipe(recipe);
+    const lead = leads.find(l => l.id === recipe.lead_id);
+    setSelectedLeadId(recipe.lead_id || '');
+    setEmailSubject(`Reçete: ${recipe.name} (${recipe.product_code})`);
+    setEmailBody(`Sayın ${lead?.company_name || 'Müşteri'},\n\nEkte ${recipe.name} reçetesini bulabilirsiniz.\n\nÜrün Kodu: ${recipe.product_code}\n\nSaygılarımızla,\nGewürzberg GmbH`);
+    setIsEmailDialogOpen(true);
+  };
+
+  const sendRecipeEmail = async () => {
+    if (!selectedLeadId) {
+      toast.error('Hata', { description: 'Lütfen müşteri seçin' });
+      return;
+    }
+
+    const lead = leads.find(l => l.id === selectedLeadId);
+    if (!lead?.email) {
+      toast.error('Hata', { description: 'Müşterinin email adresi yok' });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      await axios.post(`${API}/recipes/${selectedRecipe.id}/email?to_email=${encodeURIComponent(lead.email)}`);
+      toast.success('Başarılı', { description: 'Reçete email ile gönderildi' });
+      setIsEmailDialogOpen(false);
+    } catch (error) {
+      toast.error('Hata', { description: error.response?.data?.detail || 'Email gönderilemedi' });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const filteredRecipes = recipes.filter(recipe => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -318,6 +356,9 @@ const Recipes = () => {
                 <div className="flex items-center justify-end gap-1 mt-4 pt-3 border-t" onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="sm" onClick={() => downloadRecipePdf(recipe.id)} title="PDF İndir">
                     <FileDown className="w-4 h-4 text-blue-600" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => openEmailDialog(recipe)} title="Email Gönder">
+                    <Mail className="w-4 h-4 text-purple-600" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => openEditDialog(recipe)}>
                     <Pencil className="w-4 h-4" />
@@ -672,6 +713,65 @@ const Recipes = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Email Dialog */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-['Manrope']">Reçeteyi Email ile Gönder</DialogTitle>
+            <DialogDescription>
+              {selectedRecipe?.name} reçetesini müşteriye email ile gönderin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg">
+              <BookOpen className="w-8 h-8 text-orange-600" />
+              <div>
+                <p className="font-medium text-sm">{selectedRecipe?.name}</p>
+                <p className="text-xs text-muted-foreground">PDF olarak eklenecek</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Müşteri Seçin *</Label>
+              <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Müşteri seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leads.map(lead => (
+                    <SelectItem key={lead.id} value={lead.id}>
+                      {lead.company_name} - {lead.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Konu</Label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Mesaj</Label>
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                rows={5}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
+              İptal
+            </Button>
+            <Button onClick={sendRecipeEmail} disabled={sendingEmail}>
+              {sendingEmail ? 'Gönderiliyor...' : 'Email Gönder'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

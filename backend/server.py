@@ -884,16 +884,47 @@ async def geocode_address(city: str, country: str):
                 headers={"User-Agent": "GewurzbergCRM/1.0"},
                 timeout=10.0
             )
-            data = response.json()
-            if data and len(data) > 0:
-                return {
-                    "lat": float(data[0]["lat"]),
-                    "lng": float(data[0]["lon"]),
-                    "display_name": data[0].get("display_name", query)
-                }
+            if response.status_code == 200:
+                data = response.json()
+                if data and len(data) > 0:
+                    return {
+                        "lat": float(data[0]["lat"]),
+                        "lng": float(data[0]["lon"]),
+                        "display_name": data[0].get("display_name", query)
+                    }
+            elif response.status_code == 429:
+                logger.warning(f"Nominatim rate limited for: {query}")
     except Exception as e:
         logger.error(f"Geocoding error: {e}")
     return None
+
+@api_router.get("/geocode/search")
+async def search_address(q: str):
+    """Search for addresses and return autocomplete suggestions"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={
+                    "format": "json", 
+                    "q": q, 
+                    "limit": 5,
+                    "addressdetails": 1
+                },
+                headers={"User-Agent": "GewurzbergCRM/1.0"},
+                timeout=15.0
+            )
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 429:
+                logger.warning("Nominatim rate limit reached")
+                return []
+            else:
+                logger.error(f"Nominatim error: {response.status_code}")
+                return []
+    except Exception as e:
+        logger.error(f"Address search error: {e}")
+        return []
 
 @api_router.post("/geocode/batch")
 async def geocode_batch(leads: List[dict]):
@@ -1233,6 +1264,56 @@ async def delete_specification(spec_id: str):
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Specification not found")
     return {"message": "Specification deleted successfully"}
+
+@api_router.post("/specifications/upload-pdf")
+async def upload_specification_pdf(file: UploadFile = File(...)):
+    """Upload a PDF specification document"""
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+    
+    content = await file.read()
+    spec_id = str(uuid.uuid4())
+    
+    # Store specification with PDF data
+    doc = {
+        "id": spec_id,
+        "filename": file.filename,
+        "name": file.filename.replace('.pdf', '').replace('_', ' ').replace('-', ' '),
+        "description": "",
+        "notes": "",
+        "content_type": "application/pdf",
+        "size": len(content),
+        "pdf_data": base64.b64encode(content).decode('utf-8'),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.specifications.insert_one(doc)
+    
+    return {k: v for k, v in doc.items() if k not in ['_id', 'pdf_data']}
+
+@api_router.get("/specifications/{spec_id}/download")
+async def download_specification_pdf(spec_id: str):
+    """Download uploaded PDF specification"""
+    spec = await db.specifications.find_one({"id": spec_id}, {"_id": 0})
+    if not spec:
+        raise HTTPException(status_code=404, detail="Specification not found")
+    
+    if spec.get('pdf_data'):
+        # Return uploaded PDF
+        content = base64.b64decode(spec['pdf_data'])
+        return Response(
+            content=content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={spec.get('filename', 'specification.pdf')}"}
+        )
+    else:
+        # Generate PDF if no upload
+        settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+        pdf_content = generate_specification_pdf(spec, settings)
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=specification_{spec_id[:8]}.pdf"}
+        )
 
 @api_router.post("/specifications/upload")
 async def upload_specification_file(file: UploadFile = File(...)):
