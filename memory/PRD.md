@@ -1,81 +1,67 @@
-# SpiceCRM - B2B Müşteri Yönetim Sistemi PRD
+# Gewürzberg GmbH - B2B CRM PRD
 
-## Orijinal Problem
-Berlin'de baharat ve binder üreten bir fabrika için agent tabanlı B2B CRM sistemi. Sistem müşteri bilgilerini otomatik toplayacak ve mail gönderecek.
+## Original Problem Statement
+B2B CRM application for a spice/binder factory based in Berlin (Gewürzberg GmbH). Target customers are Döner, Gyros, and Kebab factories across Europe.
 
-## Kullanıcı Personaları
-- **Satış Ekibi**: Potansiyel müşterileri bulur, iletişim kurar, sipariş takibi yapar
-- **Yönetici**: Dashboard'dan istatistikleri takip eder, gelir raporları görür
+## Core Features (COMPLETED)
+1. **Authentication System** - Login with username/password (JWT)
+2. **Dashboard** - Stats, Calendar, clickable cards, revenue target
+3. **Lead Management** - CRUD for customer leads
+4. **Order Management** - Orders with PDF generation
+5. **Recipe Management** - Custom recipes with PDF, email sending
+6. **Product Management** - Product catalog
+7. **Specifications** - PDF upload, edit, email to customers
+8. **Route Planner** - Map-based with address autocomplete
+9. **Email Composer** - SMTP integration, attachments
+10. **Lead Finder** - AI-powered using Gemini API
+11. **Multi-language** - EN, TR, DE, PL support
 
-## Temel Gereksinimler (Statik)
-1. Müşteri bilgileri: İsim, Soyisim, Firma, Vergi No, Adres, E-posta, Şehir, Ülke
-2. Otomatik müşteri bulma (AI destekli)
-3. Mail gönderimi (SMTP)
-4. Çoklu dil desteği (TR/DE/EN)
-5. Sipariş takibi
+## Recent Updates (March 27, 2026)
+- **Dashboard Calendar** - Replaced Agenda with interactive calendar
+- **Gemini Lead Finder** - Switched from Kimi to Gemini API for better results
+- **Specifications PDF Upload** - Simplified to drag-drop PDF upload only
+- **Recipes Email** - Added email button to send recipes
+- **Route Planner** - Turkish localization, improved geocoding
 
-## Uygulanan Özellikler
-
-### Tarih: 2026-03-25
-
-#### Dashboard
-- [x] 4 istatistik kartı (Müşteri, Sipariş, Gelir, Mail)
-- [x] Son eklenen müşteriler tablosu
-- [x] Hoş geldiniz banner
-
-#### Müşteri Yönetimi (/leads)
-- [x] Müşteri CRUD işlemleri
-- [x] Arama/filtreleme
-- [x] Mail gönderme butonu
-
-#### AI Müşteri Bulucu (/find-leads)
-- [x] GPT-5.2 ile otomatik müşteri araması
-- [x] Anahtar kelime bazlı arama
-- [x] Ülke/şehir filtresi
-- [x] Bulunan müşterileri içe aktarma
-- [x] Arama geçmişi
-
-#### Sipariş Yönetimi (/orders)
-- [x] Sipariş oluşturma (ürün, kod, müşteri, adet, fiyat)
-- [x] Durum takibi (Beklemede/Onaylandı/Gönderildi/Teslim/İptal)
-- [x] Otomatik toplam hesaplama
-- [x] Sipariş düzenleme/silme
-
-#### Mail Sistemi
-- [x] Şablon yönetimi
-- [x] AI ile mail oluşturma (GPT-5.2)
-- [x] SMTP ayarları
-- [x] Mail geçmişi
-
-#### Çoklu Dil
-- [x] Türkçe (TR)
-- [x] Almanca (DE)
-- [x] İngilizce (EN)
-
-## Teknoloji Stack
-- **Frontend**: React, TailwindCSS, Shadcn/UI
-- **Backend**: FastAPI, Python
+## Tech Stack
+- **Frontend**: React 18, TailwindCSS, Shadcn UI
+- **Backend**: FastAPI (Python), Motor (async MongoDB)
 - **Database**: MongoDB
-- **AI**: OpenAI GPT-5.2 (Emergent LLM Key)
+- **APIs**: Gemini (lead finding), Nominatim (geocoding)
+- **PDF**: ReportLab with DejaVu fonts
 
-## Öncelikli Backlog
+## API Endpoints
+- `/api/auth/*` - Authentication
+- `/api/leads/*` - Lead CRUD
+- `/api/orders/*` - Order CRUD
+- `/api/recipes/*` - Recipe CRUD + email
+- `/api/specifications/*` - PDF upload, download, email
+- `/api/route/*` - Route calculation
+- `/api/geocode/*` - Address geocoding
+- `/api/lead-finder/*` - AI lead search
+- `/api/agenda/*` - Calendar events
+- `/api/dashboard/stats` - Dashboard statistics
 
-### P0 (Kritik) - Tamamlandı
-- [x] Temel CRUD işlemleri
-- [x] Sipariş sistemi
-- [x] AI müşteri bulma
+## Database Collections
+- `users` - Authentication
+- `leads` - Customer data
+- `orders` - Order records
+- `recipes` - Production recipes
+- `specifications` - PDF specifications
+- `agenda` - Calendar events
+- `company_settings` - Company info
+- `smtp_settings` - Email configuration
 
-### P1 (Önemli)
-- [ ] SMTP test edilecek (kullanıcı bilgileri gerekli)
-- [ ] Daha fazla müşteri bulma kapasitesi (Perplexity/Google API)
+## Completed Tasks
+- [x] Authentication system (admin/190371)
+- [x] Dashboard with calendar
+- [x] PDF generation with Turkish characters
+- [x] Lead finder with Gemini API
+- [x] Specifications PDF upload
+- [x] Recipes email functionality
+- [x] Route planner with geocoding
 
-### P2 (İstenen)
-- [ ] Toplu mail gönderimi
-- [ ] Mail şablonları için değişken desteği
-- [ ] Sipariş faturalandırma
-- [ ] Raporlama/analitik dashboard
-
-## Sonraki Görevler
-1. SMTP ayarlarını test et (kullanıcı bilgileri ile)
-2. Müşteri bulma kapasitesini artır (opsiyonel API entegrasyonu)
-3. Sipariş raporlama özellikleri ekle
+## Pending/Future Tasks
+- [ ] WhatsApp PDF sharing
+- [ ] Auto-reply for emails
+- [ ] WhatsApp Business API integration

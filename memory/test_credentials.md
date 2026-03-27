@@ -1,12 +1,13 @@
-# Test Credentials
+# Test Credentials for Gewürzberg GmbH CRM
 
-## Admin User
-- Username: admin
-- Password: 190371
-- Role: admin
+## Admin Account
+- **Username**: admin
+- **Password**: 190371
+- **Role**: Administrator
 
-## Auth Endpoints
-- POST /api/auth/login
-- POST /api/auth/logout
-- GET /api/auth/me
-- GET /api/auth/check
+## API Keys
+- **Gemini API**: AIzaSyCpL_KLNSPD12o1n6ZoUlQE1BpflM-dMAY (for Lead Finder)
+
+## Test URLs
+- **Frontend**: https://customer-agent-2.preview.emergentagent.com
+- **Backend API**: https://customer-agent-2.preview.emergentagent.com/api
