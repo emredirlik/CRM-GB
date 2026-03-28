@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/layout/Layout";
+import AIChatWidget from "@/components/AIChatWidget";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Leads from "@/pages/Leads";
@@ -94,6 +95,8 @@ function AppRoutes() {
                 <Route path="/daily-reports" element={<DailyReports />} />
               </Routes>
             </Layout>
+            {/* AI Chat Widget - floating button */}
+            <AIChatWidget />
           </ProtectedRoute>
         }
       />

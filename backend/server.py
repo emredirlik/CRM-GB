@@ -3087,6 +3087,123 @@ async def get_sales_forecast():
         }
 
 # Include the router in the main app
+
+# ===================== AI SERVICES ENDPOINTS =====================
+
+from ai_services import email_assistant, churn_predictor, recipe_optimizer, chatbot
+
+class AIEmailRequest(BaseModel):
+    email_type: str  # introduction, follow_up, quotation, thank_you, promotion, reminder
+    customer_name: str
+    company_name: str
+    language: str = 'en'
+    context: Optional[str] = ''
+    product_info: Optional[str] = ''
+
+@api_router.post("/ai/email/generate")
+async def generate_ai_email(request: AIEmailRequest):
+    """Generate a professional email using AI"""
+    result = await email_assistant.generate_email(
+        email_type=request.email_type,
+        customer_name=request.customer_name,
+        company_name=request.company_name,
+        language=request.language,
+        context=request.context or '',
+        product_info=request.product_info or ''
+    )
+    return result
+
+@api_router.get("/ai/churn/analyze/{lead_id}")
+async def analyze_customer_churn(lead_id: str):
+    """Analyze churn risk for a specific customer"""
+    # Get customer data
+    customer = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Get customer orders
+    orders = await db.orders.find({"lead_id": lead_id}, {"_id": 0}).to_list(100)
+    
+    result = await churn_predictor.analyze_customer(customer, orders)
+    return {
+        "customer_id": lead_id,
+        "company_name": customer.get('company_name'),
+        **result
+    }
+
+@api_router.get("/ai/churn/at-risk")
+async def get_at_risk_customers():
+    """Get all customers at risk of churning"""
+    # Get all customers
+    customers = await db.leads.find({}, {"_id": 0}).to_list(500)
+    
+    # Get all orders grouped by customer
+    all_orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    orders_by_customer = {}
+    for order in all_orders:
+        lead_id = order.get('lead_id')
+        if lead_id:
+            if lead_id not in orders_by_customer:
+                orders_by_customer[lead_id] = []
+            orders_by_customer[lead_id].append(order)
+    
+    at_risk = await churn_predictor.get_at_risk_customers(customers, orders_by_customer)
+    
+    return {
+        "total_customers": len(customers),
+        "at_risk_count": len(at_risk),
+        "at_risk_customers": at_risk[:20]  # Return top 20
+    }
+
+@api_router.post("/ai/recipe/optimize/{recipe_id}")
+async def optimize_recipe(recipe_id: str, target: str = 'cost'):
+    """Optimize a recipe using AI"""
+    recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    result = await recipe_optimizer.optimize_recipe(recipe, target)
+    return result
+
+class ChatRequest(BaseModel):
+    message: str
+    session_id: Optional[str] = None
+    language: str = 'en'
+    context: Optional[dict] = None
+
+@api_router.post("/ai/chat")
+async def ai_chat(request: ChatRequest):
+    """Chat with AI assistant"""
+    session_id = request.session_id or str(uuid.uuid4())
+    
+    result = await chatbot.chat(
+        session_id=session_id,
+        message=request.message,
+        language=request.language,
+        context=request.context
+    )
+    
+    # Store chat message in database
+    await db.chat_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "session_id": session_id,
+        "user_message": request.message,
+        "ai_response": result.get('response', ''),
+        "language": request.language,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return result
+
+@api_router.get("/ai/chat/history/{session_id}")
+async def get_chat_history(session_id: str):
+    """Get chat history for a session"""
+    messages = await db.chat_history.find(
+        {"session_id": session_id}, 
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(100)
+    
+    return {"session_id": session_id, "messages": messages}
 app.include_router(api_router)
 
 # Get frontend URL for CORS

@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles } from 'lucide-react';
+import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles, AlertTriangle } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { tr, de, enUS, pl } from 'date-fns/locale';
 import axios from 'axios';
@@ -58,6 +58,10 @@ const Dashboard = () => {
   // Calendar & Agenda state
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState([]);
+  
+  // Churn Analysis state
+  const [atRiskCustomers, setAtRiskCustomers] = useState([]);
+  const [loadingChurn, setLoadingChurn] = useState(false);
   const [leads, setLeads] = useState([]);
   
   // Visit Planning Dialog
