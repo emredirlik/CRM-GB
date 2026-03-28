@@ -247,37 +247,63 @@ class CompanySettings(BaseModel):
     currency: str = "EUR"
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-# Order Models
+# Order Models - Multi-Product Support
+class OrderProductItem(BaseModel):
+    """Single product item within an order"""
+    product_name: str
+    product_code: str
+    pieces: int = 1  # Adet (kaç paket/kutu)
+    amount: float  # Miktar (10 kg gibi)
+    unit: str = "kg"  # Birim (kg, g, adet, paket, litre)
+    unit_price: float  # Birim fiyatı (€/kg gibi)
+    subtotal: Optional[float] = None  # pieces × amount × unit_price
+
 class Order(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     lead_id: str
     lead_name: str  # For display
     company_name: str  # For display
-    product_name: str
-    product_code: str
-    pieces: Optional[int] = 1  # Adet (kaç paket/kutu)
-    quantity: Optional[int] = None  # Legacy field for backwards compatibility
-    amount: Optional[float] = None  # Miktar (10 kg gibi)
-    unit: Optional[str] = "kg"  # Birim (kg, g, adet, paket, litre)
-    unit_price: float  # Birim fiyatı (€/kg gibi)
+    # Multi-product support
+    products: List[OrderProductItem] = []
+    # Legacy single-product fields (for backwards compatibility)
+    product_name: Optional[str] = None
+    product_code: Optional[str] = None
+    pieces: Optional[int] = 1
+    quantity: Optional[int] = None
+    amount: Optional[float] = None
+    unit: Optional[str] = "kg"
+    unit_price: Optional[float] = None
     total_price: float
     status: str = "pending"  # pending, confirmed, shipped, delivered, cancelled
     notes: Optional[str] = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class OrderCreate(BaseModel):
-    lead_id: str
+class OrderCreateProductItem(BaseModel):
+    """Product item for order creation"""
     product_name: str
     product_code: str
     pieces: int = 1
     amount: float
-    unit: str
+    unit: str = "kg"
     unit_price: float
+
+class OrderCreate(BaseModel):
+    lead_id: str
+    # Multi-product support
+    products: List[OrderCreateProductItem] = []
+    # Legacy single-product fields (for backwards compatibility)
+    product_name: Optional[str] = None
+    product_code: Optional[str] = None
+    pieces: int = 1
+    amount: Optional[float] = None
+    unit: str = "kg"
+    unit_price: Optional[float] = None
     notes: Optional[str] = ""
 
 class OrderUpdate(BaseModel):
+    products: Optional[List[OrderProductItem]] = None
     product_name: Optional[str] = None
     product_code: Optional[str] = None
     pieces: Optional[int] = None
@@ -2000,20 +2026,66 @@ async def create_order(order_data: OrderCreate):
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
-    # Calculate total price: pieces × amount × unit_price
-    # Example: 1 × 10 kg × 4 €/kg = 40 €
-    total_price = order_data.pieces * order_data.amount * order_data.unit_price
+    # Handle multi-product orders
+    products_list = []
+    total_price = 0.0
+    
+    if order_data.products and len(order_data.products) > 0:
+        # Multi-product order
+        for item in order_data.products:
+            subtotal = item.pieces * item.amount * item.unit_price
+            products_list.append(OrderProductItem(
+                product_name=item.product_name,
+                product_code=item.product_code,
+                pieces=item.pieces,
+                amount=item.amount,
+                unit=item.unit,
+                unit_price=item.unit_price,
+                subtotal=subtotal
+            ))
+            total_price += subtotal
+        
+        # For display, use first product info
+        first_product = order_data.products[0]
+        product_name = first_product.product_name
+        product_code = first_product.product_code
+        pieces = first_product.pieces
+        amount = first_product.amount
+        unit = first_product.unit
+        unit_price = first_product.unit_price
+    else:
+        # Legacy single-product order
+        pieces = order_data.pieces or 1
+        amount = order_data.amount or 1
+        unit_price = order_data.unit_price or 0
+        total_price = pieces * amount * unit_price
+        
+        product_name = order_data.product_name
+        product_code = order_data.product_code
+        unit = order_data.unit
+        
+        # Create single product entry for consistency
+        products_list.append(OrderProductItem(
+            product_name=product_name,
+            product_code=product_code,
+            pieces=pieces,
+            amount=amount,
+            unit=unit,
+            unit_price=unit_price,
+            subtotal=total_price
+        ))
     
     order = Order(
         lead_id=order_data.lead_id,
         lead_name=f"{lead['first_name']} {lead['last_name']}",
         company_name=lead['company_name'],
-        product_name=order_data.product_name,
-        product_code=order_data.product_code,
-        pieces=order_data.pieces,
-        amount=order_data.amount,
-        unit=order_data.unit,
-        unit_price=order_data.unit_price,
+        products=products_list,
+        product_name=product_name,
+        product_code=product_code,
+        pieces=pieces,
+        amount=amount,
+        unit=unit,
+        unit_price=unit_price,
         total_price=total_price,
         notes=order_data.notes
     )
@@ -2021,6 +2093,8 @@ async def create_order(order_data: OrderCreate):
     doc = order.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     doc['updated_at'] = doc['updated_at'].isoformat()
+    # Serialize products
+    doc['products'] = [p.model_dump() if hasattr(p, 'model_dump') else p for p in doc['products']]
     await db.orders.insert_one(doc)
     return order
 
@@ -2047,11 +2121,38 @@ async def update_order(order_id: str, order_data: OrderUpdate):
     
     update_data = {k: v for k, v in order_data.model_dump().items() if v is not None}
     
-    # Recalculate total: pieces × amount × unit_price
-    pieces = update_data.get('pieces', existing.get('pieces', 1))
-    amount = update_data.get('amount', existing.get('amount', existing.get('quantity', 1)))
-    unit_price = update_data.get('unit_price', existing['unit_price'])
-    update_data['total_price'] = pieces * amount * unit_price
+    # Handle multi-product updates
+    if 'products' in update_data and update_data['products']:
+        products = update_data['products']
+        total_price = 0.0
+        serialized_products = []
+        for p in products:
+            if hasattr(p, 'model_dump'):
+                p_dict = p.model_dump()
+            else:
+                p_dict = p
+            subtotal = p_dict.get('pieces', 1) * p_dict.get('amount', 1) * p_dict.get('unit_price', 0)
+            p_dict['subtotal'] = subtotal
+            serialized_products.append(p_dict)
+            total_price += subtotal
+        update_data['products'] = serialized_products
+        update_data['total_price'] = total_price
+        # Update legacy fields with first product
+        if serialized_products:
+            first = serialized_products[0]
+            update_data['product_name'] = first.get('product_name')
+            update_data['product_code'] = first.get('product_code')
+            update_data['pieces'] = first.get('pieces')
+            update_data['amount'] = first.get('amount')
+            update_data['unit'] = first.get('unit')
+            update_data['unit_price'] = first.get('unit_price')
+    else:
+        # Legacy single-product update - recalculate total
+        pieces = update_data.get('pieces', existing.get('pieces', 1))
+        amount = update_data.get('amount', existing.get('amount', existing.get('quantity', 1)))
+        unit_price = update_data.get('unit_price', existing.get('unit_price', 0))
+        update_data['total_price'] = pieces * amount * unit_price
+    
     update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
     
     await db.orders.update_one({"id": order_id}, {"$set": update_data})

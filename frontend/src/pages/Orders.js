@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -49,7 +49,8 @@ const statusColors = {
 const statusLabels = {
   tr: { pending: 'Beklemede', confirmed: 'Onaylandı', shipped: 'Gönderildi', delivered: 'Teslim Edildi', cancelled: 'İptal' },
   de: { pending: 'Ausstehend', confirmed: 'Bestätigt', shipped: 'Versendet', delivered: 'Geliefert', cancelled: 'Storniert' },
-  en: { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' }
+  en: { pending: 'Pending', confirmed: 'Confirmed', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled' },
+  pl: { pending: 'Oczekujące', confirmed: 'Potwierdzone', shipped: 'Wysłane', delivered: 'Dostarczone', cancelled: 'Anulowane' }
 };
 
 const units = [
@@ -62,31 +63,32 @@ const units = [
   { value: 'ml', label: 'Mililitre (ml)' }
 ];
 
-const initialFormData = {
-  lead_id: '',
-  product_id: '', // Ürün seçimi için
+const emptyProductItem = {
   product_name: '',
   product_code: '',
   pieces: 1,
   amount: 1,
   unit: 'kg',
-  unit_price: 0,
-  notes: '',
-  status: 'pending'
+  unit_price: 0
 };
 
 const Orders = () => {
   const { t, language } = useLanguage();
   const [orders, setOrders] = useState([]);
   const [leads, setLeads] = useState([]);
-  const [products, setProducts] = useState([]); // Ürün listesi
+  const [availableProducts, setAvailableProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [formData, setFormData] = useState(initialFormData);
   const [saving, setSaving] = useState(false);
+  
+  // Multi-product form state
+  const [leadId, setLeadId] = useState('');
+  const [orderProducts, setOrderProducts] = useState([{ ...emptyProductItem }]);
+  const [orderNotes, setOrderNotes] = useState('');
+  const [orderStatus, setOrderStatus] = useState('pending');
 
   useEffect(() => {
     fetchData();
@@ -101,54 +103,54 @@ const Orders = () => {
       ]);
       setOrders(ordersRes.data);
       setLeads(leadsRes.data);
-      setProducts(productsRes.data);
+      setAvailableProducts(productsRes.data);
     } catch (error) {
-      toast.error('Error', { description: 'Failed to fetch data' });
+      toast.error('Hata', { description: 'Veri yüklenemedi' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Ürün seçildiğinde otomatik doldur
-  const handleProductSelect = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      setFormData(prev => ({
-        ...prev,
-        product_id: productId,
-        product_name: product.name,
-        product_code: product.code,
-        unit: product.default_unit || 'kg',
-        unit_price: product.default_price || 0
-      }));
-    }
+  const resetForm = () => {
+    setLeadId('');
+    setOrderProducts([{ ...emptyProductItem }]);
+    setOrderNotes('');
+    setOrderStatus('pending');
   };
 
   const openAddDialog = () => {
     setSelectedOrder(null);
-    setFormData(initialFormData);
+    resetForm();
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (order) => {
     setSelectedOrder(order);
-    setFormData({
-      lead_id: order.lead_id,
-      product_id: '',
-      product_name: order.product_name,
-      product_code: order.product_code,
-      pieces: order.pieces || 1,
-      amount: order.amount || order.quantity || 1,
-      unit: order.unit || 'kg',
-      unit_price: order.unit_price,
-      notes: order.notes || '',
-      status: order.status
-    });
+    setLeadId(order.lead_id);
+    setOrderNotes(order.notes || '');
+    setOrderStatus(order.status);
+    
+    // Load products from order
+    if (order.products && order.products.length > 0) {
+      setOrderProducts(order.products.map(p => ({
+        product_name: p.product_name || '',
+        product_code: p.product_code || '',
+        pieces: p.pieces || 1,
+        amount: p.amount || 1,
+        unit: p.unit || 'kg',
+        unit_price: p.unit_price || 0
+      })));
+    } else {
+      // Legacy single product
+      setOrderProducts([{
+        product_name: order.product_name || '',
+        product_code: order.product_code || '',
+        pieces: order.pieces || 1,
+        amount: order.amount || order.quantity || 1,
+        unit: order.unit || 'kg',
+        unit_price: order.unit_price || 0
+      }]);
+    }
     setIsDialogOpen(true);
   };
 
@@ -157,44 +159,80 @@ const Orders = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  // Product item handlers
+  const addProductItem = () => {
+    setOrderProducts([...orderProducts, { ...emptyProductItem }]);
+  };
+
+  const removeProductItem = (index) => {
+    if (orderProducts.length > 1) {
+      setOrderProducts(orderProducts.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateProductItem = (index, field, value) => {
+    const updated = [...orderProducts];
+    updated[index] = { ...updated[index], [field]: value };
+    setOrderProducts(updated);
+  };
+
+  const handleProductSelect = (index, productId) => {
+    const product = availableProducts.find(p => p.id === productId);
+    if (product) {
+      const updated = [...orderProducts];
+      updated[index] = {
+        ...updated[index],
+        product_name: product.name,
+        product_code: product.code,
+        unit: product.default_unit || 'kg',
+        unit_price: product.default_price || 0
+      };
+      setOrderProducts(updated);
+    }
+  };
+
+  const calculateItemSubtotal = (item) => {
+    return (item.pieces || 1) * (item.amount || 0) * (item.unit_price || 0);
+  };
+
   const calculateTotal = () => {
-    const pieces = parseFloat(formData.pieces) || 1;
-    const amount = parseFloat(formData.amount) || 0;
-    const unitPrice = parseFloat(formData.unit_price) || 0;
-    return pieces * amount * unitPrice;
+    return orderProducts.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
   };
 
   const handleSave = async () => {
-    if (!formData.lead_id || !formData.product_name || !formData.product_code) {
-      toast.error('Error', { description: 'Lütfen tüm zorunlu alanları doldurun' });
+    // Validation
+    if (!leadId) {
+      toast.error('Hata', { description: 'Lütfen müşteri seçin' });
+      return;
+    }
+    
+    const validProducts = orderProducts.filter(p => p.product_name && p.product_code);
+    if (validProducts.length === 0) {
+      toast.error('Hata', { description: 'En az bir ürün ekleyin' });
       return;
     }
 
     setSaving(true);
     try {
+      const payload = {
+        lead_id: leadId,
+        products: validProducts.map(p => ({
+          product_name: p.product_name,
+          product_code: p.product_code,
+          pieces: parseInt(p.pieces) || 1,
+          amount: parseFloat(p.amount) || 1,
+          unit: p.unit || 'kg',
+          unit_price: parseFloat(p.unit_price) || 0
+        })),
+        notes: orderNotes
+      };
+
       if (selectedOrder) {
-        await axios.put(`${API}/orders/${selectedOrder.id}`, {
-          product_name: formData.product_name,
-          product_code: formData.product_code,
-          pieces: parseInt(formData.pieces),
-          amount: parseFloat(formData.amount),
-          unit: formData.unit,
-          unit_price: parseFloat(formData.unit_price),
-          status: formData.status,
-          notes: formData.notes
-        });
+        payload.status = orderStatus;
+        await axios.put(`${API}/orders/${selectedOrder.id}`, payload);
         toast.success('Başarılı', { description: 'Sipariş güncellendi' });
       } else {
-        await axios.post(`${API}/orders`, {
-          lead_id: formData.lead_id,
-          product_name: formData.product_name,
-          product_code: formData.product_code,
-          pieces: parseInt(formData.pieces),
-          amount: parseFloat(formData.amount),
-          unit: formData.unit,
-          unit_price: parseFloat(formData.unit_price),
-          notes: formData.notes
-        });
+        await axios.post(`${API}/orders`, payload);
         toast.success('Başarılı', { description: 'Sipariş oluşturuldu' });
       }
       setIsDialogOpen(false);
@@ -273,15 +311,31 @@ const Orders = () => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount || 0);
   };
 
+  const formatOrderProducts = (order) => {
+    if (order.products && order.products.length > 0) {
+      if (order.products.length === 1) {
+        const p = order.products[0];
+        return `${p.product_name}`;
+      }
+      return `${order.products.length} ürün`;
+    }
+    return order.product_name || '-';
+  };
+
   const formatOrderQuantity = (order) => {
+    if (order.products && order.products.length > 0) {
+      if (order.products.length === 1) {
+        const p = order.products[0];
+        const pieces = p.pieces || 1;
+        const amount = p.amount || 1;
+        return pieces > 1 ? `${pieces} × ${amount} ${p.unit}` : `${amount} ${p.unit}`;
+      }
+      return `${order.products.length} kalem`;
+    }
     const pieces = order.pieces || 1;
     const amount = order.amount || order.quantity || 1;
     const unit = order.unit || 'kg';
-    
-    if (pieces > 1) {
-      return `${pieces} × ${amount} ${unit}`;
-    }
-    return `${amount} ${unit}`;
+    return pieces > 1 ? `${pieces} × ${amount} ${unit}` : `${amount} ${unit}`;
   };
 
   if (loading) {
@@ -331,11 +385,9 @@ const Orders = () => {
               <table className="data-table" data-testid="orders-table">
                 <thead>
                   <tr>
-                    <th>Ürün</th>
-                    <th>Ürün Kodu</th>
+                    <th>Ürünler</th>
                     <th>Müşteri</th>
                     <th>Miktar</th>
-                    <th>Birim Fiyat</th>
                     <th>Toplam</th>
                     <th>Durum</th>
                     <th className="text-right">İşlemler</th>
@@ -347,10 +399,16 @@ const Orders = () => {
                       <td>
                         <div className="flex items-center gap-2">
                           <Package className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{order.product_name}</span>
+                          <div>
+                            <span className="font-medium">{formatOrderProducts(order)}</span>
+                            {order.products && order.products.length > 1 && (
+                              <p className="text-xs text-muted-foreground">
+                                {order.products.map(p => p.product_code).join(', ')}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </td>
-                      <td className="font-mono text-xs text-muted-foreground">{order.product_code}</td>
                       <td>
                         <div>
                           <p className="font-medium">{order.company_name}</p>
@@ -360,7 +418,6 @@ const Orders = () => {
                       <td>
                         <span className="font-medium">{formatOrderQuantity(order)}</span>
                       </td>
-                      <td>{formatCurrency(order.unit_price)}/{order.unit || 'kg'}</td>
                       <td className="font-semibold text-primary">{formatCurrency(order.total_price)}</td>
                       <td>
                         <Select 
@@ -431,23 +488,24 @@ const Orders = () => {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Dialog */}
+      {/* Add/Edit Dialog - Multi-Product */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg" data-testid="order-dialog">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="order-dialog">
           <DialogHeader>
             <DialogTitle className="font-['Manrope']">
               {selectedOrder ? 'Sipariş Düzenle' : 'Yeni Sipariş'}
             </DialogTitle>
             <DialogDescription>
-              {selectedOrder ? 'Sipariş bilgilerini güncelleyin' : 'Yeni sipariş oluşturun'}
+              {selectedOrder ? 'Sipariş bilgilerini güncelleyin' : 'Birden fazla ürün ekleyebilirsiniz'}
             </DialogDescription>
           </DialogHeader>
+          
           <div className="space-y-4 py-4">
             {/* Müşteri Seçimi */}
             {!selectedOrder && (
               <div className="space-y-2">
                 <Label>Müşteri *</Label>
-                <Select value={formData.lead_id} onValueChange={(value) => setFormData(prev => ({ ...prev, lead_id: value }))}>
+                <Select value={leadId} onValueChange={setLeadId}>
                   <SelectTrigger data-testid="select-lead">
                     <SelectValue placeholder="Müşteri seçin" />
                   </SelectTrigger>
@@ -461,133 +519,155 @@ const Orders = () => {
                 </Select>
               </div>
             )}
-            
-            {/* Ürün Seçimi */}
-            {!selectedOrder && products.length > 0 && (
-              <div className="space-y-2">
-                <Label>Kayıtlı Ürünlerden Seç</Label>
-                <Select value={formData.product_id} onValueChange={handleProductSelect}>
-                  <SelectTrigger data-testid="select-product">
-                    <SelectValue placeholder="Ürün seçin (opsiyonel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name} ({product.code}) - {formatCurrency(product.default_price)}/{product.default_unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Ürün seçtiğinizde bilgiler otomatik doldurulur</p>
-              </div>
-            )}
-            
-            {/* Ürün Bilgileri */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="product_name">Ürün Adı *</Label>
-                <Input
-                  id="product_name"
-                  name="product_name"
-                  value={formData.product_name}
-                  onChange={handleInputChange}
-                  placeholder="Gyros Baharat Karışımı"
-                  data-testid="input-product-name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="product_code">Ürün Kodu *</Label>
-                <Input
-                  id="product_code"
-                  name="product_code"
-                  value={formData.product_code}
-                  onChange={handleInputChange}
-                  placeholder="GYR-001"
-                  data-testid="input-product-code"
-                />
-              </div>
-            </div>
 
-            {/* Miktar Bilgileri */}
-            <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-              <p className="text-sm font-medium text-muted-foreground">Miktar Hesaplama</p>
-              <div className="grid grid-cols-4 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="pieces">Adet</Label>
-                  <Input
-                    id="pieces"
-                    name="pieces"
-                    type="number"
-                    min="1"
-                    value={formData.pieces}
-                    onChange={handleInputChange}
-                    data-testid="input-pieces"
-                  />
-                </div>
-                <div className="flex items-end pb-2 justify-center text-lg font-bold text-muted-foreground">×</div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Miktar</Label>
-                  <Input
-                    id="amount"
-                    name="amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={handleInputChange}
-                    data-testid="input-amount"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Birim</Label>
-                  <Select value={formData.unit} onValueChange={(value) => setFormData(prev => ({ ...prev, unit: value }))}>
-                    <SelectTrigger data-testid="select-unit">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {units.map(unit => (
-                        <SelectItem key={unit.value} value={unit.value}>
-                          {unit.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Products List */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold">Ürünler</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addProductItem} data-testid="add-product-btn">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Ürün Ekle
+                </Button>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="space-y-2">
-                  <Label htmlFor="unit_price">Birim Fiyat (€/{formData.unit})</Label>
-                  <Input
-                    id="unit_price"
-                    name="unit_price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.unit_price}
-                    onChange={handleInputChange}
-                    data-testid="input-unit-price"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <div className="w-full p-3 bg-primary/10 rounded-md text-center">
-                    <p className="text-xs text-muted-foreground">Toplam Fiyat</p>
-                    <p className="text-xl font-bold text-primary">{formatCurrency(calculateTotal())}</p>
+
+              {orderProducts.map((item, index) => (
+                <div key={index} className="p-4 bg-muted/50 rounded-lg space-y-3" data-testid={`product-item-${index}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Ürün #{index + 1}</span>
+                    {orderProducts.length > 1 && (
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => removeProductItem(index)}
+                        className="text-destructive hover:text-destructive h-6 w-6 p-0"
+                        data-testid={`remove-product-${index}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Kayıtlı Ürün Seçimi */}
+                  {availableProducts.length > 0 && (
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Kayıtlı Ürünlerden Seç</Label>
+                      <Select onValueChange={(val) => handleProductSelect(index, val)}>
+                        <SelectTrigger className="h-8" data-testid={`select-saved-product-${index}`}>
+                          <SelectValue placeholder="Ürün seç (opsiyonel)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableProducts.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name} ({product.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Ürün Bilgileri */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Ürün Adı *</Label>
+                      <Input
+                        value={item.product_name}
+                        onChange={(e) => updateProductItem(index, 'product_name', e.target.value)}
+                        placeholder="Gyros Baharat"
+                        className="h-8"
+                        data-testid={`input-product-name-${index}`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Ürün Kodu *</Label>
+                      <Input
+                        value={item.product_code}
+                        onChange={(e) => updateProductItem(index, 'product_code', e.target.value)}
+                        placeholder="GYR-001"
+                        className="h-8"
+                        data-testid={`input-product-code-${index}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Miktar */}
+                  <div className="grid grid-cols-5 gap-2 items-end">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Adet</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.pieces}
+                        onChange={(e) => updateProductItem(index, 'pieces', parseInt(e.target.value) || 1)}
+                        className="h-8"
+                        data-testid={`input-pieces-${index}`}
+                      />
+                    </div>
+                    <div className="flex items-center justify-center pb-1 text-lg font-bold text-muted-foreground">×</div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Miktar</Label>
+                      <Input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={item.amount}
+                        onChange={(e) => updateProductItem(index, 'amount', parseFloat(e.target.value) || 0)}
+                        className="h-8"
+                        data-testid={`input-amount-${index}`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Birim</Label>
+                      <Select value={item.unit} onValueChange={(val) => updateProductItem(index, 'unit', val)}>
+                        <SelectTrigger className="h-8" data-testid={`select-unit-${index}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {units.map(u => (
+                            <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">€/{item.unit}</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.unit_price}
+                        onChange={(e) => updateProductItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                        className="h-8"
+                        data-testid={`input-unit-price-${index}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ara Toplam */}
+                  <div className="text-right text-sm">
+                    <span className="text-muted-foreground">Ara Toplam: </span>
+                    <span className="font-semibold text-primary">{formatCurrency(calculateItemSubtotal(item))}</span>
                   </div>
                 </div>
-              </div>
-              
-              {/* Hesaplama Özeti */}
-              <div className="text-center text-sm text-muted-foreground pt-2 border-t">
-                {formData.pieces} × {formData.amount} {formData.unit} × {formatCurrency(formData.unit_price)}/{formData.unit} = <strong className="text-foreground">{formatCurrency(calculateTotal())}</strong>
+              ))}
+            </div>
+
+            {/* Toplam */}
+            <div className="p-4 bg-primary/10 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-medium">Toplam ({orderProducts.length} ürün)</span>
+                <span className="text-2xl font-bold text-primary" data-testid="order-total">
+                  {formatCurrency(calculateTotal())}
+                </span>
               </div>
             </div>
 
-            {/* Durum (sadece düzenleme modunda) */}
+            {/* Durum (sadece düzenleme) */}
             {selectedOrder && (
               <div className="space-y-2">
                 <Label>Durum</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+                <Select value={orderStatus} onValueChange={setOrderStatus}>
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
                   </SelectTrigger>
@@ -607,15 +687,15 @@ const Orders = () => {
               <Label htmlFor="notes">Notlar</Label>
               <Textarea
                 id="notes"
-                name="notes"
-                value={formData.notes}
-                onChange={handleInputChange}
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
                 rows={2}
                 placeholder="Sipariş notları..."
                 data-testid="input-notes"
               />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="cancel-btn">
               İptal

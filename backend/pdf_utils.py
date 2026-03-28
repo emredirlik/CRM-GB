@@ -91,7 +91,7 @@ def draw_wrapped_text(c, text: str, x: float, y: float, max_width: float,
 
 
 def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
-    """Generate a professionally styled order PDF with Turkish character support"""
+    """Generate a professionally styled order PDF with multi-product support and Turkish character support"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -149,37 +149,100 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     
     y -= 1.5*cm
     
-    # Product info
-    pieces = order.get('pieces', 1)
-    amount = order.get('amount', order.get('quantity', 1))
-    unit = order.get('unit', 'kg')
+    # Get products list
+    products = order.get('products', [])
+    total_price = order.get('total_price', 0)
     
-    items = [
-        ("Ürün Adı", order.get('product_name', '')),
-        ("Ürün Kodu", order.get('product_code', '')),
-        ("Miktar", f"{pieces} × {amount} {unit}"),
-        ("Birim Fiyat", f"€{order.get('unit_price', 0):.2f}/{unit}"),
-    ]
-    
-    for label, value in items:
+    if products and len(products) > 0:
+        # Multi-product table header
+        c.setFillColor(BG_LIGHT)
+        c.rect(1.5*cm, y - 0.7*cm, width - 3*cm, 0.7*cm, fill=True, stroke=False)
         c.setFillColor(TEXT_MUTED)
-        c.setFont(FONT_REGULAR, 9)
-        c.drawString(2*cm, y, label)
-        c.setFillColor(black)
-        c.setFont(FONT_BOLD, 11)
-        c.drawString(6*cm, y, str(value))
-        y -= 0.8*cm
+        c.setFont(FONT_BOLD, 8)
+        c.drawString(2*cm, y - 0.5*cm, "ÜRÜN ADI")
+        c.drawString(7*cm, y - 0.5*cm, "KOD")
+        c.drawString(10*cm, y - 0.5*cm, "MİKTAR")
+        c.drawString(13*cm, y - 0.5*cm, "BİRİM FİYAT")
+        c.drawRightString(width - 2*cm, y - 0.5*cm, "ARA TOPLAM")
+        
+        y -= 0.9*cm
+        
+        # Product rows
+        for i, product in enumerate(products):
+            pieces = product.get('pieces', 1)
+            amount = product.get('amount', 1)
+            unit = product.get('unit', 'kg')
+            unit_price = product.get('unit_price', 0)
+            subtotal = product.get('subtotal', pieces * amount * unit_price)
+            
+            # Alternate row background
+            if i % 2 == 0:
+                c.setFillColor(HexColor('#fafafa'))
+                c.rect(1.5*cm, y - 0.6*cm, width - 3*cm, 0.6*cm, fill=True, stroke=False)
+            
+            c.setFillColor(black)
+            c.setFont(FONT_REGULAR, 9)
+            
+            # Product name (truncate if too long)
+            pname = product.get('product_name', '')[:25]
+            c.drawString(2*cm, y - 0.4*cm, pname)
+            
+            # Product code
+            c.setFillColor(TEXT_MUTED)
+            c.setFont(FONT_REGULAR, 8)
+            c.drawString(7*cm, y - 0.4*cm, product.get('product_code', ''))
+            
+            # Quantity
+            c.setFillColor(black)
+            c.setFont(FONT_REGULAR, 9)
+            qty_str = f"{pieces} × {amount} {unit}" if pieces > 1 else f"{amount} {unit}"
+            c.drawString(10*cm, y - 0.4*cm, qty_str)
+            
+            # Unit price
+            c.drawString(13*cm, y - 0.4*cm, f"€{unit_price:.2f}/{unit}")
+            
+            # Subtotal
+            c.setFont(FONT_BOLD, 9)
+            c.drawRightString(width - 2*cm, y - 0.4*cm, f"€{subtotal:.2f}")
+            
+            y -= 0.7*cm
+            
+            if y < 6*cm:
+                break
+        
+        y -= 0.3*cm
+    else:
+        # Legacy single product display
+        pieces = order.get('pieces', 1)
+        amount = order.get('amount', order.get('quantity', 1))
+        unit = order.get('unit', 'kg')
+        
+        items = [
+            ("Ürün Adı", order.get('product_name', '')),
+            ("Ürün Kodu", order.get('product_code', '')),
+            ("Miktar", f"{pieces} × {amount} {unit}"),
+            ("Birim Fiyat", f"€{order.get('unit_price', 0):.2f}/{unit}"),
+        ]
+        
+        for label, value in items:
+            c.setFillColor(TEXT_MUTED)
+            c.setFont(FONT_REGULAR, 9)
+            c.drawString(2*cm, y, label)
+            c.setFillColor(black)
+            c.setFont(FONT_BOLD, 11)
+            c.drawString(6*cm, y, str(value))
+            y -= 0.8*cm
     
     y -= 0.5*cm
     
-    # Unit Price box (instead of total)
+    # Total Price box
     c.setFillColor(SUCCESS_COLOR)
     c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_REGULAR, 12)
-    c.drawString(2*cm, y - 0.8*cm, "ÜRÜN FİYATI")
+    c.drawString(2*cm, y - 0.8*cm, "TOPLAM FİYAT")
     c.setFont(FONT_BOLD, 24)
-    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{order.get('unit_price', 0):.2f}/{unit}")
+    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{total_price:.2f}")
     
     y -= 3*cm
     
