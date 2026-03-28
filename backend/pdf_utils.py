@@ -90,13 +90,103 @@ def draw_wrapped_text(c, text: str, x: float, y: float, max_width: float,
     return y
 
 
-def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
-    """Generate a professionally styled order PDF with multi-product support and Turkish character support"""
+def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = 'tr') -> bytes:
+    """Generate a professionally styled order PDF with multi-product support and multilingual support"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
     company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Multilingual labels
+    labels = {
+        'tr': {
+            'order_form': 'Sipariş Formu',
+            'customer': 'MÜŞTERİ',
+            'date': 'TARİH',
+            'product_details': 'ÜRÜN DETAYLARI',
+            'product_name': 'ÜRÜN ADI',
+            'code': 'KOD',
+            'quantity': 'MİKTAR',
+            'unit_price': 'BİRİM FİYAT',
+            'subtotal': 'ARA TOPLAM',
+            'total_price': 'TOPLAM FİYAT',
+            'notes': 'NOTLAR',
+            'created': 'Oluşturulma',
+            'status': {
+                'pending': 'BEKLEMEDE',
+                'confirmed': 'ONAYLANDI',
+                'shipped': 'GÖNDERİLDİ',
+                'delivered': 'TESLİM EDİLDİ',
+                'cancelled': 'İPTAL'
+            }
+        },
+        'de': {
+            'order_form': 'Bestellformular',
+            'customer': 'KUNDE',
+            'date': 'DATUM',
+            'product_details': 'PRODUKTDETAILS',
+            'product_name': 'PRODUKTNAME',
+            'code': 'CODE',
+            'quantity': 'MENGE',
+            'unit_price': 'STÜCKPREIS',
+            'subtotal': 'ZWISCHENSUMME',
+            'total_price': 'GESAMTPREIS',
+            'notes': 'NOTIZEN',
+            'created': 'Erstellt',
+            'status': {
+                'pending': 'AUSSTEHEND',
+                'confirmed': 'BESTÄTIGT',
+                'shipped': 'VERSENDET',
+                'delivered': 'GELIEFERT',
+                'cancelled': 'STORNIERT'
+            }
+        },
+        'en': {
+            'order_form': 'Order Form',
+            'customer': 'CUSTOMER',
+            'date': 'DATE',
+            'product_details': 'PRODUCT DETAILS',
+            'product_name': 'PRODUCT NAME',
+            'code': 'CODE',
+            'quantity': 'QUANTITY',
+            'unit_price': 'UNIT PRICE',
+            'subtotal': 'SUBTOTAL',
+            'total_price': 'TOTAL PRICE',
+            'notes': 'NOTES',
+            'created': 'Created',
+            'status': {
+                'pending': 'PENDING',
+                'confirmed': 'CONFIRMED',
+                'shipped': 'SHIPPED',
+                'delivered': 'DELIVERED',
+                'cancelled': 'CANCELLED'
+            }
+        },
+        'pl': {
+            'order_form': 'Formularz Zamówienia',
+            'customer': 'KLIENT',
+            'date': 'DATA',
+            'product_details': 'SZCZEGÓŁY PRODUKTU',
+            'product_name': 'NAZWA PRODUKTU',
+            'code': 'KOD',
+            'quantity': 'ILOŚĆ',
+            'unit_price': 'CENA JEDN.',
+            'subtotal': 'SUMA CZĘŚCIOWA',
+            'total_price': 'CENA CAŁKOWITA',
+            'notes': 'UWAGI',
+            'created': 'Utworzono',
+            'status': {
+                'pending': 'OCZEKUJĄCE',
+                'confirmed': 'POTWIERDZONE',
+                'shipped': 'WYSŁANE',
+                'delivered': 'DOSTARCZONE',
+                'cancelled': 'ANULOWANE'
+            }
+        }
+    }
+    
+    L = labels.get(lang, labels['en'])
     
     # Header background
     c.setFillColor(PRIMARY_COLOR)
@@ -107,7 +197,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     c.setFont(FONT_BOLD, 24)
     c.drawString(2*cm, height - 2.5*cm, company_name)
     c.setFont(FONT_REGULAR, 10)
-    c.drawString(2*cm, height - 3.2*cm, "Sipariş Formu")
+    c.drawString(2*cm, height - 3.2*cm, L['order_form'])
     
     # Document ID
     c.setFont(FONT_BOLD, 12)
@@ -123,7 +213,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 9)
-    c.drawString(2*cm, y - 0.7*cm, "MÜŞTERİ")
+    c.drawString(2*cm, y - 0.7*cm, L['customer'])
     c.setFillColor(black)
     c.setFont(FONT_BOLD, 14)
     c.drawString(2*cm, y - 1.4*cm, order.get('company_name', ''))
@@ -133,7 +223,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 9)
-    c.drawString(10*cm, y - 0.7*cm, "TARİH")
+    c.drawString(10*cm, y - 0.7*cm, L['date'])
     c.setFillColor(black)
     c.setFont(FONT_BOLD, 11)
     c.drawString(10*cm, y - 1.4*cm, datetime.now().strftime('%d.%m.%Y'))
@@ -145,7 +235,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_BOLD, 10)
-    c.drawString(2*cm, y - 0.7*cm, "ÜRÜN DETAYLARI")
+    c.drawString(2*cm, y - 0.7*cm, L['product_details'])
     
     y -= 1.5*cm
     
@@ -159,11 +249,11 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
         c.rect(1.5*cm, y - 0.7*cm, width - 3*cm, 0.7*cm, fill=True, stroke=False)
         c.setFillColor(TEXT_MUTED)
         c.setFont(FONT_BOLD, 8)
-        c.drawString(2*cm, y - 0.5*cm, "ÜRÜN ADI")
-        c.drawString(7*cm, y - 0.5*cm, "KOD")
-        c.drawString(10*cm, y - 0.5*cm, "MİKTAR")
-        c.drawString(13*cm, y - 0.5*cm, "BİRİM FİYAT")
-        c.drawRightString(width - 2*cm, y - 0.5*cm, "ARA TOPLAM")
+        c.drawString(2*cm, y - 0.5*cm, L['product_name'])
+        c.drawString(7*cm, y - 0.5*cm, L['code'])
+        c.drawString(10*cm, y - 0.5*cm, L['quantity'])
+        c.drawString(13*cm, y - 0.5*cm, L['unit_price'])
+        c.drawRightString(width - 2*cm, y - 0.5*cm, L['subtotal'])
         
         y -= 0.9*cm
         
@@ -218,10 +308,10 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
         unit = order.get('unit', 'kg')
         
         items = [
-            ("Ürün Adı", order.get('product_name', '')),
-            ("Ürün Kodu", order.get('product_code', '')),
-            ("Miktar", f"{pieces} × {amount} {unit}"),
-            ("Birim Fiyat", f"€{order.get('unit_price', 0):.2f}/{unit}"),
+            (L['product_name'], order.get('product_name', '')),
+            (L['code'], order.get('product_code', '')),
+            (L['quantity'], f"{pieces} × {amount} {unit}"),
+            (L['unit_price'], f"€{order.get('unit_price', 0):.2f}/{unit}"),
         ]
         
         for label, value in items:
@@ -240,7 +330,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_REGULAR, 12)
-    c.drawString(2*cm, y - 0.8*cm, "TOPLAM FİYAT")
+    c.drawString(2*cm, y - 0.8*cm, L['total_price'])
     c.setFont(FONT_BOLD, 24)
     c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{total_price:.2f}")
     
@@ -254,13 +344,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
         'delivered': HexColor('#22c55e'),
         'cancelled': HexColor('#ef4444')
     }
-    status_labels = {
-        'pending': 'BEKLEMEDE',
-        'confirmed': 'ONAYLANDI',
-        'shipped': 'GÖNDERİLDİ',
-        'delivered': 'TESLİM EDİLDİ',
-        'cancelled': 'İPTAL'
-    }
+    status_labels = L['status']
     
     status = order.get('status', 'pending')
     c.setFillColor(status_colors.get(status, TEXT_MUTED))
@@ -274,7 +358,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
         y -= 2*cm
         c.setFillColor(TEXT_MUTED)
         c.setFont(FONT_REGULAR, 9)
-        c.drawString(2*cm, y, "NOTLAR")
+        c.drawString(2*cm, y, L['notes'])
         c.setFillColor(black)
         c.setFont(FONT_REGULAR, 10)
         c.drawString(2*cm, y - 0.6*cm, order['notes'][:100])
@@ -282,7 +366,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None) -> bytes:
     # Footer
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 8)
-    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawString(2*cm, 1.5*cm, f"{L['created']}: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
     c.drawRightString(width - 2*cm, 1.5*cm, company_name)
     
     c.save()

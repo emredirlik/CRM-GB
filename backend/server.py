@@ -1891,13 +1891,13 @@ def generate_pdf_content(title: str, data: dict, company_settings: dict = None) 
     return buffer.getvalue()
 
 @api_router.get("/orders/{order_id}/pdf")
-async def get_order_pdf(order_id: str):
+async def get_order_pdf(order_id: str, lang: str = 'tr'):
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_order_pdf(order, settings)
+    pdf_content = generate_order_pdf(order, settings, lang=lang)
     
     return Response(
         content=pdf_content,

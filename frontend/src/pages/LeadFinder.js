@@ -27,7 +27,8 @@ import {
   Factory,
   Globe,
   Filter,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -185,38 +186,41 @@ const KEYWORD_PRESETS = {
 const texts = {
   en: {
     title: 'Find Factories',
-    subtitle: 'Find Döner, Gyros and Kebab factories quickly',
+    subtitle: 'Find Döner, Gyros and Kebab factories with AI-powered search',
     country: 'Country',
     city: 'City',
     selectCountry: 'Select country',
     selectCity: 'Select city',
+    allCities: 'All Cities',
     orTypeCity: 'or Type City',
     customCity: 'Custom city...',
     keywords: 'Keywords',
-    selectKeywords: 'Select factory types to search',
+    customKeyword: 'Custom keyword',
+    customKeywordPlaceholder: 'Enter your own keyword...',
+    selectKeywords: 'Select or enter custom keywords',
     quickSearch: 'Quick Search',
-    search: 'Search Factories',
-    searching: 'Searching...',
+    search: 'AI Search',
+    searching: 'AI is searching...',
     foundFactories: 'Found Factories',
     factoriesFound: 'factories found',
     selectAll: 'Select All',
     deselectAll: 'Deselect All',
     addSelected: 'Add Selected',
     notSelected: 'Not Selected',
-    startSearch: 'Start Searching',
-    startSearchDesc: 'Select country and city, then click "Search Factories"',
-    searchingIn: 'Searching factories in',
+    startSearch: 'Start AI Search',
+    startSearchDesc: 'Select country and city, enter keywords, then let AI find real factories',
+    searchingIn: 'AI is searching factories in',
     error: 'Error',
     selectCityCountry: 'Select city and country',
     searchComplete: 'Search Complete!',
-    factoriesFoundIn: 'factories found in',
+    factoriesFoundIn: 'factories found',
     noResults: 'No results found',
-    tryDifferent: 'Try a different location',
+    tryDifferent: 'Try different keywords or location',
     searchFailed: 'Search failed',
     imported: 'Imported!',
     factoriesAdded: 'factories added to customer list',
     warning: 'Warning',
-    couldNotAdd: 'records could not be added (probably already exists)',
+    couldNotAdd: 'records could not be added (may already exist)',
     selectAtLeast: 'Select at least one factory',
     allCountries: 'All Countries',
     filterByRegion: 'Filter by Region',
@@ -226,36 +230,41 @@ const texts = {
     africa: 'Africa',
     americas: 'Americas',
     oceania: 'Oceania',
+    aiPowered: 'AI-Powered Real-Time Search',
+    aiNote: 'Searches for real factories using AI - no cached database',
   },
   tr: {
     title: 'Fabrika Bul',
-    subtitle: 'Döner, Gyros ve Kebap fabrikalarını hızlıca bulun',
+    subtitle: 'AI destekli arama ile Döner, Gyros ve Kebap fabrikalarını bulun',
     country: 'Ülke',
     city: 'Şehir',
     selectCountry: 'Ülke seçin',
     selectCity: 'Şehir seçin',
+    allCities: 'Tüm Şehirler',
     orTypeCity: 'veya Şehir Yazın',
     customCity: 'Özel şehir...',
     keywords: 'Anahtar Kelimeler',
-    selectKeywords: 'Aranacak fabrika türlerini seçin',
+    customKeyword: 'Özel anahtar kelime',
+    customKeywordPlaceholder: 'Kendi anahtar kelimenizi yazın...',
+    selectKeywords: 'Seçin veya özel anahtar kelime girin',
     quickSearch: 'Hızlı Arama',
-    search: 'Fabrika Bul',
-    searching: 'Aranıyor...',
+    search: 'AI ile Ara',
+    searching: 'AI arıyor...',
     foundFactories: 'Bulunan Fabrikalar',
     factoriesFound: 'fabrika bulundu',
     selectAll: 'Tümünü Seç',
     deselectAll: 'Seçimi Kaldır',
     addSelected: 'Seçilenleri Ekle',
     notSelected: 'Seçili Değil',
-    startSearch: 'Aramaya Başlayın',
-    startSearchDesc: 'Ülke ve şehir seçip "Fabrika Bul" butonuna tıklayın',
-    searchingIn: 'bölgesinde fabrikalar aranıyor',
+    startSearch: 'AI Araması Başlat',
+    startSearchDesc: 'Ülke ve şehir seçin, anahtar kelime girin, AI gerçek fabrikaları bulsun',
+    searchingIn: 'AI fabrikaları arıyor',
     error: 'Hata',
     selectCityCountry: 'Şehir ve ülke seçin',
     searchComplete: 'Arama Tamamlandı!',
     factoriesFoundIn: 'fabrika bulundu',
     noResults: 'Sonuç bulunamadı',
-    tryDifferent: 'Farklı bir lokasyon deneyin',
+    tryDifferent: 'Farklı anahtar kelime veya konum deneyin',
     searchFailed: 'Arama başarısız',
     imported: 'İçe Aktarıldı!',
     factoriesAdded: 'fabrika müşteri listesine eklendi',
@@ -270,36 +279,41 @@ const texts = {
     africa: 'Afrika',
     americas: 'Amerika',
     oceania: 'Okyanusya',
+    aiPowered: 'AI Destekli Gerçek Zamanlı Arama',
+    aiNote: 'AI kullanarak gerçek fabrikaları arar - önbellek yok',
   },
   de: {
     title: 'Fabriken finden',
-    subtitle: 'Finden Sie Döner-, Gyros- und Kebab-Fabriken schnell',
+    subtitle: 'Finden Sie Döner-, Gyros- und Kebab-Fabriken mit KI-Suche',
     country: 'Land',
     city: 'Stadt',
     selectCountry: 'Land auswählen',
     selectCity: 'Stadt auswählen',
+    allCities: 'Alle Städte',
     orTypeCity: 'oder Stadt eingeben',
     customCity: 'Andere Stadt...',
     keywords: 'Suchbegriffe',
-    selectKeywords: 'Zu suchende Fabriktypen auswählen',
+    customKeyword: 'Eigener Suchbegriff',
+    customKeywordPlaceholder: 'Eigenen Suchbegriff eingeben...',
+    selectKeywords: 'Auswählen oder eigene Suchbegriffe eingeben',
     quickSearch: 'Schnellsuche',
-    search: 'Fabriken suchen',
-    searching: 'Suche läuft...',
+    search: 'KI-Suche',
+    searching: 'KI sucht...',
     foundFactories: 'Gefundene Fabriken',
     factoriesFound: 'Fabriken gefunden',
     selectAll: 'Alle auswählen',
     deselectAll: 'Auswahl aufheben',
     addSelected: 'Ausgewählte hinzufügen',
     notSelected: 'Nicht ausgewählt',
-    startSearch: 'Suche starten',
-    startSearchDesc: 'Land und Stadt auswählen, dann "Fabriken suchen" klicken',
-    searchingIn: 'Suche Fabriken in',
+    startSearch: 'KI-Suche starten',
+    startSearchDesc: 'Land und Stadt auswählen, Suchbegriffe eingeben, KI findet echte Fabriken',
+    searchingIn: 'KI sucht Fabriken in',
     error: 'Fehler',
     selectCityCountry: 'Stadt und Land auswählen',
     searchComplete: 'Suche abgeschlossen!',
-    factoriesFoundIn: 'Fabriken gefunden in',
+    factoriesFoundIn: 'Fabriken gefunden',
     noResults: 'Keine Ergebnisse',
-    tryDifferent: 'Versuchen Sie einen anderen Standort',
+    tryDifferent: 'Andere Suchbegriffe oder Standort versuchen',
     searchFailed: 'Suche fehlgeschlagen',
     imported: 'Importiert!',
     factoriesAdded: 'Fabriken zur Kundenliste hinzugefügt',
@@ -314,36 +328,41 @@ const texts = {
     africa: 'Afrika',
     americas: 'Amerika',
     oceania: 'Ozeanien',
+    aiPowered: 'KI-gestützte Echtzeit-Suche',
+    aiNote: 'Sucht echte Fabriken mit KI - kein Cache',
   },
   pl: {
     title: 'Znajdź fabryki',
-    subtitle: 'Szybko znajdź fabryki Döner, Gyros i Kebab',
+    subtitle: 'Szybko znajdź fabryki Döner, Gyros i Kebab z wyszukiwaniem AI',
     country: 'Kraj',
     city: 'Miasto',
     selectCountry: 'Wybierz kraj',
     selectCity: 'Wybierz miasto',
+    allCities: 'Wszystkie miasta',
     orTypeCity: 'lub wpisz miasto',
     customCity: 'Inne miasto...',
     keywords: 'Słowa kluczowe',
-    selectKeywords: 'Wybierz typy fabryk do wyszukania',
+    customKeyword: 'Własne słowo kluczowe',
+    customKeywordPlaceholder: 'Wpisz własne słowo kluczowe...',
+    selectKeywords: 'Wybierz lub wpisz własne słowa kluczowe',
     quickSearch: 'Szybkie wyszukiwanie',
-    search: 'Szukaj fabryk',
-    searching: 'Szukanie...',
+    search: 'Szukaj z AI',
+    searching: 'AI szuka...',
     foundFactories: 'Znalezione fabryki',
     factoriesFound: 'fabryk znalezionych',
     selectAll: 'Zaznacz wszystko',
     deselectAll: 'Odznacz wszystko',
     addSelected: 'Dodaj wybrane',
     notSelected: 'Nie wybrano',
-    startSearch: 'Rozpocznij wyszukiwanie',
-    startSearchDesc: 'Wybierz kraj i miasto, następnie kliknij "Szukaj fabryk"',
-    searchingIn: 'Szukanie fabryk w',
+    startSearch: 'Rozpocznij wyszukiwanie AI',
+    startSearchDesc: 'Wybierz kraj i miasto, wpisz słowa kluczowe, AI znajdzie prawdziwe fabryki',
+    searchingIn: 'AI szuka fabryk w',
     error: 'Błąd',
     selectCityCountry: 'Wybierz miasto i kraj',
     searchComplete: 'Wyszukiwanie zakończone!',
     factoriesFoundIn: 'fabryk znalezionych',
     noResults: 'Brak wyników',
-    tryDifferent: 'Spróbuj innej lokalizacji',
+    tryDifferent: 'Spróbuj innych słów kluczowych lub lokalizacji',
     searchFailed: 'Wyszukiwanie nie powiodło się',
     imported: 'Zaimportowano!',
     factoriesAdded: 'fabryk dodanych do listy klientów',
@@ -358,6 +377,8 @@ const texts = {
     africa: 'Afryka',
     americas: 'Ameryka',
     oceania: 'Oceania',
+    aiPowered: 'Wyszukiwanie AI w czasie rzeczywistym',
+    aiNote: 'Wyszukuje prawdziwe fabryki za pomocą AI - bez cache',
   },
 };
 
@@ -378,12 +399,13 @@ const LeadFinder = () => {
   
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [location, setLocation] = useState('Athens');
-  const [country, setCountry] = useState('Greece');
+  const [location, setLocation] = useState('');
+  const [country, setCountry] = useState('Germany');
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [searchTime, setSearchTime] = useState(null);
   const [selectedKeywords, setSelectedKeywords] = useState(['gyros', 'doner', 'meat']);
+  const [customKeyword, setCustomKeyword] = useState('');
   const [regionFilter, setRegionFilter] = useState('all');
 
   const cities = LOCATIONS[country] || [];
@@ -403,13 +425,20 @@ const LeadFinder = () => {
   };
 
   const getSelectedKeywordsList = () => {
-    return keywordPresets
+    const presetKeywords = keywordPresets
       .filter(p => selectedKeywords.includes(p.id))
       .flatMap(p => p.keywords);
+    
+    // Add custom keyword if provided
+    if (customKeyword.trim()) {
+      presetKeywords.push(customKeyword.trim());
+    }
+    
+    return presetKeywords;
   };
 
   const handleSearch = async () => {
-    if (!location || !country) {
+    if (!country) {
       toast.error(t.error, { description: t.selectCityCountry });
       return;
     }
@@ -421,11 +450,15 @@ const LeadFinder = () => {
 
     try {
       const keywords = getSelectedKeywordsList();
+      // Use "All" for city if not specified or "All Cities" selected
+      const searchLocation = location && location !== 'all' ? location : 'All';
+      
       const response = await axios.post(`${API}/leads/search`, {
         keywords: keywords.length > 0 ? keywords : ['gyros', 'döner', 'kebab', 'meat factory'],
-        location: location,
+        location: searchLocation,
         country: country,
-        limit: 50
+        limit: 50,
+        ai_only: true  // New flag to use only AI search
       });
       
       const endTime = Date.now();
@@ -480,18 +513,19 @@ const LeadFinder = () => {
       try {
         await axios.post(`${API}/leads`, {
           company_name: lead.company_name,
-          first_name: lead.contact_person?.split(' ')[0] || '',
+          first_name: lead.contact_person?.split(' ')[0] || 'Contact',
           last_name: lead.contact_person?.split(' ').slice(1).join(' ') || '',
           email: lead.email || '',
           phone: lead.phone || '',
           address: lead.address || '',
-          city: lead.city || location,
+          city: lead.city || location || '',
           country: lead.country || country,
           tax_number: '',
           notes: `${lead.business_type || 'Factory'} - ${lead.website || 'No website'}`
         });
         imported++;
       } catch (error) {
+        console.error('Import error:', error);
         failed++;
       }
     }
@@ -500,6 +534,7 @@ const LeadFinder = () => {
     
     if (imported > 0) {
       toast.success(t.imported, { description: `${imported} ${t.factoriesAdded}` });
+      // Remove imported leads from results
       const newResults = results.filter((_, i) => !selectedLeads.has(i));
       setResults(newResults);
       setSelectedLeads(new Set());
@@ -518,6 +553,15 @@ const LeadFinder = () => {
           {t.title}
         </h1>
         <p className="text-muted-foreground mt-1">{t.subtitle}</p>
+      </div>
+
+      {/* AI Badge */}
+      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+        <Sparkles className="w-5 h-5 text-purple-600" />
+        <div>
+          <span className="font-semibold text-purple-800">{t.aiPowered}</span>
+          <span className="text-sm text-purple-600 ml-2">- {t.aiNote}</span>
+        </div>
       </div>
 
       {/* Search Form */}
@@ -558,7 +602,7 @@ const LeadFinder = () => {
               </Label>
               <Select value={country} onValueChange={(val) => {
                 setCountry(val);
-                setLocation(LOCATIONS[val]?.[0] || '');
+                setLocation('');
               }}>
                 <SelectTrigger className="bg-white">
                   <SelectValue placeholder={t.selectCountry} />
@@ -582,6 +626,7 @@ const LeadFinder = () => {
                   <SelectValue placeholder={t.selectCity} />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">{t.allCities}</SelectItem>
                   {cities.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -593,7 +638,7 @@ const LeadFinder = () => {
             <div className="space-y-2">
               <Label className="text-sm font-medium">{t.orTypeCity}</Label>
               <Input
-                value={location}
+                value={location === 'all' ? '' : location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder={t.customCity}
                 className="bg-white"
@@ -604,7 +649,7 @@ const LeadFinder = () => {
             <Button 
               onClick={handleSearch} 
               disabled={loading}
-              className="bg-orange-600 hover:bg-orange-700 h-10"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 h-10"
               size="lg"
             >
               {loading ? (
@@ -614,7 +659,7 @@ const LeadFinder = () => {
                 </>
               ) : (
                 <>
-                  <Search className="w-5 h-5 mr-2" />
+                  <Sparkles className="w-5 h-5 mr-2" />
                   {t.search}
                 </>
               )}
@@ -628,7 +673,9 @@ const LeadFinder = () => {
               {t.keywords}
             </Label>
             <p className="text-xs text-muted-foreground mb-2">{t.selectKeywords}</p>
-            <div className="flex flex-wrap gap-2">
+            
+            {/* Preset Keywords */}
+            <div className="flex flex-wrap gap-2 mb-3">
               {keywordPresets.map((preset) => (
                 <Button
                   key={preset.id}
@@ -641,6 +688,22 @@ const LeadFinder = () => {
                   {preset.label}
                 </Button>
               ))}
+            </div>
+            
+            {/* Custom Keyword Input */}
+            <div className="flex gap-2 items-center">
+              <Input
+                value={customKeyword}
+                onChange={(e) => setCustomKeyword(e.target.value)}
+                placeholder={t.customKeywordPlaceholder}
+                className="bg-white max-w-xs"
+                data-testid="custom-keyword-input"
+              />
+              {customKeyword && (
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                  + {customKeyword}
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -699,6 +762,7 @@ const LeadFinder = () => {
                   onClick={importSelectedLeads} 
                   disabled={selectedLeads.size === 0 || importing}
                   className="bg-green-600 hover:bg-green-700"
+                  data-testid="add-selected-btn"
                 >
                   {importing ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -721,6 +785,7 @@ const LeadFinder = () => {
                       : 'border-gray-200 hover:border-orange-300 bg-white'
                   }`}
                   onClick={() => toggleSelection(index)}
+                  data-testid={`factory-card-${index}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
@@ -778,7 +843,7 @@ const LeadFinder = () => {
       {!loading && results.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
-            <Factory className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <Sparkles className="w-16 h-16 mx-auto mb-4 text-purple-300" />
             <h3 className="text-xl font-semibold mb-2">{t.startSearch}</h3>
             <p className="text-muted-foreground mb-4">{t.startSearchDesc}</p>
             <div className="flex justify-center gap-2">
@@ -794,10 +859,13 @@ const LeadFinder = () => {
       {loading && (
         <Card>
           <CardContent className="py-16 text-center">
-            <Loader2 className="w-12 h-12 mx-auto mb-4 text-orange-600 animate-spin" />
+            <div className="relative">
+              <Sparkles className="w-12 h-12 mx-auto mb-4 text-purple-600 animate-pulse" />
+              <Loader2 className="w-6 h-6 absolute top-0 right-1/2 translate-x-8 text-purple-400 animate-spin" />
+            </div>
             <h3 className="text-xl font-semibold mb-2">{t.searching}</h3>
             <p className="text-muted-foreground">
-              {location}, {country} {t.searchingIn}
+              {location && location !== 'all' ? `${location}, ` : ''}{country} {t.searchingIn}
             </p>
           </CardContent>
         </Card>

@@ -267,7 +267,7 @@ const Orders = () => {
 
   const downloadPdf = async (orderId) => {
     try {
-      const response = await axios.get(`${API}/orders/${orderId}/pdf`, {
+      const response = await axios.get(`${API}/orders/${orderId}/pdf?lang=${language}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
