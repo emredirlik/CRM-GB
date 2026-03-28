@@ -7,7 +7,7 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - **Frontend**: React.js, TailwindCSS, Shadcn UI
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB (motor async)
-- **AI Integration**: Gemini API
+- **AI Integration**: Gemini API (via Emergent LLM Key)
 - **PDF Generation**: ReportLab with DejaVu fonts (UTF-8 support)
 
 ## Core Modules
@@ -36,10 +36,13 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Predefined factory database + Gemini AI enhancement
 - Quick search buttons
 
-### 5. Orders
-- Single product per order (TODO: Multiple products)
+### 5. Orders (Multi-Product Support) ✅ COMPLETED
+- **Multiple products per order** - Fully implemented!
+- Dynamic add/remove products in form
+- Per-product subtotal calculation
+- Total price = sum of all subtotals
 - WhatsApp sharing with PDF
-- PDF generation with UTF-8 support
+- PDF generation with multi-product table
 
 ### 6. Recipes
 - Recipe management
@@ -63,9 +66,9 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Full day PDF download (clean minimal design)
 - Email reports feature (MOCKED)
 
-## Implemented Features (March 2026)
+## Implemented Features
 
-### Phase 1 - Completed
+### Phase 1 - Completed (March 2026)
 - [x] Lead Finder with 60+ countries
 - [x] Route Planner GPS location
 - [x] Route auto-optimization
@@ -73,6 +76,7 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - [x] PDF text wrapping fix
 - [x] AI Sales Forecast
 - [x] Visit Planning on Dashboard
+- [x] **Multiple products per order** ✅
 
 ### Phase 2 - Pending
 - [ ] AI Email Assistant (Gemini)
@@ -80,7 +84,6 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - [ ] AI Recipe Optimization
 - [ ] AI Chatbot
 - [ ] AI Route Optimization (advanced)
-- [ ] Multiple products per order
 
 ## API Endpoints
 
@@ -94,10 +97,29 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - `POST /api/leads/search` (Lead Finder)
 - `POST /api/leads/bulk-email`
 
-### Orders
+### Orders (Updated for Multi-Product)
 - `GET/POST /api/orders`
 - `GET/PUT/DELETE /api/orders/{id}`
 - `GET /api/orders/{id}/pdf`
+- `GET /api/orders/{id}/whatsapp`
+
+**OrderCreate Schema:**
+```json
+{
+  "lead_id": "string",
+  "products": [
+    {
+      "product_name": "string",
+      "product_code": "string",
+      "pieces": 1,
+      "amount": 10.0,
+      "unit": "kg",
+      "unit_price": 5.50
+    }
+  ],
+  "notes": "string"
+}
+```
 
 ### Specifications
 - `GET/POST /api/specifications`
@@ -124,7 +146,7 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 ## Database Collections
 - `users`
 - `leads`
-- `orders`
+- `orders` (Updated: now contains `products` array)
 - `recipes`
 - `products`
 - `specifications`
@@ -135,9 +157,8 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 
 ## Known Issues
 - Email features are MOCKED (logged to database, not sent)
-- Orders support single product only
 
 ## Future Enhancements
 - WhatsApp Business API integration
 - Real email integration (SendGrid/Resend)
-- Advanced AI features
+- Advanced AI features (Churn prediction, Email assistant, Recipe optimization)
