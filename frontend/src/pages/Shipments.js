@@ -444,17 +444,23 @@ const Shipments = () => {
                 <div><span className="text-muted-foreground">Konum:</span> {quickTrackResult.current_location || '-'}</div>
                 <div><span className="text-muted-foreground">Tahmini:</span> {quickTrackResult.estimated_delivery || '-'}</div>
               </div>
-              {quickTrackResult.events && quickTrackResult.events.length > 0 && (
+              {quickTrackResult.events && quickTrackResult.events.filter(e => e.description || e.date).length > 0 && (
                 <div className="mt-3 pt-3 border-t">
                   <p className="text-xs font-medium mb-2">Son Hareketler:</p>
-                  {quickTrackResult.events.slice(0, 3).map((event, idx) => (
+                  {quickTrackResult.events
+                    .filter(e => e.description || e.date)
+                    .slice(0, 3)
+                    .map((event, idx) => (
                     <p key={idx} className="text-xs text-muted-foreground">
-                      {event.date} {event.time} - {event.description}
+                      {event.date && <span className="font-medium">{event.date} {event.time}</span>}
+                      {event.date && event.description && ' - '}
+                      {event.description}
+                      {event.location && <span className="text-gray-400"> ({event.location})</span>}
                     </p>
                   ))}
                 </div>
               )}
-              {quickTrackResult.status === 'pending' && quickTrackResult.message && (
+              {(quickTrackResult.status === 'pending' || quickTrackResult.status === 'check_required') && quickTrackResult.message && (
                 <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
                   {quickTrackResult.message}
