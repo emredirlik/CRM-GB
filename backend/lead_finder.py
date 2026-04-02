@@ -318,32 +318,48 @@ class LeadFinder:
             return []
     
     def _is_restaurant(self, name_lower: str, item: dict) -> bool:
-        """Check if business is a restaurant (should be filtered out)"""
+        """STRICT filter - Only allow real registered companies"""
         
-        # First check if it's a KNOWN FACTORY - never filter these
-        factory_indicators = [
-            'produktion', 'production', 'producer', 'manufacturer', 'manufacturing',
-            'fabrik', 'factory', 'fabrika', 'üretim', 'wholesale', 'grosshandel',
-            'fleisch', 'meat', 'foods s.a', 'foods sa', 'food s.a', 'food sa',
-            'gmbh', 's.r.l', 's.a.', 's.l.', 'a.e.', 'ltd', 'a.ş', 'processing',
-            'verarbeitung', 'hersteller', 'industrial', 'industri'
+        # MUST have legal company suffix - NO EXCEPTIONS
+        legal_suffixes = [
+            # German
+            'gmbh', ' kg', ' ag', 'e.k.', 'ohg', ' se',
+            # Spanish
+            's.a.', 's.l.', 's.l.u.',
+            # Romanian/Italian
+            's.r.l.',
+            # Greek
+            'a.e.', 'e.p.e.', 'o.e.', 'i.k.e.', 'a.e.b.e.', 'α.ε.', 'ε.π.ε.',
+            # Turkish
+            'a.ş.', 'ltd.', 'ltd şti', 'tic.',
+            # Dutch
+            'b.v.', 'n.v.',
+            # International
+            ' inc', ' llc', ' corp', ' co.',
+            # Common variations
+            ' sa', ' sl', ' srl', ' ae'
         ]
         
-        # If name contains factory indicator, it's NOT a restaurant
-        if any(indicator in name_lower for indicator in factory_indicators):
-            return False
+        has_legal_suffix = any(suffix in name_lower for suffix in legal_suffixes)
         
-        restaurant_indicators = [
-            'restaurant', 'imbiss', 'bistro', 'takeaway', 'kiosk',
-            'fast food', 'dükkan', 'lokanta', 'evi', 'kitchen',
-            'cafe', 'bar', 'pub', 'tavern', 'diner', 'eatery', 'pizzeria',
-            'restoran', 'lokal', 'snack', 'express', 'takeout', 'delivery',
-            'food truck', 'souvlaki', 'gyristroula', 'grill house'
-        ]
-        
-        # Check name
-        if any(indicator in name_lower for indicator in restaurant_indicators):
+        # If no legal suffix, it's NOT a real factory company - FILTER OUT
+        if not has_legal_suffix:
             return True
+        
+        # Even with legal suffix, blacklist these
+        blacklist = [
+            'restaurant', 'imbiss', 'bistro', 'cafe', 'bar',
+            'tavern', 'diner', 'pizzeria', 'grill',
+            'takeaway', 'takeout', 'delivery', 'catering',
+            'supermarket', 'market', 'grocery', 'shop',
+            'butcher', 'metzgerei', 'kasap', 'κρεοπωλείο',
+            'souvlaki', 'gyros haus', 'döner haus', 'kebab haus'
+        ]
+        
+        if any(word in name_lower for word in blacklist):
+            return True
+        
+        return False
         
         # Check type/category if available
         item_type = str(item.get("type", "")).lower()
