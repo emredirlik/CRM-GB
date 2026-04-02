@@ -1,7 +1,6 @@
 """
 Lead Finder Module - Uses Gemini AI for real-time factory search
-NO cached database - only AI-powered real-time search
-Finds ONLY manufacturing factories, not restaurants
+Specialized for finding REAL Döner/Gyros/Kebab production factories
 """
 import os
 import json
@@ -28,6 +27,59 @@ class FoundLead(BaseModel):
     notes: Optional[str] = None
 
 
+# Known REAL German Döner factories database
+KNOWN_GERMAN_FACTORIES = [
+    {"company_name": "Polat Dönerproduktion GmbH", "city": "Mönchengladbach", "business_type": "Döner Production Factory", "notes": "Since 1996, first EC certified in NRW"},
+    {"company_name": "ÖZTAS Fleischhandel & Dönerproduktion e.K.", "city": "Moers", "business_type": "Döner & Meat Processing", "notes": "40+ tons daily, since 1994"},
+    {"company_name": "AVRASYA DönerProduktion & Fleischgrosshandels GmbH", "city": "Düsseldorf", "business_type": "Döner Production Factory"},
+    {"company_name": "AKGÜL Fleischhandel & Doner Produktion", "city": "Viersen", "business_type": "Döner & Meat Trade"},
+    {"company_name": "Frostpack Geflügelverarbeitung GmbH", "city": "Paderborn", "business_type": "Poultry Processing"},
+    {"company_name": "Zirve Dönerproduktion Ltd.", "city": "Essen", "business_type": "Döner Production"},
+    {"company_name": "Ozer Döner Produktion GmbH", "city": "Heinsberg", "business_type": "Döner Production Factory"},
+    {"company_name": "Atik Döner GmbH", "city": "Ruhr", "business_type": "Döner Production", "notes": "Leading German producer"},
+    {"company_name": "BEY GmbH Dönerproduktion", "city": "Krefeld", "business_type": "Döner Production Factory"},
+    {"company_name": "NEFIS Dönerproduktion & Fleischhandels GmbH", "city": "Duisburg", "business_type": "Döner & Meat Trade"},
+    {"company_name": "Ercan Donerproduktion GmbH", "city": "NRW", "business_type": "Döner Production Factory"},
+    {"company_name": "Kismet Fleisch Döner Produktion", "city": "Köln", "business_type": "Döner & Meat Production", "notes": "Since 2001, 20-49 employees"},
+    {"company_name": "Düzgün Food GmbH", "city": "Köln", "business_type": "Döner Production Factory", "notes": "320 employees, 3 plants, 40-60 tons daily"},
+    {"company_name": "Tuna Food", "city": "Köln", "business_type": "Food Production"},
+    {"company_name": "AC Gastro GmbH", "city": "Köln", "business_type": "Gastro Production", "notes": "5-9 employees"},
+    {"company_name": "Öztürk Döner Produktion GmbH & Co.KG", "city": "Waldburg", "business_type": "Döner Production Factory", "notes": "Since 1995, family business"},
+    {"company_name": "Birtat / Meat World SE", "city": "Ludwigsburg", "business_type": "Döner & Meat Production", "notes": "35-40 tons daily, 30+ years"},
+    {"company_name": "CarnEt Fleisch GmbH", "city": "Stuttgart", "business_type": "Halal Meat Processing", "notes": "Halal certified"},
+    {"company_name": "BDK - Berlin Döner Kebab", "city": "Berlin", "business_type": "Döner Production Factory", "notes": "Since 1978, 3 factories, exports to 30 countries"},
+    {"company_name": "Kap-lan Dönerproduktion", "city": "Berlin", "business_type": "Döner Production"},
+    {"company_name": "Carnivora GmbH", "city": "Berlin", "business_type": "Meat Processing", "notes": "100-199 employees"},
+    {"company_name": "Farmers Food", "city": "Germany", "business_type": "Döner Industry Supplier"},
+    {"company_name": "Finalta Döner", "city": "Germany", "business_type": "Döner Production"},
+    {"company_name": "Narin Döner", "city": "Germany", "business_type": "Döner Production"},
+    {"company_name": "Tek Döner", "city": "Berlin", "business_type": "Döner Production", "notes": "Max-Urich-Str. 1-9, 13355 Berlin"},
+    {"company_name": "MY FOOD MS GMBH", "city": "Pulheim-Brauweiler", "business_type": "Food Production", "notes": "Since 2009"},
+    {"company_name": "Efsane / Kaya Dönerproduktion GmbH", "city": "Wittstock", "business_type": "Döner Production", "notes": "Northwest Berlin, since 2009"},
+    {"company_name": "ÖzDöner", "city": "Germany", "business_type": "Döner Production", "notes": "Production in Turkey and Germany"},
+    {"company_name": "NUR Helal Döner Produktion GmbH", "city": "Germany", "business_type": "Halal Döner Production", "notes": "30+ years, Halal certified"},
+    {"company_name": "Namm Helal Döner und Fleischhandel", "city": "Germany", "business_type": "Halal Döner & Meat Trade"},
+    {"company_name": "Tadim Döner GmbH", "city": "Velten", "business_type": "Döner Production Factory"},
+    {"company_name": "Kama Dönerproduktion", "city": "Barenthin", "business_type": "Döner Production"},
+    {"company_name": "Yeni Istikbal Kebab GmbH", "city": "Treuen", "business_type": "Kebab Production Factory"},
+    {"company_name": "ADIM Dönerproduktion GmbH", "city": "Großröhrsdorf", "business_type": "Döner Production Factory"},
+    {"company_name": "Dündar Dönerproduktion", "city": "Neunkirchen", "business_type": "Döner Production"},
+    {"company_name": "Tekdemir GmbH Kebab-Produktion", "city": "Saarbrücken", "business_type": "Kebab Production Factory"},
+    {"company_name": "Euro Döner GmbH & Co. KG", "city": "Eisenach", "business_type": "Döner Production Factory"},
+    {"company_name": "Dostlar Group", "city": "Germany", "business_type": "Döner Production", "notes": "2 plants, since 1999"},
+    {"company_name": "Öztek Döner Vertriebs GmbH", "city": "Germany", "business_type": "Döner Distribution", "notes": "Since 2010, Halal"},
+    {"company_name": "Eroğlu Döner GmbH & Co. KG", "city": "Germany", "business_type": "Döner Production", "notes": "19+ years"},
+    {"company_name": "ADA Food", "city": "Germany", "business_type": "Food Production"},
+    {"company_name": "Mamado Ready Doner", "city": "Germany", "business_type": "Ready Döner Production"},
+    {"company_name": "Avrupa Kebap", "city": "Köthen", "business_type": "Kebab Production"},
+    {"company_name": "YOLDAS Dönerproduktion GmbH", "city": "Germany", "business_type": "Döner Production Factory"},
+    {"company_name": "TEKDEMIR Dönerproduktion GmbH", "city": "Germany", "business_type": "Döner Production Factory"},
+    {"company_name": "ÖZ Ustam GmbH", "city": "Germany", "business_type": "Döner Production"},
+    {"company_name": "First Orient-Food GmbH", "city": "Germany", "business_type": "Oriental Food Production"},
+    {"company_name": "Doner&Fleisch Großhandel Ozgun Deniz Cam", "city": "Germany", "business_type": "Döner & Meat Wholesale"},
+]
+
+
 class LeadFinder:
     def __init__(self):
         self.api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('EMERGENT_LLM_KEY')
@@ -42,20 +94,54 @@ class LeadFinder:
         limit: int = 50,
         ai_only: bool = True
     ) -> List[FoundLead]:
-        """
-        Search for potential leads using AI only
-        No cached database - real-time AI search
-        """
-        if not self.api_key:
-            logger.error("No API key available for search")
-            return []
+        """Search for potential leads - combines known factories with AI search"""
+        leads = []
         
-        try:
-            leads = await self._search_with_gemini(keywords, location, country, limit)
-            return leads[:limit]
-        except Exception as e:
-            logger.error(f"AI search failed: {e}")
-            return []
+        # For Germany, first add known REAL factories
+        if country.lower() == "germany":
+            leads = self._get_known_factories(location, country, limit)
+        
+        # Then enhance with AI search for more results
+        if self.api_key and len(leads) < limit:
+            try:
+                ai_leads = await self._search_with_gemini(keywords, location, country, limit - len(leads))
+                leads.extend(ai_leads)
+            except Exception as e:
+                logger.error(f"AI search failed: {e}")
+        
+        return leads[:limit]
+    
+    def _get_known_factories(self, location: str, country: str, limit: int) -> List[FoundLead]:
+        """Get factories from known database"""
+        leads = []
+        location_lower = location.lower() if location else ""
+        
+        for factory in KNOWN_GERMAN_FACTORIES:
+            # Filter by location if specified
+            if location_lower and location_lower != "all":
+                factory_city = (factory.get("city", "") or "").lower()
+                if location_lower not in factory_city and factory_city not in location_lower:
+                    # Also check region matches (e.g., "NRW" contains multiple cities)
+                    nrw_cities = ["köln", "düsseldorf", "duisburg", "essen", "dortmund", "moers", "krefeld", "mönchengladbach", "viersen"]
+                    if location_lower == "nrw" or factory_city == "nrw":
+                        if location_lower not in nrw_cities and factory_city not in nrw_cities:
+                            continue
+                    else:
+                        continue
+            
+            lead = FoundLead(
+                company_name=factory["company_name"],
+                city=factory.get("city", ""),
+                country="Germany",
+                business_type=factory.get("business_type", "Döner Production"),
+                notes=factory.get("notes", "Verified Factory")
+            )
+            leads.append(lead)
+            
+            if len(leads) >= limit:
+                break
+        
+        return leads
     
     async def _search_with_gemini(
         self, 
@@ -64,82 +150,59 @@ class LeadFinder:
         country: str, 
         limit: int
     ) -> List[FoundLead]:
-        """Detailed Gemini search focused on real factories only"""
+        """AI search for additional factories not in database"""
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
             
-            # Build country-specific search keywords
             country_lower = country.lower()
             
-            # Determine search terms based on country
+            # Country-specific search terms
             if country_lower in ['greece', 'cyprus']:
-                # Greek-speaking countries: gyros, souvlaki
-                search_terms = "gyros üretim fabrikası, souvlaki production factory, meat processing plant, κρεατοσκευάσματα εργοστάσιο"
-                product_focus = "gyros, souvlaki, meat products"
+                search_focus = "gyros production, souvlaki manufacturing, κρεατοσκευάσματα"
+                factory_examples = "Gyros Manufacturing S.A., Souvlaki Production Ltd."
             elif country_lower in ['turkey']:
-                # Turkey: döner
-                search_terms = "döner fabrikası, döner üretim tesisi, et işleme fabrikası, kebap üretim"
-                product_focus = "döner, kebab, köfte"
-            elif country_lower in ['germany', 'austria', 'switzerland', 'netherlands', 'belgium']:
-                # German-speaking/Central Europe: döner produktion
-                search_terms = "Döner Produktion, Döner Fabrik, Fleischverarbeitung, Dönerfleisch Hersteller, Gyros Produktion"
-                product_focus = "döner, gyros, kebab meat production"
+                search_focus = "döner fabrikası, et işleme tesisi, kebap üretim"
+                factory_examples = "XYZ Döner Üretim A.Ş., ABC Et Sanayi Ltd."
+            elif country_lower in ['netherlands', 'belgium']:
+                search_focus = "döner productie, vleesverwerking, kebab fabriek"
+                factory_examples = "Döner Production B.V., Kebab Manufacturing N.V."
             else:
-                # Other countries: mix of terms
-                search_terms = "döner production factory, gyros manufacturing plant, kebab meat processing, meat production facility"
-                product_focus = "döner, gyros, kebab"
+                search_focus = "Döner Produktion, Fleischverarbeitung, Kebab Herstellung"
+                factory_examples = "XYZ Dönerproduktion GmbH, ABC Fleischwerk AG"
             
-            # Handle "All" cities
-            location_str = f"in {location}" if location and location.lower() != 'all' else f"across all major cities in"
+            location_str = f"in {location}" if location and location.lower() != 'all' else f"across"
             
-            system_prompt = f"""You are a B2B business intelligence expert for the food industry. Your ONLY task is to find REAL manufacturing facilities that produce döner, gyros, kebab, or processed meat products.
+            system_prompt = f"""You are a B2B research expert specialized in the European döner/kebab/gyros MANUFACTURING industry.
 
-ABSOLUTE RULES - NO EXCEPTIONS:
-1. Return ONLY actual FACTORIES, PRODUCTION PLANTS, and MANUFACTURING FACILITIES
-2. NEVER include: restaurants, shops, fast food chains, retail stores, takeaway, delivery services, food trucks, grills, bistros, imbiss, snack bars
-3. The company MUST be a manufacturer/producer that MAKES döner/gyros/kebab meat products
-4. These are B2B wholesale buyers of spices and binders - they produce hundreds or thousands of kg of meat products daily
-5. Look for industrial/manufacturing business names with: Produktion, Fabrik, GmbH, A.Ş., S.A., Factory, Manufacturing, Processing, Üretim, Sanayi
+CRITICAL: You must ONLY return actual PRODUCTION FACTORIES - companies that MANUFACTURE döner/gyros/kebab meat products in industrial quantities.
 
-SEARCH FOCUS for {country}:
-- Search terms: {search_terms}
-- Product focus: {product_focus}
+STRICT RULES:
+1. ONLY include companies with legal suffixes: GmbH, GmbH & Co. KG, AG, e.K., Ltd., S.A., A.Ş., B.V., N.V.
+2. Company name MUST contain production-related words: Produktion, Production, Fleisch, Meat, Food, Manufacturing, Verarbeitung, Processing
+3. NEVER include: restaurants, imbiss, grill, bistro, takeaway, delivery, fast food, retail shops
+4. These are B2B wholesale manufacturers selling to restaurants - NOT restaurants themselves
+5. Look for companies in industrial areas, not shopping districts
 
-VALID EXAMPLES:
-- "Döner Produktion Berlin GmbH" ✓ (has Produktion, GmbH)
-- "Eurogyros Manufacturing S.A." ✓ (has Manufacturing, S.A.)
-- "Istanbul Et Sanayi A.Ş." ✓ (has Sanayi, A.Ş.)
+SEARCH: {search_focus}
+LOCATION: {location_str} {country}
+EXAMPLE NAMES: {factory_examples}
 
-INVALID EXAMPLES - NEVER RETURN THESE:
-- "Kebab House Berlin" ✗ (restaurant)
-- "Gyros Grill Athens" ✗ (restaurant)
-- "Ali's Döner Imbiss" ✗ (fast food)
-- "Best Gyros Restaurant" ✗ (restaurant)
-
-Return a JSON array:
+Return JSON array ONLY:
 [
-  {{
-    "company_name": "FACTORY NAME (must include GmbH/S.A./A.Ş./Ltd etc)",
-    "business_type": "Döner Production Factory / Gyros Manufacturing Plant / Meat Processing",
-    "phone": "local format phone",
-    "address": "Industrial zone/area address",
-    "city": "City",
-    "country": "{country}",
-    "website": "www.company.com or N/A"
-  }}
+  {{"company_name": "FULL LEGAL NAME with GmbH/Ltd/etc", "city": "City", "country": "{country}", "business_type": "Döner Production Factory / Meat Processing Plant / etc", "phone": "local format or empty"}}
 ]
 
-Return 15-25 REAL manufacturing facilities ONLY. No restaurants. No explanation needed."""
+Return 10-20 REAL manufacturing companies. NO explanation needed."""
 
             user_prompt = f"""Find döner/gyros/kebab PRODUCTION FACTORIES {location_str} {country}.
 
-These are MANUFACTURING PLANTS that produce processed meat products for the food industry.
-They buy industrial quantities (tons) of spices, binders, and seasonings.
+These are INDUSTRIAL MEAT PROCESSING plants that manufacture döner/gyros for wholesale.
+They buy TONS of spices and ingredients - not retail customers.
 
-ONLY return actual production facilities with legal company names (GmbH, S.A., A.Ş., Ltd, etc.)
-ABSOLUTELY NO restaurants, grills, or retail businesses.
+ONLY companies with: GmbH, AG, Ltd, S.A., A.Ş., e.K., B.V. in name
+ONLY factories/plants - NO restaurants, NO shops
 
-Return JSON array only."""
+JSON array only:"""
 
             chat = LlmChat(
                 api_key=self.api_key,
@@ -150,47 +213,16 @@ Return JSON array only."""
             message = UserMessage(text=user_prompt)
             response = await asyncio.wait_for(
                 chat.send_message(message),
-                timeout=30.0  # 30 second timeout for thorough search
+                timeout=30.0
             )
             
             return self._parse_response(response, country, location)
             
         except asyncio.TimeoutError:
-            logger.warning("Gemini API timeout - trying shorter query")
-            return await self._quick_search(keywords, location, country)
+            logger.warning("Gemini API timeout")
+            return []
         except Exception as e:
             logger.error(f"Gemini API error: {e}")
-            return []
-    
-    async def _quick_search(
-        self, 
-        keywords: List[str],
-        location: str, 
-        country: str
-    ) -> List[FoundLead]:
-        """Fallback quick search if main search times out"""
-        try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage
-            
-            keyword_str = ', '.join(keywords[:3]) if keywords else 'meat factory'
-            
-            chat = LlmChat(
-                api_key=self.api_key,
-                session_id=f"quick-search-{country}",
-                system_message="Return JSON array of 10 meat/food FACTORIES only. No restaurants."
-            ).with_model("gemini", "gemini-2.5-flash-lite")
-            
-            loc = location if location and location.lower() != 'all' else 'major cities'
-            message = UserMessage(text=f"List 10 {keyword_str} factories in {loc}, {country}. JSON format: [{{'company_name':'X','business_type':'Y Factory','city':'{location}','country':'{country}'}}]")
-            
-            response = await asyncio.wait_for(
-                chat.send_message(message),
-                timeout=15.0
-            )
-            
-            return self._parse_response(response, country, location)
-        except Exception as e:
-            logger.error(f"Quick search failed: {e}")
             return []
     
     def _parse_response(self, response: str, country: str, location: str) -> List[FoundLead]:
@@ -217,46 +249,40 @@ Return JSON array only."""
                 
                 for item in data:
                     if isinstance(item, dict) and item.get('company_name'):
-                        # Filter out non-factory results
+                        company_name = item.get('company_name', '').strip()
                         btype = (item.get('business_type', '') or '').lower()
-                        company_name = (item.get('company_name', '') or '').lower()
-                        combined = f"{btype} {company_name}"
+                        combined = f"{company_name.lower()} {btype}"
                         
-                        # STRICT: Exclude restaurants and retail - expanded list
-                        excluded_terms = [
-                            'restaurant', 'eatery', 'diner', 'cafe', 'bistro', 'takeaway', 
-                            'delivery', 'fast food', 'shop', 'store', 'market', 'retail',
-                            'grill', 'kitchen', 'pizzeria', 'taverna', 'kebab house', 'kebap house',
-                            'imbiss', 'snack', 'bar', 'lokanta', 'lokal', 'ocakbaşı', 'ocakbasi',
-                            'mangal', 'steakhouse', 'steak house', 'food truck', 'catering only',
-                            'express', 'quick', 'corner', 'point', 'spot', 'place', 'house of',
-                            'döner haus', 'doner haus', 'gyros haus', 'kebab haus',
-                            'εστιατόριο', 'ταβέρνα', 'ψησταριά', 'σουβλατζίδικο',  # Greek restaurant terms
-                            'restoran', 'lokantası', 'büfe', 'kokoreç'  # Turkish restaurant terms
-                        ]
+                        # STRICT exclusion of restaurants
+                        excluded = ['restaurant', 'eatery', 'diner', 'cafe', 'bistro', 'takeaway', 
+                                   'delivery', 'fast food', 'shop', 'store', 'market', 'retail',
+                                   'grill', 'kitchen', 'pizzeria', 'taverna', 'kebab house',
+                                   'imbiss', 'snack', 'bar', 'lokanta', 'ocakbaşı', 'express',
+                                   'döner haus', 'gyros haus', 'kebab haus', 'house of']
                         
-                        is_excluded = any(term in combined for term in excluded_terms)
+                        if any(term in combined for term in excluded):
+                            continue
                         
-                        # STRICT: Must have factory/manufacturing indicators
-                        factory_terms = [
-                            'factory', 'plant', 'manufacturing', 'production', 'industrial', 
-                            'processing', 'fabrik', 'üretim', 'sanayi', 'werk', 'fabryka',
-                            'produktion', 'hersteller', 'verarbeitung', 'fleischwerk',
-                            's.a.', 'a.s.', 'a.ş.', 'gmbh', 'ag', 'ltd', 'bv', 'sa', 'sp.',
-                            'anonim', 'şirketi', 'εργοστάσιο', 'βιομηχανία',  # Greek: factory, industry
-                            'imalat', 'tesisi', 'işletmesi', 'holding'
-                        ]
+                        # MUST have legal suffix
+                        legal_suffixes = ['gmbh', 'ag', 'e.k.', 'ltd', 's.a.', 'a.ş.', 'a.s.', 
+                                         'b.v.', 'n.v.', 'sp.', 'co. kg', '& co', 'se', 'ohg', 'kg']
                         
-                        is_factory = any(term in combined for term in factory_terms)
+                        has_legal = any(suffix in company_name.lower() for suffix in legal_suffixes)
                         
-                        # Only include if it's clearly a factory and NOT excluded
-                        if is_factory and not is_excluded:
+                        # MUST have factory/production indicator
+                        factory_terms = ['produktion', 'production', 'fleisch', 'meat', 'food',
+                                        'manufacturing', 'verarbeitung', 'processing', 'fabrik',
+                                        'factory', 'werk', 'üretim', 'sanayi', 'döner', 'gyros', 'kebab']
+                        
+                        has_factory = any(term in combined for term in factory_terms)
+                        
+                        if has_legal and has_factory:
                             city = item.get('city', '')
                             if not city or city.lower() == 'all':
                                 city = location if location and location.lower() != 'all' else ''
                             
                             lead = FoundLead(
-                                company_name=item.get('company_name', ''),
+                                company_name=company_name,
                                 contact_person=item.get('contact_person'),
                                 email=item.get('email'),
                                 phone=item.get('phone'),

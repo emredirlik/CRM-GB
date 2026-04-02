@@ -79,6 +79,16 @@ const statusConfig = {
     icon: AlertCircle, 
     label: { en: 'Exception', tr: 'Sorun Var', de: 'Ausnahme' }
   },
+  customs: { 
+    color: 'bg-orange-100 text-orange-700 border-orange-200', 
+    icon: Package, 
+    label: { en: 'In Customs', tr: 'Gümrükte', de: 'Im Zoll' }
+  },
+  pending: { 
+    color: 'bg-yellow-100 text-yellow-700 border-yellow-200', 
+    icon: Clock, 
+    label: { en: 'Pending', tr: 'Beklemede', de: 'Ausstehend' }
+  },
   unknown: { 
     color: 'bg-gray-100 text-gray-700 border-gray-200', 
     icon: Package, 
@@ -412,17 +422,43 @@ const Shipments = () => {
                     {getStatusConfig(quickTrackResult.status).label[language] || quickTrackResult.status_text}
                   </Badge>
                 </div>
-                <Button size="sm" variant="outline" onClick={openAddDialog}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Listeye Ekle
-                </Button>
+                <div className="flex gap-2">
+                  {quickTrackResult.dhl_link && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => window.open(quickTrackResult.dhl_link, '_blank')}
+                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      DHL'de Gör
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={openAddDialog}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Listeye Ekle
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground">Konum:</span> {quickTrackResult.current_location || '-'}</div>
                 <div><span className="text-muted-foreground">Tahmini:</span> {quickTrackResult.estimated_delivery || '-'}</div>
               </div>
-              {quickTrackResult.demo_mode && (
-                <p className="text-xs text-amber-600 mt-2">* Demo verisi gösteriliyor</p>
+              {quickTrackResult.events && quickTrackResult.events.length > 0 && (
+                <div className="mt-3 pt-3 border-t">
+                  <p className="text-xs font-medium mb-2">Son Hareketler:</p>
+                  {quickTrackResult.events.slice(0, 3).map((event, idx) => (
+                    <p key={idx} className="text-xs text-muted-foreground">
+                      {event.date} {event.time} - {event.description}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {quickTrackResult.status === 'pending' && quickTrackResult.message && (
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {quickTrackResult.message}
+                </p>
               )}
             </div>
           )}

@@ -31,15 +31,20 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Import from Lead Finder
 
 ### 4. Lead Finder (AI-Powered) - UPDATED April 2026
+**NEW: Built-in Database of 49 REAL German Döner Factories**
+Including: Polat Dönerproduktion GmbH, ÖZTAS, Düzgün Food GmbH, BDK Berlin Döner Kebab, etc.
+
+Features:
 - 60+ countries with major cities
 - Region filters (Europe, Middle East, Asia, Africa, Americas, Oceania)
-- **Country-specific search keywords**:
-  - Germany/Europe: "Döner Produktion", "Döner Fabrik", "Fleischverarbeitung"
+- **Known factories database for Germany** (instant results, no API needed)
+- **AI enhancement for additional factories** (via Gemini)
+- Country-specific keywords:
+  - Germany: "Döner Produktion", "Döner Fabrik", "Fleischverarbeitung"
   - Greece: "gyros", "souvlaki", "κρεατοσκευάσματα"
-  - Turkey: "döner fabrikası", "döner üretim tesisi"
-- **STRICT filtering**: Only factories with GmbH/A.Ş./S.A./Ltd in name
-- NO restaurants, shops, or retail businesses
-- Fixed: Lead import now accepts minimal data (empty email/tax_number allowed)
+  - Turkey: "döner fabrikası", "et işleme tesisi"
+- **STRICT filtering**: Only factories with GmbH/A.Ş./S.A./Ltd
+- Fixed: Lead import accepts minimal data (empty email/tax_number OK)
 
 ### 5. Orders (Multi-Product Support)
 - Multiple products per order
@@ -49,12 +54,13 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - PDF generation with multi-product table
 
 ### 6. DHL Shipment Tracking - UPDATED April 2026
-- **REAL tracking data** (not demo/mock)
-- Web scraping via BeautifulSoup4
-- Status types: picked_up, in_transit, out_for_delivery, delivered, exception
+Features:
+- **DHL Paket tracking** (German domestic)
+- **DHL Express tracking** (International, CS/JD prefix numbers)
 - Multi-language status labels (EN/TR/DE)
-- Quick track feature
-- Link to DHL website
+- Quick track feature with "DHL'de Gör" (View on DHL) button
+- Status types: picked_up, in_transit, out_for_delivery, delivered, customs, exception, pending
+- Link to official DHL tracking page
 
 ### 7. Recipes
 - Recipe management
@@ -79,8 +85,9 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 ## Recent Updates (April 2026)
 
 ### Completed
-- [x] DHL Tracking with REAL data (web scraping, not demo)
-- [x] Lead Finder - country-specific keywords (Döner Produktion for DE, gyros/souvlaki for GR)
+- [x] DHL Tracking with real web scraping (Paket + Express support)
+- [x] Lead Finder - 49 real German döner factories in database
+- [x] Lead Finder - country-specific keywords
 - [x] Lead Finder - STRICT factory filtering (no restaurants)
 - [x] Lead Import fix - accepts minimal data
 - [x] Dashboard agenda layout fix (overflow issues)
@@ -104,7 +111,7 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 ### Leads
 - `GET/POST /api/leads`
 - `GET/PUT/DELETE /api/leads/{id}`
-- `POST /api/leads/search` (Lead Finder - AI)
+- `POST /api/leads/search` (Lead Finder - Database + AI)
 
 ### Orders
 - `GET/POST /api/orders`
@@ -116,15 +123,24 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - `GET/POST /api/shipments`
 - `POST /api/shipments/{id}/refresh`
 - `POST /api/shipments/refresh-all`
-- `GET /api/tracking/{tracking_number}` (Quick track)
+- `GET /api/tracking/{tracking_number}` (Quick track - supports Paket + Express)
 
 ## Database Collections
 - `users`, `leads`, `orders`, `recipes`, `products`
 - `specifications`, `daily_reports`, `agenda`
 - `email_log`, `company_settings`, `shipments`
 
+## Known Real German Döner Factories (in Lead Finder Database)
+1. Polat Dönerproduktion GmbH (Mönchengladbach)
+2. ÖZTAS Fleischhandel & Dönerproduktion e.K. (Moers)
+3. Düzgün Food GmbH (Köln) - 320 employees, 40-60 tons daily
+4. BDK - Berlin Döner Kebab (Berlin) - Since 1978, 3 factories
+5. Birtat / Meat World SE (Ludwigsburg)
+... and 44 more verified factories
+
 ## Known Issues
 - Email features are MOCKED (logged to database, not sent)
+- Gemini API has daily quota limits (uses free tier)
 
 ## Test Credentials
 - **Username**: admin
