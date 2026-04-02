@@ -97,6 +97,9 @@ const texts = {
     startSearchDesc: 'Ülke seçin ve AI döner/gyros/kebap fabrikalarını bulsun',
     added: 'eklendi',
     error: 'Hata',
+    keywords: 'Arama Kelimeleri',
+    keywordsPlaceholder: 'döner fabrikası, gyros üretim, kebap, et işleme...',
+    keywordsHelp: 'Virgülle ayırarak birden fazla kelime yazabilirsiniz',
   },
   en: {
     title: 'Find Factories',
@@ -114,6 +117,9 @@ const texts = {
     startSearchDesc: 'Select a country and let AI find döner/gyros/kebab factories',
     added: 'added',
     error: 'Error',
+    keywords: 'Search Keywords',
+    keywordsPlaceholder: 'döner factory, gyros production, kebab, meat processing...',
+    keywordsHelp: 'Separate multiple keywords with commas',
   },
   de: {
     title: 'Fabriken finden',
@@ -131,6 +137,9 @@ const texts = {
     startSearchDesc: 'Wählen Sie ein Land und lassen Sie KI Döner/Gyros/Kebab-Fabriken finden',
     added: 'hinzugefügt',
     error: 'Fehler',
+    keywords: 'Suchbegriffe',
+    keywordsPlaceholder: 'Döner Fabrik, Gyros Produktion, Kebab, Fleischverarbeitung...',
+    keywordsHelp: 'Mehrere Begriffe mit Komma trennen',
   },
 };
 
@@ -142,14 +151,26 @@ const LeadFinder = () => {
   const [importing, setImporting] = useState(false);
   const [country, setCountry] = useState('Germany');
   const [city, setCity] = useState('');
+  const [keywords, setKeywords] = useState('döner fabrikası, gyros üretim, kebap üretim, et işleme');
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
 
   const cities = COUNTRIES[country] || [];
+  
+  // Parse keywords from comma-separated string
+  const parseKeywords = (str) => {
+    return str.split(',').map(k => k.trim()).filter(k => k.length > 0);
+  };
 
   const handleSearch = async () => {
     if (!country) {
       toast.error(t.error, { description: 'Ülke seçin' });
+      return;
+    }
+    
+    const keywordList = parseKeywords(keywords);
+    if (keywordList.length === 0) {
+      toast.error(t.error, { description: 'En az bir arama kelimesi girin' });
       return;
     }
 
@@ -159,7 +180,7 @@ const LeadFinder = () => {
 
     try {
       const response = await axios.post(`${API}/leads/search`, {
-        keywords: ['döner', 'gyros', 'kebab', 'meat factory', 'meat processing'],
+        keywords: keywordList,
         location: city || 'All',
         country: country,
         limit: 100
@@ -257,7 +278,7 @@ const LeadFinder = () => {
             <span className="font-medium text-orange-800">AI-Powered Search</span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             {/* Ülke */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
@@ -306,11 +327,29 @@ const LeadFinder = () => {
               />
             </div>
 
-            {/* Search Button */}
+            {/* Arama Kelimeleri */}
+            <div className="space-y-2 lg:col-span-2">
+              <Label className="flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                {t.keywords}
+              </Label>
+              <Input
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                placeholder={t.keywordsPlaceholder}
+                className="bg-white"
+                data-testid="keywords-input"
+              />
+              <p className="text-xs text-muted-foreground">{t.keywordsHelp}</p>
+            </div>
+          </div>
+          
+          {/* Search Button - Full Width */}
+          <div className="mt-4">
             <Button 
               onClick={handleSearch} 
               disabled={loading}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 h-10"
+              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 h-10 w-full md:w-auto"
               size="lg"
             >
               {loading ? (
@@ -329,10 +368,13 @@ const LeadFinder = () => {
 
           {/* Quick Buttons */}
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-orange-200">
+            <span className="text-sm text-orange-700 font-medium mr-2">Hızlı Seç:</span>
             {[
               { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
               { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
               { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
+              { city: 'Bucharest', country: 'Romania', flag: '🇷🇴' },
+              { city: 'Madrid', country: 'Spain', flag: '🇪🇸' },
               { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱' },
               { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
             ].map(({ city: c, country: co, flag }) => (
@@ -344,6 +386,30 @@ const LeadFinder = () => {
                 className="bg-white hover:bg-orange-100"
               >
                 {flag} {c}
+              </Button>
+            ))}
+          </div>
+          
+          {/* Keyword Presets */}
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-orange-200">
+            <span className="text-sm text-orange-700 font-medium mr-2">Arama Şablonları:</span>
+            {[
+              { label: 'Döner Fabrikası', keywords: 'döner fabrikası, döner produktion, döner üretim' },
+              { label: 'Gyros Üretim', keywords: 'gyros üretim, gyros factory, γύρος' },
+              { label: 'Kebap Fabrikası', keywords: 'kebap fabrikası, kebab production, kebap üretim' },
+              { label: 'Et İşleme', keywords: 'et işleme, meat processing, fleischverarbeitung' },
+              { label: 'Helal Et', keywords: 'helal et, halal meat, helal döner' },
+              { label: 'Cinar Food', keywords: 'cinar food, döner fabrikası' },
+              { label: 'Özturk', keywords: 'özturk, ozturk döner, kebab' },
+            ].map(({ label, keywords: kw }) => (
+              <Button
+                key={label}
+                variant="outline"
+                size="sm"
+                onClick={() => setKeywords(kw)}
+                className="bg-white hover:bg-amber-100 text-amber-700 border-amber-300"
+              >
+                {label}
               </Button>
             ))}
           </div>
