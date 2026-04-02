@@ -79,16 +79,6 @@ const statusConfig = {
     icon: AlertCircle, 
     label: { en: 'Exception', tr: 'Sorun Var', de: 'Ausnahme' }
   },
-  customs: { 
-    color: 'bg-orange-100 text-orange-700 border-orange-200', 
-    icon: Package, 
-    label: { en: 'In Customs', tr: 'Gümrükte', de: 'Im Zoll' }
-  },
-  pending: { 
-    color: 'bg-yellow-100 text-yellow-700 border-yellow-200', 
-    icon: Clock, 
-    label: { en: 'Pending', tr: 'Beklemede', de: 'Ausstehend' }
-  },
   unknown: { 
     color: 'bg-gray-100 text-gray-700 border-gray-200', 
     icon: Package, 
@@ -203,7 +193,6 @@ const Shipments = () => {
   const [quickTrackResult, setQuickTrackResult] = useState(null);
   const [quickTracking, setQuickTracking] = useState(false);
   const [detailViewShipment, setDetailViewShipment] = useState(null);
-  const [showTrackingModal, setShowTrackingModal] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -422,94 +411,21 @@ const Shipments = () => {
                   <Badge className={getStatusConfig(quickTrackResult.status).color}>
                     {getStatusConfig(quickTrackResult.status).label[language] || quickTrackResult.status_text}
                   </Badge>
-                  <span className="text-sm font-mono text-muted-foreground">{quickTrackResult.tracking_number}</span>
                 </div>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    onClick={() => setShowTrackingModal(true)}
-                    className="bg-amber-600 hover:bg-amber-700"
-                  >
-                    <Search className="w-4 h-4 mr-1" />
-                    Detayları Gör
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={openAddDialog}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    Listeye Ekle
-                  </Button>
-                </div>
+                <Button size="sm" variant="outline" onClick={openAddDialog}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Listeye Ekle
+                </Button>
               </div>
-              
-              {/* Basic info */}
-              <div className="text-sm text-muted-foreground">
-                {quickTrackResult.current_location && (
-                  <p><MapPin className="w-3 h-3 inline mr-1" />Konum: {quickTrackResult.current_location}</p>
-                )}
-                {quickTrackResult.estimated_delivery && (
-                  <p><Calendar className="w-3 h-3 inline mr-1" />Tahmini: {quickTrackResult.estimated_delivery}</p>
-                )}
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-muted-foreground">Konum:</span> {quickTrackResult.current_location || '-'}</div>
+                <div><span className="text-muted-foreground">Tahmini:</span> {quickTrackResult.estimated_delivery || '-'}</div>
               </div>
-              
-              {/* Events if available */}
-              {quickTrackResult.events && quickTrackResult.events.filter(e => e.description).length > 0 && (
-                <div className="mt-3 pt-3 border-t">
-                  <p className="text-xs font-medium mb-2">Son Hareketler:</p>
-                  {quickTrackResult.events
-                    .filter(e => e.description)
-                    .slice(0, 3)
-                    .map((event, idx) => (
-                    <p key={idx} className="text-xs text-muted-foreground mb-1">
-                      {event.date && <span className="font-medium">{event.date} {event.time} - </span>}
-                      {event.description}
-                    </p>
-                  ))}
-                </div>
-              )}
-              
-              {/* Message for manual check */}
-              {(!quickTrackResult.events || quickTrackResult.events.filter(e => e.description).length === 0) && (
-                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Detaylı bilgi için "Detayları Gör" butonuna tıklayın
-                </p>
+              {quickTrackResult.demo_mode && (
+                <p className="text-xs text-amber-600 mt-2">* Demo verisi gösteriliyor</p>
               )}
             </div>
           )}
-          
-          {/* Tracking Details Modal */}
-          <Dialog open={showTrackingModal} onOpenChange={setShowTrackingModal}>
-            <DialogContent className="max-w-4xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-amber-600" />
-                  DHL Kargo Takibi - {quickTrackResult?.tracking_number}
-                </DialogTitle>
-                <DialogDescription>
-                  DHL resmi takip sayfası aşağıda gösterilmektedir
-                </DialogDescription>
-              </DialogHeader>
-              <div className="relative w-full h-[500px] bg-gray-100 rounded-lg overflow-hidden">
-                {quickTrackResult?.dhl_link && (
-                  <iframe
-                    src={quickTrackResult.dhl_link}
-                    className="w-full h-full border-0"
-                    title="DHL Tracking"
-                    sandbox="allow-scripts allow-same-origin allow-forms"
-                  />
-                )}
-              </div>
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.open(quickTrackResult?.dhl_link, '_blank')}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Yeni Sekmede Aç
-                </Button>
-                <Button onClick={() => setShowTrackingModal(false)}>Kapat</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </CardContent>
       </Card>
 
