@@ -18,6 +18,7 @@ import Settings from "@/pages/Settings";
 import RoutePlanner from "@/pages/RoutePlanner";
 import Specifications from "@/pages/Specifications";
 import DailyReports from "@/pages/DailyReports";
+import Shipments from "@/pages/Shipments";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -84,6 +85,7 @@ function AppRoutes() {
                 <Route path="/leads" element={<Leads />} />
                 <Route path="/find-leads" element={<LeadFinder />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/shipments" element={<Shipments />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/recipes" element={<Recipes />} />
                 <Route path="/specifications" element={<Specifications />} />

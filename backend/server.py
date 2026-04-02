@@ -3235,6 +3235,152 @@ async def get_sales_forecast():
 
 # Include the router in the main app
 
+# ===================== DHL TRACKING ENDPOINTS =====================
+
+from dhl_tracking import dhl_tracker, STATUS_LABELS
+
+class ShipmentCreate(BaseModel):
+    order_id: Optional[str] = None
+    tracking_number: str
+    carrier: str = "DHL"
+    recipient_name: str
+    recipient_address: str
+    notes: Optional[str] = ""
+
+class ShipmentUpdate(BaseModel):
+    tracking_number: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+@api_router.get("/shipments")
+async def get_shipments():
+    """Get all shipments"""
+    shipments = await db.shipments.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return shipments
+
+@api_router.post("/shipments")
+async def create_shipment(shipment: ShipmentCreate):
+    """Create a new shipment and start tracking"""
+    # Get initial tracking info
+    tracking_info = await dhl_tracker.track_package(shipment.tracking_number)
+    
+    doc = {
+        "id": str(uuid.uuid4()),
+        "order_id": shipment.order_id,
+        "tracking_number": shipment.tracking_number.strip().upper(),
+        "carrier": shipment.carrier,
+        "recipient_name": shipment.recipient_name,
+        "recipient_address": shipment.recipient_address,
+        "notes": shipment.notes,
+        "status": tracking_info.get("status", "unknown"),
+        "status_text": tracking_info.get("status_text", "Takip başlatıldı"),
+        "current_location": tracking_info.get("current_location", ""),
+        "estimated_delivery": tracking_info.get("estimated_delivery"),
+        "events": tracking_info.get("events", []),
+        "last_tracked": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.shipments.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.get("/shipments/{shipment_id}")
+async def get_shipment(shipment_id: str):
+    """Get a single shipment"""
+    shipment = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    return shipment
+
+@api_router.put("/shipments/{shipment_id}")
+async def update_shipment(shipment_id: str, data: ShipmentUpdate):
+    """Update shipment details"""
+    existing = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.shipments.update_one({"id": shipment_id}, {"$set": update_data})
+    updated = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/shipments/{shipment_id}")
+async def delete_shipment(shipment_id: str):
+    """Delete a shipment"""
+    result = await db.shipments.delete_one({"id": shipment_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    return {"status": "deleted", "id": shipment_id}
+
+@api_router.post("/shipments/{shipment_id}/refresh")
+async def refresh_shipment_tracking(shipment_id: str):
+    """Refresh tracking status for a shipment"""
+    shipment = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    
+    # Get updated tracking info
+    tracking_info = await dhl_tracker.track_package(shipment["tracking_number"])
+    
+    update_data = {
+        "status": tracking_info.get("status", shipment.get("status", "unknown")),
+        "status_text": tracking_info.get("status_text", ""),
+        "current_location": tracking_info.get("current_location", ""),
+        "estimated_delivery": tracking_info.get("estimated_delivery"),
+        "events": tracking_info.get("events", []),
+        "last_tracked": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.shipments.update_one({"id": shipment_id}, {"$set": update_data})
+    updated = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
+    return updated
+
+@api_router.get("/tracking/{tracking_number}")
+async def track_package(tracking_number: str):
+    """Track a package by tracking number (without saving)"""
+    result = await dhl_tracker.track_package(tracking_number)
+    return result
+
+@api_router.post("/shipments/refresh-all")
+async def refresh_all_shipments():
+    """Refresh tracking for all active shipments"""
+    # Get all non-delivered shipments
+    shipments = await db.shipments.find(
+        {"status": {"$nin": ["delivered", "exception"]}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    updated_count = 0
+    for shipment in shipments:
+        try:
+            tracking_info = await dhl_tracker.track_package(shipment["tracking_number"])
+            
+            update_data = {
+                "status": tracking_info.get("status", shipment.get("status")),
+                "status_text": tracking_info.get("status_text", ""),
+                "current_location": tracking_info.get("current_location", ""),
+                "estimated_delivery": tracking_info.get("estimated_delivery"),
+                "events": tracking_info.get("events", []),
+                "last_tracked": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.shipments.update_one({"id": shipment["id"]}, {"$set": update_data})
+            updated_count += 1
+            
+            # Small delay to avoid rate limiting
+            await asyncio.sleep(0.5)
+            
+        except Exception as e:
+            logger.error(f"Failed to refresh shipment {shipment['id']}: {e}")
+    
+    return {"status": "success", "updated_count": updated_count, "total": len(shipments)}
+
 # ===================== AI SERVICES ENDPOINTS =====================
 
 from ai_services import email_assistant, churn_predictor, recipe_optimizer, chatbot
