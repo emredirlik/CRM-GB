@@ -7,9 +7,9 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - **Frontend**: React.js, TailwindCSS, Shadcn UI
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB (motor async)
-- **AI Integration**: Gemini API (gemini-2.5-flash-lite via Emergent LLM Key)
+- **AI Integration**: Gemini API (gemini-2.0-flash via Emergent LLM Key)
+- **Business Data**: SerpAPI (Google Maps real data)
 - **PDF Generation**: ReportLab with DejaVu fonts (UTF-8 support)
-- **Web Scraping**: BeautifulSoup4 (DHL Tracking)
 
 ## Core Modules
 
@@ -30,21 +30,21 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Google Maps navigation
 - Import from Lead Finder
 
-### 4. Lead Finder (AI-Powered) - UPDATED April 2026
-**NEW: Built-in Database of 49 REAL German Döner Factories**
-Including: Polat Dönerproduktion GmbH, ÖZTAS, Düzgün Food GmbH, BDK Berlin Döner Kebab, etc.
+### 4. Lead Finder (SerpAPI - Real Google Maps Data) - UPDATED April 2026
+**NEW: Real factory data from Google Maps via SerpAPI**
 
 Features:
 - 60+ countries with major cities
-- Region filters (Europe, Middle East, Asia, Africa, Americas, Oceania)
-- **Known factories database for Germany** (instant results, no API needed)
-- **AI enhancement for additional factories** (via Gemini)
-- Country-specific keywords:
-  - Germany: "Döner Produktion", "Döner Fabrik", "Fleischverarbeitung"
-  - Greece: "gyros", "souvlaki", "κρεατοσκευάσματα"
-  - Turkey: "döner fabrikası", "et işleme tesisi"
-- **STRICT filtering**: Only factories with GmbH/A.Ş./S.A./Ltd
-- Fixed: Lead import accepts minimal data (empty email/tax_number OK)
+- **SerpAPI Integration** - Searches Google Maps for REAL businesses
+- **User-defined search keywords** - Users can type their own search terms
+- **Keyword presets**: Döner Fabrikası, Gyros Üretim, Kebap Fabrikası, Et İşleme, Helal Et, Cinar Food, Özturk
+- **Quick location buttons**: Berlin, Athens, Istanbul, Bucharest, Madrid, Amsterdam, Dubai
+- **Real phone numbers and websites** from Google Maps
+- **Strict restaurant filtering** - No restaurants, imbiss, fast food
+- **Fallback to AI** (Gemini) if SerpAPI has no results
+- Lead import accepts minimal data (empty email/tax_number OK)
+
+API Key: SERPAPI_KEY in backend/.env
 
 ### 5. Orders (Multi-Product Support)
 - Multiple products per order
@@ -61,6 +61,7 @@ Features:
 - Quick track feature with "DHL'de Gör" (View on DHL) button
 - Status types: picked_up, in_transit, out_for_delivery, delivered, customs, exception, pending
 - Link to official DHL tracking page
+- **Note**: DHL API key pending activation (401 error)
 
 ### 7. Recipes
 - Recipe management
@@ -85,17 +86,18 @@ Features:
 ## Recent Updates (April 2026)
 
 ### Completed
-- [x] DHL Tracking with real web scraping (Paket + Express support)
-- [x] Lead Finder - 49 real German döner factories in database
-- [x] Lead Finder - country-specific keywords
-- [x] Lead Finder - STRICT factory filtering (no restaurants)
-- [x] Lead Import fix - accepts minimal data
+- [x] **SerpAPI Integration** - Real Google Maps data for Lead Finder
+- [x] **User-defined search keywords** - Custom keyword input field
+- [x] **Keyword presets** - Quick buttons for common searches
+- [x] **Romania & Spain** added to quick location buttons
+- [x] DHL Official API integration (pending key activation)
 - [x] Dashboard agenda layout fix (overflow issues)
 - [x] Multi-product orders support
 - [x] WhatsApp sharing format (no total price)
 - [x] PDF Turkish/Polish character support
 
 ### Pending
+- [ ] DHL API key activation (401 error - waiting on DHL)
 - [ ] UI Modernization (design_guidelines.json exists)
 - [ ] Monthly Reports merged single PDF
 - [ ] User Management in Settings
@@ -111,7 +113,7 @@ Features:
 ### Leads
 - `GET/POST /api/leads`
 - `GET/PUT/DELETE /api/leads/{id}`
-- `POST /api/leads/search` (Lead Finder - Database + AI)
+- `POST /api/leads/search` (Lead Finder - SerpAPI + AI fallback)
 
 ### Orders
 - `GET/POST /api/orders`
@@ -123,24 +125,27 @@ Features:
 - `GET/POST /api/shipments`
 - `POST /api/shipments/{id}/refresh`
 - `POST /api/shipments/refresh-all`
-- `GET /api/tracking/{tracking_number}` (Quick track - supports Paket + Express)
+- `GET /api/tracking/{tracking_number}` (Quick track)
 
 ## Database Collections
 - `users`, `leads`, `orders`, `recipes`, `products`
 - `specifications`, `daily_reports`, `agenda`
 - `email_log`, `company_settings`, `shipments`
 
-## Known Real German Döner Factories (in Lead Finder Database)
-1. Polat Dönerproduktion GmbH (Mönchengladbach)
-2. ÖZTAS Fleischhandel & Dönerproduktion e.K. (Moers)
-3. Düzgün Food GmbH (Köln) - 320 employees, 40-60 tons daily
-4. BDK - Berlin Döner Kebab (Berlin) - Since 1978, 3 factories
-5. Birtat / Meat World SE (Ludwigsburg)
-... and 44 more verified factories
+## Environment Variables
+### Backend (.env)
+- MONGO_URL
+- DB_NAME
+- EMERGENT_LLM_KEY
+- SERPAPI_KEY
+- DHL_API_KEY
+
+### Frontend (.env)
+- REACT_APP_BACKEND_URL
 
 ## Known Issues
 - Email features are MOCKED (logged to database, not sent)
-- Gemini API has daily quota limits (uses free tier)
+- DHL API returns 401 (key pending activation)
 
 ## Test Credentials
 - **Username**: admin
