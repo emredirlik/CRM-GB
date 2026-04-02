@@ -411,18 +411,57 @@ const Shipments = () => {
                   <Badge className={getStatusConfig(quickTrackResult.status).color}>
                     {getStatusConfig(quickTrackResult.status).label[language] || quickTrackResult.status_text}
                   </Badge>
+                  <span className="font-mono text-sm text-muted-foreground">{quickTrackResult.tracking_number}</span>
                 </div>
-                <Button size="sm" variant="outline" onClick={openAddDialog}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Listeye Ekle
-                </Button>
+                <div className="flex gap-2">
+                  {quickTrackResult.dhl_link && (
+                    <Button size="sm" variant="outline" onClick={() => window.open(quickTrackResult.dhl_link, '_blank')}>
+                      <ExternalLink className="w-4 h-4 mr-1" />
+                      DHL
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={openAddDialog}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Listeye Ekle
+                  </Button>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="text-muted-foreground">Konum:</span> {quickTrackResult.current_location || '-'}</div>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div><span className="text-muted-foreground">Konum:</span> <strong>{quickTrackResult.current_location || '-'}</strong></div>
                 <div><span className="text-muted-foreground">Tahmini:</span> {quickTrackResult.estimated_delivery || '-'}</div>
               </div>
-              {quickTrackResult.demo_mode && (
-                <p className="text-xs text-amber-600 mt-2">* Demo verisi gösteriliyor</p>
+              
+              {/* Events Timeline */}
+              {quickTrackResult.events && quickTrackResult.events.length > 0 && (
+                <div className="mt-3 pt-3 border-t">
+                  <p className="text-sm font-semibold mb-2 flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Kargo Hareketleri ({quickTrackResult.events.length})
+                  </p>
+                  <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                    {quickTrackResult.events.map((event, idx) => (
+                      <div key={idx} className="flex gap-3 text-sm">
+                        <div className="text-muted-foreground whitespace-nowrap min-w-[90px]">
+                          {event.date} {event.time}
+                        </div>
+                        <div className="flex-1">
+                          <span className="font-medium">{event.description}</span>
+                          {event.location && (
+                            <span className="text-muted-foreground ml-1">- {event.location}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {quickTrackResult.message && (
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {quickTrackResult.message}
+                </p>
               )}
             </div>
           )}
