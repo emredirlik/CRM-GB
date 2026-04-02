@@ -395,7 +395,6 @@ const Orders = () => {
                     <th>Ürünler</th>
                     <th>Müşteri</th>
                     <th>Miktar</th>
-                    <th>Toplam</th>
                     <th>Durum</th>
                     <th className="text-right">İşlemler</th>
                   </tr>
@@ -425,7 +424,6 @@ const Orders = () => {
                       <td>
                         <span className="font-medium">{formatOrderQuantity(order)}</span>
                       </td>
-                      <td className="font-semibold text-primary">{formatCurrency(order.total_price)}</td>
                       <td>
                         <Select 
                           value={order.status} 
