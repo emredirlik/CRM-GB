@@ -118,7 +118,7 @@ Return JSON array only, no explanation."""
                 api_key=self.api_key,
                 session_id=f"factory-search-{country}-{location}",
                 system_message=system_prompt
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash-lite")
             
             message = UserMessage(text=user_prompt)
             response = await asyncio.wait_for(
@@ -151,7 +151,7 @@ Return JSON array only, no explanation."""
                 api_key=self.api_key,
                 session_id=f"quick-search-{country}",
                 system_message="Return JSON array of 10 meat/food FACTORIES only. No restaurants."
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash-lite")
             
             loc = location if location and location.lower() != 'all' else 'major cities'
             message = UserMessage(text=f"List 10 {keyword_str} factories in {loc}, {country}. JSON format: [{{'company_name':'X','business_type':'Y Factory','city':'{location}','country':'{country}'}}]")

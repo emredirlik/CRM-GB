@@ -437,7 +437,7 @@ Odpowiadaj w języku użytkownika."""
                 api_key=self.api_key,
                 session_id=session_id,
                 system_message=system_messages[lang]
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash-lite")
             
             # Add context if provided
             full_message = message
