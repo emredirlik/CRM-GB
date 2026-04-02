@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -81,6 +81,8 @@ const Orders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewOrder, setPreviewOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [saving, setSaving] = useState(false);
   
@@ -116,6 +118,11 @@ const Orders = () => {
     setOrderProducts([{ ...emptyProductItem }]);
     setOrderNotes('');
     setOrderStatus('pending');
+  };
+
+  const openPreview = (order) => {
+    setPreviewOrder(order);
+    setIsPreviewOpen(true);
   };
 
   const openAddDialog = () => {
@@ -445,6 +452,15 @@ const Orders = () => {
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => openPreview(order)}
+                            title="Önizleme"
+                            data-testid={`preview-${order.id}`}
+                          >
+                            <Eye className="w-4 h-4 text-indigo-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => sendWhatsApp(order.id)}
                             title="WhatsApp'tan Gönder"
                             data-testid={`whatsapp-${order.id}`}
@@ -724,6 +740,133 @@ const Orders = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Order Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent className="max-w-2xl" data-testid="preview-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-indigo-600" />
+              Sipariş Önizleme
+            </DialogTitle>
+            <DialogDescription>
+              Sipariş detayları
+            </DialogDescription>
+          </DialogHeader>
+          
+          {previewOrder && (
+            <div className="space-y-6">
+              {/* Customer Info */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-sm text-gray-600 mb-2">Müşteri Bilgileri</h4>
+                <p className="text-lg font-bold">{previewOrder.company_name}</p>
+                <p className="text-sm text-gray-600">{previewOrder.lead_name}</p>
+              </div>
+
+              {/* Products Table */}
+              <div>
+                <h4 className="font-semibold text-sm text-gray-600 mb-2">Ürünler</h4>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left px-4 py-2 font-medium">Ürün</th>
+                        <th className="text-left px-4 py-2 font-medium">Kod</th>
+                        <th className="text-right px-4 py-2 font-medium">Miktar</th>
+                        <th className="text-right px-4 py-2 font-medium">Birim Fiyat</th>
+                        <th className="text-right px-4 py-2 font-medium">Toplam</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewOrder.products && previewOrder.products.length > 0 ? (
+                        previewOrder.products.map((product, idx) => (
+                          <tr key={idx} className="border-t">
+                            <td className="px-4 py-3">{product.product_name}</td>
+                            <td className="px-4 py-3 text-gray-500">{product.product_code || '-'}</td>
+                            <td className="px-4 py-3 text-right">{product.amount} {product.unit}</td>
+                            <td className="px-4 py-3 text-right">{formatCurrency(product.unit_price)}</td>
+                            <td className="px-4 py-3 text-right font-medium">{formatCurrency(product.amount * product.unit_price)}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr className="border-t">
+                          <td className="px-4 py-3">{previewOrder.product_name}</td>
+                          <td className="px-4 py-3 text-gray-500">{previewOrder.product_code || '-'}</td>
+                          <td className="px-4 py-3 text-right">{previewOrder.quantity || previewOrder.amount} {previewOrder.unit}</td>
+                          <td className="px-4 py-3 text-right">{formatCurrency(previewOrder.unit_price)}</td>
+                          <td className="px-4 py-3 text-right font-medium">{formatCurrency(previewOrder.total_price)}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                    <tfoot className="bg-indigo-50">
+                      <tr>
+                        <td colSpan="4" className="px-4 py-3 text-right font-semibold">Genel Toplam:</td>
+                        <td className="px-4 py-3 text-right font-bold text-indigo-600 text-lg">{formatCurrency(previewOrder.total_price)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* Status & Notes */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-600 mb-2">Durum</h4>
+                  <Badge className={`${statusColors[previewOrder.status]} border-0`}>
+                    {statusLabels[language]?.[previewOrder.status] || previewOrder.status}
+                  </Badge>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-600 mb-2">Tarih</h4>
+                  <p className="text-sm">{previewOrder.created_at ? new Date(previewOrder.created_at).toLocaleDateString('tr-TR') : '-'}</p>
+                </div>
+              </div>
+
+              {previewOrder.notes && (
+                <div>
+                  <h4 className="font-semibold text-sm text-gray-600 mb-2">Notlar</h4>
+                  <p className="text-sm bg-gray-50 rounded-lg p-3">{previewOrder.notes}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    sendWhatsApp(previewOrder.id);
+                    setIsPreviewOpen(false);
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2 text-green-600" />
+                  WhatsApp
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    downloadPdf(previewOrder.id);
+                  }}
+                >
+                  <FileDown className="w-4 h-4 mr-2 text-blue-600" />
+                  PDF İndir
+                </Button>
+                <Button
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  onClick={() => {
+                    setIsPreviewOpen(false);
+                    openEditDialog(previewOrder);
+                  }}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Düzenle
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
