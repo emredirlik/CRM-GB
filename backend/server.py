@@ -1906,39 +1906,65 @@ async def get_order_pdf(order_id: str, lang: str = 'tr'):
     )
 
 @api_router.get("/leads/export/pdf")
-async def export_leads_pdf():
+async def export_leads_pdf(lang: str = 'en'):
+    """Export all leads as PDF with language support"""
     leads = await db.leads.find({}, {"_id": 0}).to_list(1000)
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
     
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import cm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    
+    # Register DejaVu fonts for Turkish/Polish character support
+    try:
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        FONT = 'DejaVu'
+        FONT_BOLD = 'DejaVu-Bold'
+    except:
+        FONT = 'Helvetica'
+        FONT_BOLD = 'Helvetica-Bold'
+    
+    # Multi-language labels
+    labels = {
+        'en': {'title': 'Customer List', 'total': 'Total', 'customers': 'customers', 'date': 'Date',
+               'company': 'Company', 'contact': 'Contact', 'city': 'City', 'country': 'Country'},
+        'tr': {'title': 'Müşteri Listesi', 'total': 'Toplam', 'customers': 'müşteri', 'date': 'Tarih',
+               'company': 'Firma', 'contact': 'Kişi', 'city': 'Şehir', 'country': 'Ülke'},
+        'de': {'title': 'Kundenliste', 'total': 'Gesamt', 'customers': 'Kunden', 'date': 'Datum',
+               'company': 'Firma', 'contact': 'Kontakt', 'city': 'Stadt', 'country': 'Land'},
+        'pl': {'title': 'Lista Klientów', 'total': 'Razem', 'customers': 'klienci', 'date': 'Data',
+               'company': 'Firma', 'contact': 'Kontakt', 'city': 'Miasto', 'country': 'Kraj'}
+    }
+    L = labels.get(lang, labels['en'])
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
     y = height - 2*cm
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(2*cm, y, "Müşteri Listesi")
+    c.setFont(FONT_BOLD, 16)
+    c.drawString(2*cm, y, L['title'])
     y -= 1*cm
-    c.setFont("Helvetica", 8)
-    c.drawString(2*cm, y, f"Toplam: {len(leads)} müşteri | Tarih: {datetime.now().strftime('%d.%m.%Y')}")
+    c.setFont(FONT, 8)
+    c.drawString(2*cm, y, f"{L['total']}: {len(leads)} {L['customers']} | {L['date']}: {datetime.now().strftime('%d.%m.%Y')}")
     y -= 1*cm
     
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(2*cm, y, "Firma")
-    c.drawString(7*cm, y, "Kişi")
-    c.drawString(11*cm, y, "Şehir")
-    c.drawString(14*cm, y, "Ülke")
+    c.setFont(FONT_BOLD, 9)
+    c.drawString(2*cm, y, L['company'])
+    c.drawString(7*cm, y, L['contact'])
+    c.drawString(11*cm, y, L['city'])
+    c.drawString(14*cm, y, L['country'])
     y -= 0.5*cm
     
-    c.setFont("Helvetica", 9)
+    c.setFont(FONT, 9)
     for lead in leads:
         if y < 2*cm:
             c.showPage()
             y = height - 2*cm
-            c.setFont("Helvetica", 9)
+            c.setFont(FONT, 9)
         
         c.drawString(2*cm, y, (lead.get('company_name', '')[:25]))
         c.drawString(7*cm, y, f"{lead.get('first_name', '')} {lead.get('last_name', '')}"[:20])
@@ -1952,17 +1978,17 @@ async def export_leads_pdf():
     return Response(
         content=buffer.getvalue(),
         media_type="application/pdf",
-        headers={"Content-Disposition": "attachment; filename=musteriler.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={L['title'].lower().replace(' ', '_')}.pdf"}
     )
 
 @api_router.get("/recipes/{recipe_id}/pdf")
-async def get_recipe_pdf(recipe_id: str):
+async def get_recipe_pdf(recipe_id: str, lang: str = 'en'):
     recipe = await db.recipes.find_one({"id": recipe_id}, {"_id": 0})
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_recipe_pdf(recipe, settings)
+    pdf_content = generate_recipe_pdf(recipe, settings, lang=lang)
     
     return Response(
         content=pdf_content,
@@ -2460,11 +2486,18 @@ async def check_auth(request: Request):
 # ===================== WHATSAPP ENDPOINTS =====================
 
 @api_router.get("/orders/{order_id}/whatsapp")
-async def get_order_whatsapp_link(order_id: str):
-    """Generate WhatsApp share link for an order with PDF link"""
+async def get_order_whatsapp_link(order_id: str, lang: str = 'tr'):
+    """Generate WhatsApp share link for an order - NO TOTAL PRICE"""
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Get lead info for address
+    lead = await db.leads.find_one({"id": order.get('lead_id')}, {"_id": 0})
+    customer_address = ""
+    if lead:
+        address_parts = [lead.get('address', ''), lead.get('city', ''), lead.get('country', '')]
+        customer_address = ', '.join([p for p in address_parts if p])
     
     # Get company settings
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
@@ -2472,27 +2505,40 @@ async def get_order_whatsapp_link(order_id: str):
     
     # Get backend URL for PDF link
     backend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://customer-agent-2.preview.emergentagent.com')
-    pdf_url = f"{backend_url}/api/orders/{order_id}/pdf/public"
+    pdf_url = f"{backend_url}/api/orders/{order_id}/pdf/public?lang={lang}"
     
-    # Format order details for WhatsApp with PDF link
-    pieces = order.get('pieces', 1)
-    amount = order.get('amount', order.get('quantity', 1))
-    unit = order.get('unit', 'kg')
+    # Build product list - NO TOTAL PRICE
+    products = order.get('products', [])
+    product_lines = []
     
-    message = f"""🧾 *SİPARİŞ - {company_name}*
+    if products and len(products) > 0:
+        for p in products:
+            pieces = p.get('pieces', 1)
+            amount = p.get('amount', 1)
+            unit = p.get('unit', 'kg')
+            unit_price = p.get('unit_price', 0)
+            qty_str = f"{pieces}×{amount}{unit}" if pieces > 1 else f"{amount}{unit}"
+            product_lines.append(f"• {p.get('product_code', '')} - {qty_str} @ €{unit_price:.2f}/{unit}")
+    else:
+        # Legacy single product
+        pieces = order.get('pieces', 1)
+        amount = order.get('amount', order.get('quantity', 1))
+        unit = order.get('unit', 'kg')
+        qty_str = f"{pieces}×{amount}{unit}" if pieces > 1 else f"{amount}{unit}"
+        product_lines.append(f"• {order.get('product_code', '')} - {qty_str} @ €{order.get('unit_price', 0):.2f}/{unit}")
+    
+    products_text = '\n'.join(product_lines)
+    
+    # Format message - NO TOTAL PRICE
+    message = f"""📦 *{company_name} - Sipariş*
 
-📦 *Ürün:* {order['product_name']}
-🏷️ *Kod:* {order['product_code']}
-🏢 *Müşteri:* {order['company_name']}
+*Müşteri:* {order.get('company_name', '')}
+*Adres:* {customer_address}
 
-📊 *Miktar:* {pieces} × {amount} {unit}
-💰 *Fiyat:* €{order['unit_price']:.2f}/{unit}
+*Ürünler:*
+{products_text}
 
-📄 *PDF Sipariş Formu:*
-{pdf_url}
-
----
-_{company_name}_"""
+📄 PDF: {pdf_url}"""
     
     # URL encode the message
     encoded_message = quote(message)

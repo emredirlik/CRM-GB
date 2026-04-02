@@ -325,18 +325,8 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     
     y -= 0.5*cm
     
-    # Total Price box
-    c.setFillColor(SUCCESS_COLOR)
-    c.roundRect(1.5*cm, y - 2*cm, width - 3*cm, 2*cm, 5, fill=True, stroke=False)
-    c.setFillColor(white)
-    c.setFont(FONT_REGULAR, 12)
-    c.drawString(2*cm, y - 0.8*cm, L['total_price'])
-    c.setFont(FONT_BOLD, 24)
-    c.drawRightString(width - 2*cm, y - 1.4*cm, f"€{total_price:.2f}")
-    
-    y -= 3*cm
-    
-    # Status badge
+    # NO TOTAL PRICE - User requested to never show total price
+    # Status badge directly
     status_colors = {
         'pending': HexColor('#eab308'),
         'confirmed': HexColor('#3b82f6'),
@@ -374,13 +364,82 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     return buffer.getvalue()
 
 
-def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
-    """Generate a professionally styled recipe PDF matching the UI design"""
+def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str = 'en') -> bytes:
+    """Generate a professionally styled recipe PDF matching the UI design with multilingual support"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
     company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Multilingual labels
+    labels = {
+        'en': {
+            'title': 'Production Recipe',
+            'customer': 'Customer',
+            'main_ingredients': 'MAIN INGREDIENTS',
+            'meat': 'Meat Amount',
+            'water': 'Water Amount',
+            'spice': 'Spice Amount',
+            'binding': 'Binding Amount',
+            'production_params': 'PRODUCTION PARAMETERS',
+            'mixing': 'Mixing Time',
+            'resting': 'Resting Time',
+            'temp': 'Temperature',
+            'instructions': 'INSTRUCTIONS',
+            'notes': 'NOTES',
+            'created': 'Created'
+        },
+        'tr': {
+            'title': 'Üretim Reçetesi',
+            'customer': 'Müşteri',
+            'main_ingredients': 'ANA MALZEMELER',
+            'meat': 'Et Miktarı',
+            'water': 'Su Miktarı',
+            'spice': 'Baharat Miktarı',
+            'binding': 'Binding Miktarı',
+            'production_params': 'ÜRETİM PARAMETRELERİ',
+            'mixing': 'Karıştırma Süresi',
+            'resting': 'Dinlenme Süresi',
+            'temp': 'Sıcaklık',
+            'instructions': 'TALİMATLAR',
+            'notes': 'NOTLAR',
+            'created': 'Oluşturulma'
+        },
+        'de': {
+            'title': 'Produktionsrezept',
+            'customer': 'Kunde',
+            'main_ingredients': 'HAUPTZUTATEN',
+            'meat': 'Fleischmenge',
+            'water': 'Wassermenge',
+            'spice': 'Gewürzmenge',
+            'binding': 'Bindermenge',
+            'production_params': 'PRODUKTIONSPARAMETER',
+            'mixing': 'Mischzeit',
+            'resting': 'Ruhezeit',
+            'temp': 'Temperatur',
+            'instructions': 'ANWEISUNGEN',
+            'notes': 'NOTIZEN',
+            'created': 'Erstellt'
+        },
+        'pl': {
+            'title': 'Receptura Produkcji',
+            'customer': 'Klient',
+            'main_ingredients': 'GŁÓWNE SKŁADNIKI',
+            'meat': 'Ilość Mięsa',
+            'water': 'Ilość Wody',
+            'spice': 'Ilość Przypraw',
+            'binding': 'Ilość Wiązania',
+            'production_params': 'PARAMETRY PRODUKCJI',
+            'mixing': 'Czas Mieszania',
+            'resting': 'Czas Odpoczynku',
+            'temp': 'Temperatura',
+            'instructions': 'INSTRUKCJE',
+            'notes': 'UWAGI',
+            'created': 'Utworzono'
+        }
+    }
+    L = labels.get(lang, labels['en'])
     
     # Header
     c.setFillColor(PRIMARY_COLOR)
@@ -390,7 +449,7 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     c.setFont(FONT_BOLD, 24)
     c.drawString(2*cm, height - 2.5*cm, company_name)
     c.setFont(FONT_REGULAR, 10)
-    c.drawString(2*cm, height - 3.2*cm, "Üretim Reçetesi")
+    c.drawString(2*cm, height - 3.2*cm, L['title'])
     
     c.setFont(FONT_BOLD, 12)
     c.drawRightString(width - 2*cm, height - 2.5*cm, recipe.get('product_code', ''))
@@ -406,7 +465,7 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     c.drawString(2*cm, y - 1*cm, recipe.get('name', ''))
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 11)
-    c.drawString(2*cm, y - 1.8*cm, f"Müşteri: {recipe.get('company_name', '')}")
+    c.drawString(2*cm, y - 1.8*cm, f"{L['customer']}: {recipe.get('company_name', '')}")
     
     y -= 4*cm
     
@@ -415,7 +474,7 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_BOLD, 10)
-    c.drawString(2*cm, y - 0.7*cm, "ANA MALZEMELER")
+    c.drawString(2*cm, y - 0.7*cm, L['main_ingredients'])
     
     y -= 1.8*cm
     
@@ -424,10 +483,10 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     box_height = 1.8*cm
     
     ingredients = [
-        (RED_COLOR, HexColor('#fef2f2'), "Et Miktarı", f"{recipe.get('meat_amount', 0)} kg"),
-        (BLUE_COLOR, HexColor('#eff6ff'), "Su Miktarı", f"{recipe.get('water_amount', 0)} L"),
-        (ACCENT_COLOR, HexColor('#fff7ed'), "Baharat Miktarı", f"{recipe.get('spice_amount', 0)} kg"),
-        (PURPLE_COLOR, HexColor('#faf5ff'), "Binding Miktarı", f"{recipe.get('binding_amount', 0)} kg"),
+        (RED_COLOR, HexColor('#fef2f2'), L['meat'], f"{recipe.get('meat_amount', 0)} kg"),
+        (BLUE_COLOR, HexColor('#eff6ff'), L['water'], f"{recipe.get('water_amount', 0)} L"),
+        (ACCENT_COLOR, HexColor('#fff7ed'), L['spice'], f"{recipe.get('spice_amount', 0)} kg"),
+        (PURPLE_COLOR, HexColor('#faf5ff'), L['binding'], f"{recipe.get('binding_amount', 0)} kg"),
     ]
     
     for i, (text_color, bg_color, label, value) in enumerate(ingredients):
@@ -454,13 +513,18 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_BOLD, 10)
-    c.drawString(2*cm, y - 0.7*cm, "ÜRETİM PARAMETRELERİ")
+    c.drawString(2*cm, y - 0.7*cm, L['production_params'])
     
     y -= 1.8*cm
     
+    # Mixing time label based on language
+    mixing_labels = {'en': 'Mixing Time', 'tr': 'Karışım Süresi', 'de': 'Mischzeit', 'pl': 'Czas Mieszania'}
+    motor_labels = {'en': 'Motor Speed', 'tr': 'Motor Hızı', 'de': 'Motordrehzahl', 'pl': 'Prędkość Silnika'}
+    min_labels = {'en': 'min', 'tr': 'dakika', 'de': 'min', 'pl': 'min'}
+    
     params = [
-        (GREEN_COLOR, HexColor('#f0fdf4'), "Karışım Süresi", f"{recipe.get('mixing_time', 0)} dakika"),
-        (GRAY_COLOR, HexColor('#f3f4f6'), "Motor Hızı", f"{recipe.get('motor_speed', 0)} rpm"),
+        (GREEN_COLOR, HexColor('#f0fdf4'), mixing_labels.get(lang, 'Mixing Time'), f"{recipe.get('mixing_time', 0)} {min_labels.get(lang, 'min')}"),
+        (GRAY_COLOR, HexColor('#f3f4f6'), motor_labels.get(lang, 'Motor Speed'), f"{recipe.get('motor_speed', 0)} rpm"),
     ]
     
     for i, (text_color, bg_color, label, value) in enumerate(params):
@@ -478,11 +542,14 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     
     y -= 3*cm
     
+    # Additional ingredients label
+    add_ing_labels = {'en': 'ADDITIONAL INGREDIENTS', 'tr': 'EK MALZEMELER', 'de': 'ZUSÄTZLICHE ZUTATEN', 'pl': 'DODATKOWE SKŁADNIKI'}
+    
     # Additional ingredients
     if recipe.get('additional_ingredients'):
         c.setFillColor(TEXT_MUTED)
         c.setFont(FONT_BOLD, 10)
-        c.drawString(2*cm, y, "EK MALZEMELER")
+        c.drawString(2*cm, y, add_ing_labels.get(lang, 'ADDITIONAL INGREDIENTS'))
         y -= 0.6*cm
         
         c.setFont(FONT_REGULAR, 10)
@@ -493,11 +560,14 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     
     y -= 0.5*cm
     
+    # Instructions label
+    inst_labels = {'en': 'PRODUCTION INSTRUCTIONS', 'tr': 'ÜRETİM TALİMATLARI', 'de': 'PRODUKTIONSANWEISUNGEN', 'pl': 'INSTRUKCJE PRODUKCJI'}
+    
     # Instructions
     if recipe.get('instructions'):
         c.setFillColor(TEXT_MUTED)
         c.setFont(FONT_BOLD, 10)
-        c.drawString(2*cm, y, "ÜRETİM TALİMATLARI")
+        c.drawString(2*cm, y, inst_labels.get(lang, 'PRODUCTION INSTRUCTIONS'))
         y -= 0.6*cm
         
         c.setFillColor(BG_LIGHT)
@@ -512,7 +582,7 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None) -> bytes:
     # Footer
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 8)
-    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawString(2*cm, 1.5*cm, f"{L['created']}: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
     c.drawRightString(width - 2*cm, 1.5*cm, company_name)
     
     c.save()
