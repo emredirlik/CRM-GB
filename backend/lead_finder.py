@@ -111,6 +111,30 @@ class LeadFinder:
                 f"et işleme tesisi {search_location}",
             ])
             
+            # Country-specific searches
+            country_lower = country.lower()
+            if country_lower == "greece":
+                search_queries.extend([
+                    f"gyros production factory Athens Greece",
+                    f"gyros manufacturer Greece",
+                    f"κρεατοσκευάσματα {search_location}",
+                    f"βιομηχανία κρέατος {search_location}",
+                    f"gyros wholesale Greece",
+                    f"souvlaki production Greece",
+                    f"meat factory Greece",
+                    f"Elvida Foods Greece",
+                    f"Megas Yeeros Greece",
+                    f"Creta Farms Greece",
+                    f"gyros εργοστάσιο Greece",
+                ])
+            elif country_lower == "turkey":
+                search_queries.extend([
+                    f"döner fabrikası {search_location}",
+                    f"et işleme tesisi {search_location}",
+                    f"kebap üretim {search_location}",
+                    f"et entegre tesisi {search_location}",
+                ])
+            
             logger.info(f"Running {len(search_queries)} search queries for {country}")
             
             for query in search_queries:
@@ -295,12 +319,26 @@ class LeadFinder:
     
     def _is_restaurant(self, name_lower: str, item: dict) -> bool:
         """Check if business is a restaurant (should be filtered out)"""
+        
+        # First check if it's a KNOWN FACTORY - never filter these
+        factory_indicators = [
+            'produktion', 'production', 'producer', 'manufacturer', 'manufacturing',
+            'fabrik', 'factory', 'fabrika', 'üretim', 'wholesale', 'grosshandel',
+            'fleisch', 'meat', 'foods s.a', 'foods sa', 'food s.a', 'food sa',
+            'gmbh', 's.r.l', 's.a.', 's.l.', 'a.e.', 'ltd', 'a.ş', 'processing',
+            'verarbeitung', 'hersteller', 'industrial', 'industri'
+        ]
+        
+        # If name contains factory indicator, it's NOT a restaurant
+        if any(indicator in name_lower for indicator in factory_indicators):
+            return False
+        
         restaurant_indicators = [
-            'restaurant', 'imbiss', 'grill', 'bistro', 'takeaway', 'kiosk',
-            'fast food', 'dükkan', 'lokanta', 'evi', 'house', 'kitchen',
+            'restaurant', 'imbiss', 'bistro', 'takeaway', 'kiosk',
+            'fast food', 'dükkan', 'lokanta', 'evi', 'kitchen',
             'cafe', 'bar', 'pub', 'tavern', 'diner', 'eatery', 'pizzeria',
             'restoran', 'lokal', 'snack', 'express', 'takeout', 'delivery',
-            'kebab haus', 'döner haus', 'gyros haus', 'food truck'
+            'food truck', 'souvlaki', 'gyristroula', 'grill house'
         ]
         
         # Check name
