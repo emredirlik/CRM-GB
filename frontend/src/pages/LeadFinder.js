@@ -261,7 +261,7 @@ const LeadFinder = () => {
     <div className="space-y-6" data-testid="lead-finder-page">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl">
+        <div className="p-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl">
           <Factory className="w-8 h-8 text-white" />
         </div>
         <div>
@@ -271,11 +271,11 @@ const LeadFinder = () => {
       </div>
 
       {/* Search Card */}
-      <Card className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
+      <Card className="border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50">
         <CardContent className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-orange-600" />
-            <span className="font-medium text-orange-800">AI-Powered Search</span>
+            <Sparkles className="w-5 h-5 text-indigo-600" />
+            <span className="font-medium text-indigo-800">AI-Powered Search</span>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
@@ -349,7 +349,7 @@ const LeadFinder = () => {
             <Button 
               onClick={handleSearch} 
               disabled={loading}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 h-10 w-full md:w-auto"
+              className="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 h-10 w-full md:w-auto"
               size="lg"
             >
               {loading ? (
@@ -367,8 +367,8 @@ const LeadFinder = () => {
           </div>
 
           {/* Quick Buttons */}
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-orange-200">
-            <span className="text-sm text-orange-700 font-medium mr-2">Hızlı Seç:</span>
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-indigo-200">
+            <span className="text-sm text-indigo-700 font-medium mr-2">Hızlı Seç:</span>
             {[
               { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
               { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
@@ -383,7 +383,7 @@ const LeadFinder = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => { setCountry(co); setCity(c); }}
-                className="bg-white hover:bg-orange-100"
+                className="bg-white hover:bg-indigo-100"
               >
                 {flag} {c}
               </Button>
@@ -391,8 +391,8 @@ const LeadFinder = () => {
           </div>
           
           {/* Keyword Presets */}
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-orange-200">
-            <span className="text-sm text-orange-700 font-medium mr-2">Arama Şablonları:</span>
+          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-indigo-200">
+            <span className="text-sm text-indigo-700 font-medium mr-2">Arama Şablonları:</span>
             {[
               { label: 'Döner Fabrikası', keywords: 'döner fabrikası, döner produktion, döner üretim' },
               { label: 'Gyros Üretim', keywords: 'gyros üretim, gyros factory, γύρος' },
@@ -407,7 +407,7 @@ const LeadFinder = () => {
                 variant="outline"
                 size="sm"
                 onClick={() => setKeywords(kw)}
-                className="bg-white hover:bg-amber-100 text-amber-700 border-amber-300"
+                className="bg-white hover:bg-violet-100 text-violet-700 border-violet-300"
               >
                 {label}
               </Button>
@@ -448,7 +448,7 @@ const LeadFinder = () => {
                   className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
                     selectedLeads.has(index) 
                       ? 'border-green-500 bg-green-50' 
-                      : 'border-gray-200 hover:border-orange-300 bg-white'
+                      : 'border-gray-200 hover:border-indigo-300 bg-white'
                   }`}
                   onClick={() => toggleSelection(index)}
                 >
@@ -460,7 +460,7 @@ const LeadFinder = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm truncate">{lead.company_name}</h3>
-                      <Badge variant="secondary" className="text-xs mt-1 mb-2 bg-orange-100 text-orange-700">
+                      <Badge variant="secondary" className="text-xs mt-1 mb-2 bg-indigo-100 text-indigo-700">
                         <Factory className="w-3 h-3 mr-1" />
                         {lead.business_type || 'Factory'}
                       </Badge>
@@ -502,7 +502,7 @@ const LeadFinder = () => {
       {!loading && results.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
-            <Factory className="w-16 h-16 mx-auto mb-4 text-orange-300" />
+            <Factory className="w-16 h-16 mx-auto mb-4 text-indigo-300" />
             <h3 className="text-xl font-semibold mb-2">{t.startSearch}</h3>
             <p className="text-muted-foreground">{t.startSearchDesc}</p>
           </CardContent>
@@ -513,7 +513,7 @@ const LeadFinder = () => {
       {loading && (
         <Card>
           <CardContent className="py-16 text-center">
-            <Sparkles className="w-12 h-12 mx-auto mb-4 text-orange-600 animate-pulse" />
+            <Sparkles className="w-12 h-12 mx-auto mb-4 text-indigo-600 animate-pulse" />
             <h3 className="text-xl font-semibold mb-2">{t.searching}</h3>
             <p className="text-muted-foreground">Döner, Gyros, Kebap fabrikaları aranıyor...</p>
           </CardContent>

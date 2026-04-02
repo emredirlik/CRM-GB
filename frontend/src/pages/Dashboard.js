@@ -36,7 +36,7 @@ const EVENT_TYPES = [
   { value: 'visit', label: 'Customer Visit', icon: MapPin, color: 'bg-blue-500' },
   { value: 'meeting', label: 'Meeting', icon: Briefcase, color: 'bg-purple-500' },
   { value: 'call', label: 'Phone Call', icon: Phone, color: 'bg-green-500' },
-  { value: 'delivery', label: 'Delivery', icon: Truck, color: 'bg-orange-500' },
+  { value: 'delivery', label: 'Delivery', icon: Truck, color: 'bg-indigo-500' },
   { value: 'task', label: 'Task', icon: CheckCircle, color: 'bg-gray-500' },
 ];
 
@@ -96,11 +96,15 @@ const Dashboard = () => {
     }
   };
 
+  // Shipments state
+  const [shipments, setShipments] = useState([]);
+  
   useEffect(() => {
     fetchStats(period);
     fetchEvents();
     fetchLeads();
     fetchForecast();
+    fetchShipments();
   }, [period]);
 
   const fetchStats = async (selectedPeriod) => {
@@ -112,6 +116,16 @@ const Dashboard = () => {
       console.error('Failed to fetch stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchShipments = async () => {
+    try {
+      const response = await axios.get(`${API}/shipments`);
+      setShipments(response.data?.slice(0, 5) || []);
+    } catch (error) {
+      console.error('Failed to fetch shipments:', error);
+      setShipments([]);
     }
   };
   
@@ -276,9 +290,9 @@ const Dashboard = () => {
       label: t('emailsSent'),
       value: stats.emails_sent,
       icon: Mail,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      hoverBg: 'hover:bg-orange-100',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      hoverBg: 'hover:bg-indigo-100',
       link: '/email-history'
     }
   ];
@@ -306,7 +320,7 @@ const Dashboard = () => {
               variant={period === p.value ? 'default' : 'outline'}
               size="sm"
               onClick={() => setPeriod(p.value)}
-              className={period === p.value ? 'bg-orange-600 hover:bg-orange-700' : ''}
+              className={period === p.value ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
             >
               {p.label}
             </Button>
@@ -341,11 +355,11 @@ const Dashboard = () => {
 
       {/* Revenue Target Progress */}
       {stats.yearly_target > 0 && (
-        <Card className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200">
+        <Card className="bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <Target className="w-6 h-6 text-orange-600" />
+                <Target className="w-6 h-6 text-indigo-600" />
                 <div>
                   <h3 className="font-semibold">Annual Revenue Target</h3>
                   <p className="text-sm text-muted-foreground">
@@ -353,7 +367,7 @@ const Dashboard = () => {
                   </p>
                 </div>
               </div>
-              <Badge className="bg-orange-600 text-white">
+              <Badge className="bg-indigo-600 text-white">
                 {revenueProgress.toFixed(1)}%
               </Badge>
             </div>
@@ -453,7 +467,7 @@ const Dashboard = () => {
         <Card className="lg:col-span-2 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xl">
-              <CalendarIcon className="w-5 h-5 text-orange-600" />
+              <CalendarIcon className="w-5 h-5 text-indigo-600" />
               Calendar & Visit Planning
             </CardTitle>
           </CardHeader>
@@ -488,7 +502,7 @@ const Dashboard = () => {
                   <Button 
                     size="sm"
                     onClick={openVisitDialog}
-                    className="bg-orange-600 hover:bg-orange-700"
+                    className="bg-indigo-600 hover:bg-indigo-700"
                   >
                     <Plus className="w-4 h-4 mr-1" />
                     Schedule Visit
@@ -579,7 +593,7 @@ const Dashboard = () => {
                   variant="link" 
                   size="sm" 
                   onClick={openVisitDialog}
-                  className="text-orange-600"
+                  className="text-indigo-600"
                 >
                   Schedule your first visit
                 </Button>
@@ -640,7 +654,7 @@ const Dashboard = () => {
               <Button 
                 variant="link" 
                 onClick={() => navigate('/leads')}
-                className="text-orange-600"
+                className="text-indigo-600"
               >
                 Add your first lead <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
@@ -678,15 +692,15 @@ const Dashboard = () => {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="font-['Manrope'] flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-orange-600" />
+              <MapPin className="w-5 h-5 text-indigo-600" />
               Schedule Visit / Event
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             {/* Date Display */}
-            <div className="p-3 bg-orange-50 rounded-lg text-center">
-              <p className="text-sm text-orange-700 font-medium">
+            <div className="p-3 bg-indigo-50 rounded-lg text-center">
+              <p className="text-sm text-indigo-700 font-medium">
                 {format(selectedDate, 'EEEE, MMMM d, yyyy', { locale: getLocale() })}
               </p>
             </div>
@@ -775,13 +789,93 @@ const Dashboard = () => {
             <Button 
               onClick={handleVisitSubmit}
               disabled={saving}
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-indigo-600 hover:bg-indigo-700"
             >
               {saving ? 'Saving...' : 'Schedule'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Shipments Section */}
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Truck className="w-5 h-5 text-indigo-600" />
+            Recent Shipments
+          </CardTitle>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate('/shipments')}
+            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          >
+            View All
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {shipments.length > 0 ? (
+            <div className="space-y-3">
+              {shipments.map((shipment, index) => {
+                const statusColors = {
+                  'delivered': 'bg-green-100 text-green-700',
+                  'in_transit': 'bg-blue-100 text-blue-700',
+                  'out_for_delivery': 'bg-indigo-100 text-indigo-700',
+                  'pending': 'bg-yellow-100 text-yellow-700',
+                  'exception': 'bg-red-100 text-red-700',
+                };
+                const statusLabels = {
+                  'delivered': 'Delivered',
+                  'in_transit': 'In Transit',
+                  'out_for_delivery': 'Out for Delivery',
+                  'pending': 'Pending',
+                  'exception': 'Exception',
+                };
+                return (
+                  <div 
+                    key={shipment._id || index} 
+                    className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-colors cursor-pointer"
+                    onClick={() => navigate('/shipments')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <Truck className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{shipment.tracking_number}</p>
+                        <p className="text-xs text-muted-foreground">{shipment.lead_name || 'Customer'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">{shipment.location || '-'}</p>
+                      </div>
+                      <Badge className={statusColors[shipment.status] || 'bg-gray-100 text-gray-700'}>
+                        {statusLabels[shipment.status] || shipment.status}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Truck className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+              <p className="text-muted-foreground">No shipments found</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-3"
+                onClick={() => navigate('/shipments')}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Shipment
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
