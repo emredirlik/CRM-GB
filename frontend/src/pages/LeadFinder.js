@@ -258,266 +258,259 @@ const LeadFinder = () => {
   };
 
   return (
-    <div className="space-y-6" data-testid="lead-finder-page">
+    <div className="space-y-6 font-body" data-testid="lead-finder-page">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl">
+        <div className="p-3 bg-[#BA4323] rounded-md">
           <Factory className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground">{t.subtitle}</p>
+          <h1 className="text-3xl font-heading font-bold tracking-tight text-zinc-900">{t.title}</h1>
+          <p className="text-zinc-500 text-sm">{t.subtitle}</p>
         </div>
       </div>
 
       {/* Search Card */}
-      <Card className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-orange-600" />
-            <span className="font-medium text-orange-800">AI-Powered Search</span>
+      <div className="bg-white border border-zinc-200 rounded-md p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-5 h-5 text-[#BA4323]" />
+          <span className="font-medium text-zinc-900">AI-Powered Search</span>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          {/* Ülke */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-zinc-700 text-sm font-medium">
+              <Globe className="w-4 h-4" />
+              {t.country}
+            </Label>
+            <Select value={country} onValueChange={(val) => { setCountry(val); setCity(''); }}>
+              <SelectTrigger className="bg-white border-zinc-200 focus:ring-2 focus:ring-[#BA4323]/20 focus:border-[#BA4323]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.keys(COUNTRIES).map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-            {/* Ülke */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
-                {t.country}
-              </Label>
-              <Select value={country} onValueChange={(val) => { setCountry(val); setCity(''); }}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(COUNTRIES).map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
-            {/* Şehir */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                {t.city}
-              </Label>
-              <Select value={city || "all"} onValueChange={(val) => setCity(val === "all" ? "" : val)}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder={t.allCities} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t.allCities}</SelectItem>
-                  {cities.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom City */}
-            <div className="space-y-2">
-              <Label>veya şehir yazın</Label>
-              <Input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Şehir adı..."
-                className="bg-white"
-              />
-            </div>
-
-            {/* Arama Kelimeleri */}
-            <div className="space-y-2 lg:col-span-2">
-              <Label className="flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                {t.keywords}
-              </Label>
-              <Input
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-                placeholder={t.keywordsPlaceholder}
-                className="bg-white"
-                data-testid="keywords-input"
-              />
-              <p className="text-xs text-muted-foreground">{t.keywordsHelp}</p>
-            </div>
+          {/* Şehir */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 text-zinc-700 text-sm font-medium">
+              <MapPin className="w-4 h-4" />
+              {t.city}
+            </Label>
+            <Select value={city || "all"} onValueChange={(val) => setCity(val === "all" ? "" : val)}>
+              <SelectTrigger className="bg-white border-zinc-200 focus:ring-2 focus:ring-[#BA4323]/20 focus:border-[#BA4323]">
+                <SelectValue placeholder={t.allCities} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t.allCities}</SelectItem>
+                {cities.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          
-          {/* Search Button - Full Width */}
-          <div className="mt-4">
-            <Button 
-              onClick={handleSearch} 
-              disabled={loading}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 h-10 w-full md:w-auto"
-              size="lg"
+
+          {/* Custom City */}
+          <div className="space-y-2">
+            <Label className="text-zinc-700 text-sm font-medium">veya şehir yazın</Label>
+            <Input
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Şehir adı..."
+              className="bg-white border-zinc-200 focus:ring-2 focus:ring-[#BA4323]/20 focus:border-[#BA4323]"
+            />
+          </div>
+
+          {/* Arama Kelimeleri */}
+          <div className="space-y-2 lg:col-span-2">
+            <Label className="flex items-center gap-2 text-zinc-700 text-sm font-medium">
+              <Search className="w-4 h-4" />
+              {t.keywords}
+            </Label>
+            <Input
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              placeholder={t.keywordsPlaceholder}
+              className="bg-white border-zinc-200 focus:ring-2 focus:ring-[#BA4323]/20 focus:border-[#BA4323]"
+              data-testid="keywords-input"
+            />
+            <p className="text-xs text-zinc-500">{t.keywordsHelp}</p>
+          </div>
+        </div>
+        
+        {/* Search Button - Full Width */}
+        <div className="mt-4">
+          <Button 
+            onClick={handleSearch} 
+            disabled={loading}
+            className="bg-[#BA4323] hover:bg-[#8C3118] text-white h-10 w-full md:w-auto rounded-md transition-colors duration-200"
+            size="lg"
+            data-testid="search-factories-btn"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                {t.searching}
+              </>
+            ) : (
+              <>
+                <Search className="w-5 h-5 mr-2" />
+                {t.search}
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Quick Buttons */}
+        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-zinc-200">
+          <span className="text-xs tracking-[0.1em] uppercase font-medium text-zinc-500 mr-2">Hızlı Seç:</span>
+          {[
+            { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
+            { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
+            { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
+            { city: 'Bucharest', country: 'Romania', flag: '🇷🇴' },
+            { city: 'Madrid', country: 'Spain', flag: '🇪🇸' },
+            { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱' },
+            { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
+          ].map(({ city: c, country: co, flag }) => (
+            <Button
+              key={`${c}-${co}`}
+              variant="outline"
+              size="sm"
+              onClick={() => { setCountry(co); setCity(c); }}
+              className="bg-white hover:bg-zinc-100 border-zinc-200 text-zinc-700 transition-colors duration-200"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {t.searching}
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5 mr-2" />
-                  {t.search}
-                </>
-              )}
+              {flag} {c}
             </Button>
-          </div>
-
-          {/* Quick Buttons */}
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-orange-200">
-            <span className="text-sm text-orange-700 font-medium mr-2">Hızlı Seç:</span>
-            {[
-              { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
-              { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
-              { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
-              { city: 'Bucharest', country: 'Romania', flag: '🇷🇴' },
-              { city: 'Madrid', country: 'Spain', flag: '🇪🇸' },
-              { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱' },
-              { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
-            ].map(({ city: c, country: co, flag }) => (
-              <Button
-                key={`${c}-${co}`}
-                variant="outline"
-                size="sm"
-                onClick={() => { setCountry(co); setCity(c); }}
-                className="bg-white hover:bg-orange-100"
-              >
-                {flag} {c}
-              </Button>
-            ))}
-          </div>
-          
-          {/* Keyword Presets */}
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-orange-200">
-            <span className="text-sm text-orange-700 font-medium mr-2">Arama Şablonları:</span>
-            {[
-              { label: 'Döner Fabrikası', keywords: 'döner fabrikası, döner produktion, döner üretim' },
-              { label: 'Gyros Üretim', keywords: 'gyros üretim, gyros factory, γύρος' },
-              { label: 'Kebap Fabrikası', keywords: 'kebap fabrikası, kebab production, kebap üretim' },
-              { label: 'Et İşleme', keywords: 'et işleme, meat processing, fleischverarbeitung' },
-              { label: 'Helal Et', keywords: 'helal et, halal meat, helal döner' },
-              { label: 'Cinar Food', keywords: 'cinar food, döner fabrikası' },
-              { label: 'Özturk', keywords: 'özturk, ozturk döner, kebab' },
-            ].map(({ label, keywords: kw }) => (
-              <Button
-                key={label}
-                variant="outline"
-                size="sm"
-                onClick={() => setKeywords(kw)}
-                className="bg-white hover:bg-amber-100 text-amber-700 border-amber-300"
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+        
+        {/* Keyword Presets */}
+        <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-zinc-200">
+          <span className="text-xs tracking-[0.1em] uppercase font-medium text-zinc-500 mr-2">Şablonlar:</span>
+          {[
+            { label: 'Döner Fabrikası', keywords: 'döner fabrikası, döner produktion, döner üretim' },
+            { label: 'Gyros Üretim', keywords: 'gyros üretim, gyros factory, γύρος' },
+            { label: 'Kebap Fabrikası', keywords: 'kebap fabrikası, kebab production, kebap üretim' },
+            { label: 'Et İşleme', keywords: 'et işleme, meat processing, fleischverarbeitung' },
+            { label: 'Helal Et', keywords: 'helal et, halal meat, helal döner' },
+          ].map(({ label, keywords: kw }) => (
+            <Button
+              key={label}
+              variant="outline"
+              size="sm"
+              onClick={() => setKeywords(kw)}
+              className="bg-white hover:bg-[#BA4323]/10 text-[#BA4323] border-[#BA4323]/30 transition-colors duration-200"
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       {/* Results */}
       {results.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-green-600" />
-                <span className="font-semibold">{results.length} {t.found}</span>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={selectAll}>
-                  {selectedLeads.size === results.length ? 'Seçimi Kaldır' : t.selectAll}
-                </Button>
-                <Button 
-                  onClick={importSelectedLeads} 
-                  disabled={selectedLeads.size === 0 || importing}
-                  className="bg-green-600 hover:bg-green-700"
-                  size="sm"
-                >
-                  {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                  {selectedLeads.size > 0 ? `${selectedLeads.size} ${t.addSelected}` : t.addSelected}
-                </Button>
-              </div>
+        <div className="bg-white border border-zinc-200 rounded-md p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-emerald-600" />
+              <span className="font-heading font-semibold text-zinc-900">{results.length} {t.found}</span>
             </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={selectAll} className="border-zinc-200">
+                {selectedLeads.size === results.length ? 'Seçimi Kaldır' : t.selectAll}
+              </Button>
+              <Button 
+                onClick={importSelectedLeads} 
+                disabled={selectedLeads.size === 0 || importing}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                size="sm"
+                data-testid="add-selected-btn"
+              >
+                {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                {selectedLeads.size > 0 ? `${selectedLeads.size} ${t.addSelected}` : t.addSelected}
+              </Button>
+            </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {results.map((lead, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                    selectedLeads.has(index) 
-                      ? 'border-green-500 bg-green-50' 
-                      : 'border-gray-200 hover:border-orange-300 bg-white'
-                  }`}
-                  onClick={() => toggleSelection(index)}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedLeads.has(index) ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                    }`}>
-                      {selectedLeads.has(index) && <CheckCircle className="w-4 h-4 text-white" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate">{lead.company_name}</h3>
-                      <Badge variant="secondary" className="text-xs mt-1 mb-2 bg-orange-100 text-orange-700">
-                        <Factory className="w-3 h-3 mr-1" />
-                        {lead.business_type || 'Factory'}
-                      </Badge>
-                      
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>{lead.city}, {lead.country}</span>
-                        </div>
-                        {lead.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            <span>{lead.phone}</span>
-                          </div>
-                        )}
-                        {lead.website && lead.website !== 'N/A' && (
-                          <a 
-                            href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-blue-600 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Website
-                          </a>
-                        )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {results.map((lead, index) => (
+              <div
+                key={index}
+                className={`p-4 rounded-md border transition-all cursor-pointer hover:-translate-y-0.5 ${
+                  selectedLeads.has(index) 
+                    ? 'border-emerald-500 bg-emerald-50 shadow-md' 
+                    : 'border-zinc-200 hover:border-[#BA4323]/50 hover:shadow-md bg-white'
+                }`}
+                onClick={() => toggleSelection(index)}
+                data-testid={`lead-card-${index}`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    selectedLeads.has(index) ? 'bg-emerald-500 border-emerald-500' : 'border-zinc-300'
+                  }`}>
+                    {selectedLeads.has(index) && <CheckCircle className="w-4 h-4 text-white" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm truncate text-zinc-900">{lead.company_name}</h3>
+                    <Badge variant="secondary" className="text-xs mt-1 mb-2 bg-[#BA4323]/10 text-[#BA4323] border-0">
+                      <Factory className="w-3 h-3 mr-1" />
+                      {lead.business_type || 'Factory'}
+                    </Badge>
+                    
+                    <div className="space-y-1 text-xs text-zinc-500">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{lead.city}, {lead.country}</span>
                       </div>
+                      {lead.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          <span>{lead.phone}</span>
+                        </div>
+                      )}
+                      {lead.website && lead.website !== 'N/A' && (
+                        <a 
+                          href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-[#BA4323] hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          Website
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Empty State */}
       {!loading && results.length === 0 && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center">
-            <Factory className="w-16 h-16 mx-auto mb-4 text-orange-300" />
-            <h3 className="text-xl font-semibold mb-2">{t.startSearch}</h3>
-            <p className="text-muted-foreground">{t.startSearchDesc}</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-dashed border-zinc-300 rounded-md py-16 text-center">
+          <Factory className="w-16 h-16 mx-auto mb-4 text-zinc-300" />
+          <h3 className="text-xl font-heading font-semibold mb-2 text-zinc-900">{t.startSearch}</h3>
+          <p className="text-zinc-500">{t.startSearchDesc}</p>
+        </div>
       )}
 
       {/* Loading State */}
       {loading && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Sparkles className="w-12 h-12 mx-auto mb-4 text-orange-600 animate-pulse" />
-            <h3 className="text-xl font-semibold mb-2">{t.searching}</h3>
-            <p className="text-muted-foreground">Döner, Gyros, Kebap fabrikaları aranıyor...</p>
-          </CardContent>
-        </Card>
+        <div className="bg-white border border-zinc-200 rounded-md py-16 text-center">
+          <Sparkles className="w-12 h-12 mx-auto mb-4 text-[#BA4323] animate-pulse" />
+          <h3 className="text-xl font-heading font-semibold mb-2 text-zinc-900">{t.searching}</h3>
+          <p className="text-zinc-500">Döner, Gyros, Kebap fabrikaları aranıyor...</p>
+        </div>
       )}
     </div>
   );

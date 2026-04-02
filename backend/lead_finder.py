@@ -360,29 +360,34 @@ class LeadFinder:
         country: str, 
         limit: int
     ) -> List[FoundLead]:
-        """Fallback: Use AI to search for factories"""
+        """Fallback: Use AI to search for factories with strict prompt"""
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
             
-            location_str = f"{location} şehrinde" if location and location.lower() != 'all' else "tüm şehirlerde"
+            location_str = f"{location}" if location and location.lower() != 'all' else "tüm şehirler"
             keywords_str = ", ".join(keywords)
             
-            system_prompt = f"""Sen bir B2B endüstriyel araştırma uzmanısın. SADECE GERÇEK fabrikaları bulacaksın.
+            system_prompt = """Sen bir pazar araştırma uzmanısın. Görevin, belirli bir bölgedeki ticari işletmeleri bulmak ve bunları yazılı tarafından okunabilir bir formatta sunmaktır.
 
-KURALLAR:
-1. SADECE ÜRETİM TESİSLERİ - Restoran YASAK
-2. YASAL EK ZORUNLU: GmbH, S.A., S.L., Ltd, A.Ş.
-3. GERÇEK şirketler olmalı
+Görev: Kullanıcının belirttiği bölgedeki tüm Gyros üretim tesislerini, Döner fabrikalarını ve toptan et işleme merkezlerini bul.
 
-JSON formatında döndür:
-[{{"company_name": "Firma", "city": "Şehir", "phone": "Tel", "business_type": "Tip"}}]
+Format Kuralları:
+- Yanıtı sadece JSON formatında ver
+- Her işletme için şu bilgileri dahil et: company_name, city, address, phone, business_type (Fabrika/Toptancı), website (varsa)
+- Sadece gerçek ve doğrulanabilir yerleri listele
+- RESTORAN, IMBISS, FAST FOOD OLMASIN
+- Şirket adında yasal ek olmalı: GmbH, S.A., S.L., S.R.L., Ltd, A.Ş. vb.
 
-En az 30 fabrika bul. SADECE JSON döndür."""
+JSON formatı:
+[{"company_name": "Şirket Adı S.L.", "city": "Şehir", "address": "Adres", "phone": "Telefon", "business_type": "Döner Fabrikası", "website": "www.site.com"}]
 
-            user_prompt = f"""{country} ülkesinde {location_str} şu kelimelere uygun FABRİKALAR bul:
+SADECE JSON döndür, başka açıklama yazma."""
+
+            user_prompt = f"""{country} ülkesinde {location_str} bölgesinde şu kelimelere uygun işletmeleri bul:
 {keywords_str}
 
-SADECE üretim tesisleri. JSON array döndür:"""
+SADECE üretim tesisleri ve fabrikalar. Restoran, imbiss, fast food YASAK.
+En fazla 15-20 gerçek işletme bul. JSON array döndür:"""
 
             chat = LlmChat(
                 api_key=self.gemini_key,
