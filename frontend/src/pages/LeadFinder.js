@@ -24,7 +24,13 @@ import {
   CheckCircle,
   Factory,
   Globe,
-  Sparkles
+  Sparkles,
+  Filter,
+  Download,
+  Star,
+  TrendingUp,
+  Users,
+  Zap
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -33,7 +39,6 @@ const API = `${BACKEND_URL}/api`;
 
 // Ülkeler ve şehirler
 const COUNTRIES = {
-  // Europe
   "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Düsseldorf", "Stuttgart", "Dortmund", "Essen", "Leipzig"],
   "Greece": ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Kavala"],
   "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya", "Adana", "Gaziantep", "Konya"],
@@ -46,89 +51,73 @@ const COUNTRIES = {
   "Switzerland": ["Zurich", "Geneva", "Basel", "Bern", "Lausanne"],
   "United Kingdom": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Liverpool"],
   "Poland": ["Warsaw", "Krakow", "Wroclaw", "Poznan", "Gdansk", "Lodz"],
-  "Czech Republic": ["Prague", "Brno", "Ostrava", "Pilsen"],
-  "Hungary": ["Budapest", "Debrecen", "Szeged", "Miskolc"],
   "Romania": ["Bucharest", "Cluj-Napoca", "Timisoara", "Iasi", "Constanta"],
   "Bulgaria": ["Sofia", "Plovdiv", "Varna", "Burgas"],
-  "Croatia": ["Zagreb", "Split", "Rijeka", "Osijek"],
-  "Serbia": ["Belgrade", "Novi Sad", "Niš"],
-  "Slovenia": ["Ljubljana", "Maribor"],
-  "Slovakia": ["Bratislava", "Košice"],
-  "Portugal": ["Lisbon", "Porto", "Braga"],
-  "Sweden": ["Stockholm", "Gothenburg", "Malmö"],
-  "Denmark": ["Copenhagen", "Aarhus", "Odense"],
-  "Norway": ["Oslo", "Bergen", "Trondheim"],
-  "Finland": ["Helsinki", "Espoo", "Tampere"],
-  // Middle East
   "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca", "Medina", "Dammam"],
   "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman"],
   "Kuwait": ["Kuwait City", "Hawalli"],
   "Qatar": ["Doha", "Al Wakrah"],
-  "Bahrain": ["Manama", "Riffa"],
-  "Oman": ["Muscat", "Salalah"],
-  "Jordan": ["Amman", "Zarqa", "Irbid"],
-  "Lebanon": ["Beirut", "Tripoli", "Sidon"],
-  "Israel": ["Tel Aviv", "Jerusalem", "Haifa"],
-  "Egypt": ["Cairo", "Alexandria", "Giza"],
-  // North Africa
-  "Morocco": ["Casablanca", "Rabat", "Marrakech", "Fes"],
-  "Tunisia": ["Tunis", "Sfax", "Sousse"],
-  "Algeria": ["Algiers", "Oran", "Constantine"],
-  // Other
-  "Australia": ["Sydney", "Melbourne", "Brisbane", "Perth"],
-  "Canada": ["Toronto", "Montreal", "Vancouver", "Calgary"],
-  "United States": ["New York", "Los Angeles", "Chicago", "Houston", "Miami"],
 };
 
 const texts = {
   tr: {
-    title: 'Fabrika Bul',
-    subtitle: 'Döner, Gyros ve Kebap fabrikalarını AI ile bulun',
+    title: 'Müşteri Bul',
+    subtitle: 'AI destekli fabrika arama motoru',
     country: 'Ülke',
     city: 'Şehir',
     allCities: 'Tüm Şehirler',
-    search: 'Fabrika Ara',
-    searching: 'AI arıyor...',
+    search: 'Ara',
+    searching: 'Aranıyor...',
     found: 'fabrika bulundu',
     addSelected: 'Seçilenleri Ekle',
     selectAll: 'Tümünü Seç',
     noResults: 'Sonuç bulunamadı',
-    startSearch: 'Aramaya başlayın',
-    startSearchDesc: 'Ülke seçin ve AI döner/gyros/kebap fabrikalarını bulsun',
+    startSearch: 'Aramaya Başlayın',
+    startSearchDesc: 'Ülke seçin ve AI ile döner/gyros/kebap fabrikalarını bulun',
     added: 'eklendi',
     error: 'Hata',
     keywords: 'Arama Kelimeleri',
-    keywordsPlaceholder: 'döner fabrikası, gyros üretim, kebap, et işleme...',
-    keywordsHelp: 'Virgülle ayırarak birden fazla kelime yazabilirsiniz',
+    keywordsPlaceholder: 'döner fabrikası, gyros üretim, kebap...',
+    keywordsHelp: 'Virgülle ayırarak birden fazla kelime yazın',
+    quickFilters: 'Hızlı Filtreler',
+    searchTemplates: 'Arama Şablonları',
+    popularCountries: 'Popüler Ülkeler',
+    resultsTitle: 'Arama Sonuçları',
+    importToLeads: 'Müşterilere Aktar',
   },
   en: {
-    title: 'Find Factories',
-    subtitle: 'Find Döner, Gyros and Kebab factories with AI',
+    title: 'Find Customers',
+    subtitle: 'AI-powered factory search engine',
     country: 'Country',
     city: 'City',
     allCities: 'All Cities',
-    search: 'Search Factories',
-    searching: 'AI searching...',
+    search: 'Search',
+    searching: 'Searching...',
     found: 'factories found',
     addSelected: 'Add Selected',
     selectAll: 'Select All',
     noResults: 'No results found',
-    startSearch: 'Start searching',
+    startSearch: 'Start Searching',
     startSearchDesc: 'Select a country and let AI find döner/gyros/kebab factories',
     added: 'added',
     error: 'Error',
     keywords: 'Search Keywords',
-    keywordsPlaceholder: 'döner factory, gyros production, kebab, meat processing...',
+    keywordsPlaceholder: 'döner factory, gyros production, kebab...',
     keywordsHelp: 'Separate multiple keywords with commas',
+    quickFilters: 'Quick Filters',
+    searchTemplates: 'Search Templates',
+    popularCountries: 'Popular Countries',
+    resultsTitle: 'Search Results',
+    importToLeads: 'Import to Leads',
   },
   de: {
-    title: 'Fabriken finden',
-    subtitle: 'Finden Sie Döner-, Gyros- und Kebab-Fabriken mit KI',
+    title: 'Kunden finden',
+    subtitle: 'KI-gestützte Fabriksuche',
     country: 'Land',
     city: 'Stadt',
     allCities: 'Alle Städte',
-    search: 'Fabriken suchen',
-    searching: 'KI sucht...',
+    search: 'Suchen',
+    searching: 'Suche läuft...',
     found: 'Fabriken gefunden',
     addSelected: 'Ausgewählte hinzufügen',
     selectAll: 'Alle auswählen',
@@ -138,8 +127,13 @@ const texts = {
     added: 'hinzugefügt',
     error: 'Fehler',
     keywords: 'Suchbegriffe',
-    keywordsPlaceholder: 'Döner Fabrik, Gyros Produktion, Kebab, Fleischverarbeitung...',
+    keywordsPlaceholder: 'Döner Fabrik, Gyros Produktion, Kebab...',
     keywordsHelp: 'Mehrere Begriffe mit Komma trennen',
+    quickFilters: 'Schnellfilter',
+    searchTemplates: 'Suchvorlagen',
+    popularCountries: 'Beliebte Länder',
+    resultsTitle: 'Suchergebnisse',
+    importToLeads: 'Zu Leads importieren',
   },
 };
 
@@ -157,7 +151,6 @@ const LeadFinder = () => {
 
   const cities = COUNTRIES[country] || [];
   
-  // Parse keywords from comma-separated string
   const parseKeywords = (str) => {
     return str.split(',').map(k => k.trim()).filter(k => k.length > 0);
   };
@@ -183,7 +176,7 @@ const LeadFinder = () => {
         keywords: keywordList,
         location: city || 'All',
         country: country,
-        limit: 500  // No limit - get all available results
+        limit: 500
       });
       
       if (response.data.leads && response.data.leads.length > 0) {
@@ -218,75 +211,124 @@ const LeadFinder = () => {
   };
 
   const importSelectedLeads = async () => {
-    if (selectedLeads.size === 0) {
-      toast.error(t.error, { description: 'En az bir fabrika seçin' });
-      return;
-    }
-
+    if (selectedLeads.size === 0) return;
+    
     setImporting(true);
-    let imported = 0;
-
+    let successCount = 0;
+    
     for (const index of selectedLeads) {
       const lead = results[index];
       try {
         await axios.post(`${API}/leads`, {
           company_name: lead.company_name,
-          first_name: lead.contact_person?.split(' ')[0] || 'Contact',
-          last_name: lead.contact_person?.split(' ').slice(1).join(' ') || '',
+          contact_person: lead.contact_person || '',
           email: lead.email || '',
           phone: lead.phone || '',
           address: lead.address || '',
-          city: lead.city || city || '',
+          city: lead.city || '',
           country: lead.country || country,
-          tax_number: '',
-          notes: `${lead.business_type || 'Factory'} - ${lead.website || ''}`
+          website: lead.website || '',
+          business_type: lead.business_type || 'Döner/Kebap Üretimi',
+          notes: lead.notes || `AI ile bulundu - ${new Date().toLocaleDateString()}`,
+          status: 'new'
         });
-        imported++;
+        successCount++;
       } catch (error) {
-        console.error('Import error:', error);
+        console.error('Failed to import lead:', error);
       }
     }
-
-    setImporting(false);
     
-    if (imported > 0) {
-      toast.success(`${imported} ${t.added}`);
-      const newResults = results.filter((_, i) => !selectedLeads.has(i));
-      setResults(newResults);
-      setSelectedLeads(new Set());
-    }
+    setImporting(false);
+    toast.success(`${successCount} müşteri ${t.added}`);
+    setSelectedLeads(new Set());
   };
+
+  // Popular countries with flags
+  const popularCountries = [
+    { country: 'Germany', flag: '🇩🇪', city: '' },
+    { country: 'Greece', flag: '🇬🇷', city: '' },
+    { country: 'Turkey', flag: '🇹🇷', city: '' },
+    { country: 'Romania', flag: '🇷🇴', city: '' },
+    { country: 'Spain', flag: '🇪🇸', city: '' },
+    { country: 'Netherlands', flag: '🇳🇱', city: '' },
+    { country: 'UAE', flag: '🇦🇪', city: '' },
+    { country: 'France', flag: '🇫🇷', city: '' },
+  ];
+
+  // Search templates
+  const searchTemplates = [
+    { label: 'Döner Fabrikası', keywords: 'döner fabrikası, döner produktion, döner üretim', icon: '🥙' },
+    { label: 'Gyros Üretim', keywords: 'gyros üretim, gyros factory, γύρος production', icon: '🇬🇷' },
+    { label: 'Kebap Fabrikası', keywords: 'kebap fabrikası, kebab production, kebap üretim', icon: '🍢' },
+    { label: 'Et İşleme', keywords: 'et işleme, meat processing, fleischverarbeitung', icon: '🥩' },
+    { label: 'Helal Et', keywords: 'helal et, halal meat, helal döner üretim', icon: '✓' },
+  ];
 
   return (
     <div className="space-y-6" data-testid="lead-finder-page">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl">
-          <Factory className="w-8 h-8 text-white" />
+      {/* Header with Stats */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg shadow-indigo-500/25">
+            <Factory className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              {t.title}
+            </h1>
+            <p className="text-muted-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-500" />
+              {t.subtitle}
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground">{t.subtitle}</p>
+        
+        {/* Quick Stats */}
+        <div className="flex gap-3">
+          <div className="px-4 py-2 bg-indigo-50 rounded-xl border border-indigo-100">
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-medium text-indigo-900">{Object.keys(COUNTRIES).length} Ülke</span>
+            </div>
+          </div>
+          <div className="px-4 py-2 bg-purple-50 rounded-xl border border-purple-100">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-medium text-purple-900">AI Destekli</span>
+            </div>
+          </div>
+          {results.length > 0 && (
+            <div className="px-4 py-2 bg-green-50 rounded-xl border border-green-100">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-green-600" />
+                <span className="text-sm font-medium text-green-900">{results.length} Sonuç</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Search Card */}
-      <Card className="border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-indigo-600" />
-            <span className="font-medium text-indigo-800">AI-Powered Search</span>
+      {/* Main Search Card */}
+      <Card className="overflow-hidden border-0 shadow-xl shadow-indigo-500/10">
+        <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 p-4">
+          <div className="flex items-center gap-2 text-white">
+            <Search className="w-5 h-5" />
+            <span className="font-semibold">AI-Powered Search</span>
+            <Badge className="bg-white/20 text-white border-0 ml-2">Beta</Badge>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        </div>
+        
+        <CardContent className="p-6">
+          {/* Search Form */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Ülke */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Globe className="w-4 h-4" />
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Globe className="w-4 h-4 text-indigo-500" />
                 {t.country}
               </Label>
               <Select value={country} onValueChange={(val) => { setCountry(val); setCity(''); }}>
-                <SelectTrigger className="bg-white">
+                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/20">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -299,12 +341,12 @@ const LeadFinder = () => {
 
             {/* Şehir */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <MapPin className="w-4 h-4 text-indigo-500" />
                 {t.city}
               </Label>
               <Select value={city || "all"} onValueChange={(val) => setCity(val === "all" ? "" : val)}>
-                <SelectTrigger className="bg-white">
+                <SelectTrigger className="h-11 border-2 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/20">
                   <SelectValue placeholder={t.allCities} />
                 </SelectTrigger>
                 <SelectContent>
@@ -316,180 +358,184 @@ const LeadFinder = () => {
               </Select>
             </div>
 
-            {/* Custom City */}
-            <div className="space-y-2">
-              <Label>veya şehir yazın</Label>
-              <Input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Şehir adı..."
-                className="bg-white"
-              />
-            </div>
-
             {/* Arama Kelimeleri */}
             <div className="space-y-2 lg:col-span-2">
-              <Label className="flex items-center gap-2">
-                <Search className="w-4 h-4" />
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Search className="w-4 h-4 text-indigo-500" />
                 {t.keywords}
               </Label>
               <Input
                 value={keywords}
                 onChange={(e) => setKeywords(e.target.value)}
                 placeholder={t.keywordsPlaceholder}
-                className="bg-white"
+                className="h-11 border-2 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500/20"
                 data-testid="keywords-input"
               />
-              <p className="text-xs text-muted-foreground">{t.keywordsHelp}</p>
             </div>
           </div>
-          
-          {/* Search Button - Full Width */}
-          <div className="mt-4">
-            <Button 
-              onClick={handleSearch} 
-              disabled={loading}
-              className="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 h-10 w-full md:w-auto"
-              size="lg"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {t.searching}
-                </>
-              ) : (
-                <>
-                  <Search className="w-5 h-5 mr-2" />
-                  {t.search}
-                </>
-              )}
-            </Button>
+
+          {/* Search Button */}
+          <Button 
+            onClick={handleSearch} 
+            disabled={loading}
+            className="w-full md:w-auto h-12 px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-200 hover:shadow-xl hover:shadow-indigo-500/30"
+            size="lg"
+            data-testid="search-factories-btn"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                {t.searching}
+              </>
+            ) : (
+              <>
+                <Search className="w-5 h-5 mr-2" />
+                {t.search}
+              </>
+            )}
+          </Button>
+
+          {/* Popular Countries */}
+          <div className="mt-6 pt-6 border-t">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t.popularCountries}</p>
+            <div className="flex flex-wrap gap-2">
+              {popularCountries.map(({ country: c, flag }) => (
+                <button
+                  key={c}
+                  onClick={() => { setCountry(c); setCity(''); }}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    country === c 
+                      ? 'bg-indigo-600 text-white shadow-md' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700'
+                  }`}
+                >
+                  <span className="mr-2">{flag}</span>
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Quick Buttons */}
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-indigo-200">
-            <span className="text-sm text-indigo-700 font-medium mr-2">Hızlı Seç:</span>
-            {[
-              { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
-              { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
-              { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
-              { city: 'Bucharest', country: 'Romania', flag: '🇷🇴' },
-              { city: 'Madrid', country: 'Spain', flag: '🇪🇸' },
-              { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱' },
-              { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
-            ].map(({ city: c, country: co, flag }) => (
-              <Button
-                key={`${c}-${co}`}
-                variant="outline"
-                size="sm"
-                onClick={() => { setCountry(co); setCity(c); }}
-                className="bg-white hover:bg-indigo-100"
-              >
-                {flag} {c}
-              </Button>
-            ))}
-          </div>
-          
-          {/* Keyword Presets */}
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-indigo-200">
-            <span className="text-sm text-indigo-700 font-medium mr-2">Arama Şablonları:</span>
-            {[
-              { label: 'Döner Fabrikası', keywords: 'döner fabrikası, döner produktion, döner üretim' },
-              { label: 'Gyros Üretim', keywords: 'gyros üretim, gyros factory, γύρος' },
-              { label: 'Kebap Fabrikası', keywords: 'kebap fabrikası, kebab production, kebap üretim' },
-              { label: 'Et İşleme', keywords: 'et işleme, meat processing, fleischverarbeitung' },
-              { label: 'Helal Et', keywords: 'helal et, halal meat, helal döner' },
-              { label: 'Cinar Food', keywords: 'cinar food, döner fabrikası' },
-              { label: 'Özturk', keywords: 'özturk, ozturk döner, kebab' },
-            ].map(({ label, keywords: kw }) => (
-              <Button
-                key={label}
-                variant="outline"
-                size="sm"
-                onClick={() => setKeywords(kw)}
-                className="bg-white hover:bg-violet-100 text-violet-700 border-violet-300"
-              >
-                {label}
-              </Button>
-            ))}
+          {/* Search Templates */}
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t.searchTemplates}</p>
+            <div className="flex flex-wrap gap-2">
+              {searchTemplates.map(({ label, keywords: kw, icon }) => (
+                <button
+                  key={label}
+                  onClick={() => setKeywords(kw)}
+                  className="px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-purple-50 to-indigo-50 text-indigo-700 hover:from-purple-100 hover:to-indigo-100 border border-indigo-200 transition-all duration-200"
+                >
+                  <span className="mr-2">{icon}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Results */}
+      {/* Results Section */}
       {results.length > 0 && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
+        <Card className="border-0 shadow-xl shadow-gray-200/50">
+          <div className="bg-gradient-to-r from-gray-50 to-white p-4 border-b flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-lg">
                 <Building2 className="w-5 h-5 text-green-600" />
-                <span className="font-semibold">{results.length} {t.found}</span>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={selectAll}>
-                  {selectedLeads.size === results.length ? 'Seçimi Kaldır' : t.selectAll}
-                </Button>
-                <Button 
-                  onClick={importSelectedLeads} 
-                  disabled={selectedLeads.size === 0 || importing}
-                  className="bg-green-600 hover:bg-green-700"
-                  size="sm"
-                >
-                  {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                  {selectedLeads.size > 0 ? `${selectedLeads.size} ${t.addSelected}` : t.addSelected}
-                </Button>
+              <div>
+                <h3 className="font-semibold text-gray-900">{t.resultsTitle}</h3>
+                <p className="text-sm text-gray-500">{results.length} {t.found}</p>
               </div>
             </div>
+            
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={selectAll}
+                className="border-gray-300"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {selectedLeads.size === results.length ? 'Seçimi Kaldır' : t.selectAll}
+              </Button>
+              <Button 
+                onClick={importSelectedLeads} 
+                disabled={selectedLeads.size === 0 || importing}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white"
+                data-testid="add-selected-btn"
+              >
+                {importing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                {selectedLeads.size > 0 ? `${selectedLeads.size} ${t.importToLeads}` : t.addSelected}
+              </Button>
+            </div>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {results.map((lead, index) => (
                 <div
                   key={index}
-                  className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                  className={`group relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
                     selectedLeads.has(index) 
-                      ? 'border-green-500 bg-green-50' 
-                      : 'border-gray-200 hover:border-indigo-300 bg-white'
+                      ? 'border-indigo-500 bg-indigo-50 shadow-md' 
+                      : 'border-gray-200 hover:border-indigo-300 hover:shadow-lg bg-white'
                   }`}
                   onClick={() => toggleSelection(index)}
+                  data-testid={`lead-card-${index}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                      selectedLeads.has(index) ? 'bg-green-500 border-green-500' : 'border-gray-300'
-                    }`}>
-                      {selectedLeads.has(index) && <CheckCircle className="w-4 h-4 text-white" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm truncate">{lead.company_name}</h3>
-                      <Badge variant="secondary" className="text-xs mt-1 mb-2 bg-indigo-100 text-indigo-700">
-                        <Factory className="w-3 h-3 mr-1" />
-                        {lead.business_type || 'Factory'}
-                      </Badge>
-                      
-                      <div className="space-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>{lead.city}, {lead.country}</span>
-                        </div>
-                        {lead.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="w-3 h-3" />
-                            <span>{lead.phone}</span>
-                          </div>
-                        )}
-                        {lead.website && lead.website !== 'N/A' && (
-                          <a 
-                            href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-blue-600 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            Website
-                          </a>
-                        )}
+                  {/* Selection Indicator */}
+                  <div className={`absolute top-3 right-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                    selectedLeads.has(index) 
+                      ? 'bg-indigo-500 border-indigo-500' 
+                      : 'border-gray-300 group-hover:border-indigo-400'
+                  }`}>
+                    {selectedLeads.has(index) && <CheckCircle className="w-4 h-4 text-white" />}
+                  </div>
+
+                  {/* Company Info */}
+                  <div className="pr-8">
+                    <h4 className="font-semibold text-gray-900 mb-1 truncate">{lead.company_name}</h4>
+                    <Badge className="bg-indigo-100 text-indigo-700 border-0 text-xs mb-3">
+                      {lead.business_type || 'Fabrika'}
+                    </Badge>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{lead.city}{lead.city && lead.country ? ', ' : ''}{lead.country}</span>
                       </div>
+                      {lead.phone && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span>{lead.phone}</span>
+                        </div>
+                      )}
+                      {lead.address && (
+                        <div className="flex items-center gap-2 text-gray-500 text-xs">
+                          <Building2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{lead.address}</span>
+                        </div>
+                      )}
                     </div>
+
+                    {lead.website && lead.website !== 'N/A' && (
+                      <a 
+                        href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-3 text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Website
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
@@ -500,22 +546,31 @@ const LeadFinder = () => {
 
       {/* Empty State */}
       {!loading && results.length === 0 && (
-        <Card className="border-dashed">
+        <Card className="border-2 border-dashed border-gray-200">
           <CardContent className="py-16 text-center">
-            <Factory className="w-16 h-16 mx-auto mb-4 text-indigo-300" />
-            <h3 className="text-xl font-semibold mb-2">{t.startSearch}</h3>
-            <p className="text-muted-foreground">{t.startSearchDesc}</p>
+            <div className="inline-flex p-4 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mb-4">
+              <Factory className="w-12 h-12 text-indigo-500" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-gray-900">{t.startSearch}</h3>
+            <p className="text-gray-500 max-w-md mx-auto">{t.startSearchDesc}</p>
           </CardContent>
         </Card>
       )}
 
       {/* Loading State */}
       {loading && (
-        <Card>
+        <Card className="border-0 shadow-xl">
           <CardContent className="py-16 text-center">
-            <Sparkles className="w-12 h-12 mx-auto mb-4 text-indigo-600 animate-pulse" />
+            <div className="inline-flex p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 animate-pulse">
+              <Sparkles className="w-12 h-12 text-white" />
+            </div>
             <h3 className="text-xl font-semibold mb-2">{t.searching}</h3>
-            <p className="text-muted-foreground">Döner, Gyros, Kebap fabrikaları aranıyor...</p>
+            <p className="text-muted-foreground">AI ile döner, gyros, kebap fabrikaları aranıyor...</p>
+            <div className="mt-4 flex justify-center gap-1">
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
           </CardContent>
         </Card>
       )}
