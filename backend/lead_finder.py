@@ -68,51 +68,78 @@ class LeadFinder:
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
             
-            # Build keyword string for search
-            keyword_str = ', '.join(keywords) if keywords else 'gyros, döner, kebab, meat processing'
+            # Build country-specific search keywords
+            country_lower = country.lower()
+            
+            # Determine search terms based on country
+            if country_lower in ['greece', 'cyprus']:
+                # Greek-speaking countries: gyros, souvlaki
+                search_terms = "gyros üretim fabrikası, souvlaki production factory, meat processing plant, κρεατοσκευάσματα εργοστάσιο"
+                product_focus = "gyros, souvlaki, meat products"
+            elif country_lower in ['turkey']:
+                # Turkey: döner
+                search_terms = "döner fabrikası, döner üretim tesisi, et işleme fabrikası, kebap üretim"
+                product_focus = "döner, kebab, köfte"
+            elif country_lower in ['germany', 'austria', 'switzerland', 'netherlands', 'belgium']:
+                # German-speaking/Central Europe: döner produktion
+                search_terms = "Döner Produktion, Döner Fabrik, Fleischverarbeitung, Dönerfleisch Hersteller, Gyros Produktion"
+                product_focus = "döner, gyros, kebab meat production"
+            else:
+                # Other countries: mix of terms
+                search_terms = "döner production factory, gyros manufacturing plant, kebab meat processing, meat production facility"
+                product_focus = "döner, gyros, kebab"
             
             # Handle "All" cities
             location_str = f"in {location}" if location and location.lower() != 'all' else f"across all major cities in"
             
-            system_prompt = f"""You are a business intelligence expert. Your task is to find REAL manufacturing facilities and factories.
+            system_prompt = f"""You are a B2B business intelligence expert for the food industry. Your ONLY task is to find REAL manufacturing facilities that produce döner, gyros, kebab, or processed meat products.
 
-CRITICAL RULES:
-1. Return ONLY actual factories, production plants, and manufacturing facilities
-2. Do NOT include restaurants, shops, fast food chains, or retail stores
-3. Do NOT include takeaway/delivery businesses
-4. Focus on: meat processing plants, food production factories, industrial manufacturers
-5. Include realistic contact details when available
-6. Return companies that would BUY spices, binders, and seasonings in bulk
+ABSOLUTE RULES - NO EXCEPTIONS:
+1. Return ONLY actual FACTORIES, PRODUCTION PLANTS, and MANUFACTURING FACILITIES
+2. NEVER include: restaurants, shops, fast food chains, retail stores, takeaway, delivery services, food trucks, grills, bistros, imbiss, snack bars
+3. The company MUST be a manufacturer/producer that MAKES döner/gyros/kebab meat products
+4. These are B2B wholesale buyers of spices and binders - they produce hundreds or thousands of kg of meat products daily
+5. Look for industrial/manufacturing business names with: Produktion, Fabrik, GmbH, A.Ş., S.A., Factory, Manufacturing, Processing, Üretim, Sanayi
 
-Search for: {keyword_str}
-Location: {location_str} {country}
+SEARCH FOCUS for {country}:
+- Search terms: {search_terms}
+- Product focus: {product_focus}
 
-Return a JSON array with this exact format:
+VALID EXAMPLES:
+- "Döner Produktion Berlin GmbH" ✓ (has Produktion, GmbH)
+- "Eurogyros Manufacturing S.A." ✓ (has Manufacturing, S.A.)
+- "Istanbul Et Sanayi A.Ş." ✓ (has Sanayi, A.Ş.)
+
+INVALID EXAMPLES - NEVER RETURN THESE:
+- "Kebab House Berlin" ✗ (restaurant)
+- "Gyros Grill Athens" ✗ (restaurant)
+- "Ali's Döner Imbiss" ✗ (fast food)
+- "Best Gyros Restaurant" ✗ (restaurant)
+
+Return a JSON array:
 [
   {{
-    "company_name": "ACTUAL COMPANY NAME",
-    "business_type": "Type of Factory (e.g., Meat Processing Factory, Döner Production Plant, Food Manufacturing)",
-    "phone": "+XX XXX XXXX (realistic local format)",
-    "address": "Full industrial address",
-    "city": "City name",
+    "company_name": "FACTORY NAME (must include GmbH/S.A./A.Ş./Ltd etc)",
+    "business_type": "Döner Production Factory / Gyros Manufacturing Plant / Meat Processing",
+    "phone": "local format phone",
+    "address": "Industrial zone/area address",
+    "city": "City",
     "country": "{country}",
     "website": "www.company.com or N/A"
   }}
 ]
 
-IMPORTANT:
-- Return 15-25 factories
-- Only REAL manufacturing businesses
-- Include industrial addresses (not shop addresses)
-- Use realistic local phone formats
-- business_type MUST contain: factory, plant, production, manufacturing, industrial, or processing"""
+Return 15-25 REAL manufacturing facilities ONLY. No restaurants. No explanation needed."""
 
-            user_prompt = f"""Find {keyword_str} FACTORIES (manufacturing plants) {location_str} {country}.
+            user_prompt = f"""Find döner/gyros/kebab PRODUCTION FACTORIES {location_str} {country}.
 
-Remember: ONLY manufacturing facilities that would buy industrial quantities of spices and ingredients.
-NO restaurants, NO shops, NO retail. ONLY factories and production plants.
+These are MANUFACTURING PLANTS that produce processed meat products for the food industry.
+They buy industrial quantities (tons) of spices, binders, and seasonings.
 
-Return JSON array only, no explanation."""
+ONLY return actual production facilities with legal company names (GmbH, S.A., A.Ş., Ltd, etc.)
+ABSOLUTELY NO restaurants, grills, or retail businesses.
+
+Return JSON array only."""
 
             chat = LlmChat(
                 api_key=self.api_key,
@@ -193,21 +220,36 @@ Return JSON array only, no explanation."""
                         # Filter out non-factory results
                         btype = (item.get('business_type', '') or '').lower()
                         company_name = (item.get('company_name', '') or '').lower()
+                        combined = f"{btype} {company_name}"
                         
-                        # Exclude restaurants and retail
-                        excluded_terms = ['restaurant', 'eatery', 'diner', 'cafe', 'bistro', 'takeaway', 
-                                         'delivery', 'fast food', 'shop', 'store', 'market', 'retail',
-                                         'grill', 'kitchen', 'pizzeria', 'taverna', 'kebab house']
+                        # STRICT: Exclude restaurants and retail - expanded list
+                        excluded_terms = [
+                            'restaurant', 'eatery', 'diner', 'cafe', 'bistro', 'takeaway', 
+                            'delivery', 'fast food', 'shop', 'store', 'market', 'retail',
+                            'grill', 'kitchen', 'pizzeria', 'taverna', 'kebab house', 'kebap house',
+                            'imbiss', 'snack', 'bar', 'lokanta', 'lokal', 'ocakbaşı', 'ocakbasi',
+                            'mangal', 'steakhouse', 'steak house', 'food truck', 'catering only',
+                            'express', 'quick', 'corner', 'point', 'spot', 'place', 'house of',
+                            'döner haus', 'doner haus', 'gyros haus', 'kebab haus',
+                            'εστιατόριο', 'ταβέρνα', 'ψησταριά', 'σουβλατζίδικο',  # Greek restaurant terms
+                            'restoran', 'lokantası', 'büfe', 'kokoreç'  # Turkish restaurant terms
+                        ]
                         
-                        is_excluded = any(term in btype or term in company_name for term in excluded_terms)
+                        is_excluded = any(term in combined for term in excluded_terms)
                         
-                        # Must be a factory/plant
-                        factory_terms = ['factory', 'plant', 'manufacturing', 'production', 'industrial', 
-                                        'processing', 'fabrik', 'üretim', 'sanayi', 'werk', 'fabryka',
-                                        's.a.', 'a.s.', 'gmbh', 'ag', 'ltd', 'bv', 'sa']
+                        # STRICT: Must have factory/manufacturing indicators
+                        factory_terms = [
+                            'factory', 'plant', 'manufacturing', 'production', 'industrial', 
+                            'processing', 'fabrik', 'üretim', 'sanayi', 'werk', 'fabryka',
+                            'produktion', 'hersteller', 'verarbeitung', 'fleischwerk',
+                            's.a.', 'a.s.', 'a.ş.', 'gmbh', 'ag', 'ltd', 'bv', 'sa', 'sp.',
+                            'anonim', 'şirketi', 'εργοστάσιο', 'βιομηχανία',  # Greek: factory, industry
+                            'imalat', 'tesisi', 'işletmesi', 'holding'
+                        ]
                         
-                        is_factory = any(term in btype or term in company_name for term in factory_terms)
+                        is_factory = any(term in combined for term in factory_terms)
                         
+                        # Only include if it's clearly a factory and NOT excluded
                         if is_factory and not is_excluded:
                             city = item.get('city', '')
                             if not city or city.lower() == 'all':

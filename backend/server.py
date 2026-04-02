@@ -123,14 +123,14 @@ class Lead(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class LeadCreate(BaseModel):
-    first_name: str
-    last_name: str
+    first_name: str = ""
+    last_name: str = ""
     company_name: str
-    tax_number: str
-    address: str
-    email: EmailStr
-    city: str
-    country: str
+    tax_number: Optional[str] = ""
+    address: Optional[str] = ""
+    email: Optional[str] = ""  # Changed from EmailStr to allow empty/invalid emails from AI
+    city: Optional[str] = ""
+    country: Optional[str] = ""
     notes: Optional[str] = ""
 
 class LeadUpdate(BaseModel):
