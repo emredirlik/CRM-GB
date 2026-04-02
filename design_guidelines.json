@@ -1,90 +1,107 @@
 {
-  "project_name": "Gewürzberg GmbH B2B CRM",
-  "domain": "B2B CRM, Food Manufacturing",
-  "theme": "light",
-  "archetype": "1_organic_earthy",
-  "rationale": "As a factory producing spices and binders for kebab/gyros, the platform should feel grounded, warm, and tactile. Replacing generic SaaS 'tech blue' with organic earth tones (terracotta, sage, warm sand) establishes industry context while maintaining clear CRM functionality.",
+  "theme": "Light",
+  "archetype": "Archetype 4 (Swiss & High-Contrast)",
+  "domain": "B2B CRM / SaaS Dashboard for Spice Factory (Gewürzberg GmbH)",
+  "design_philosophy": "Modernize the legacy orange-gradient design into a premium, enterprise-grade B2B CRM. Leverage 'Control Room' grids, high-density data layouts, and strict functional typography. Replace generic gradients with stark contrasts and a mature 'Deep Rust' accent to nod to the spice factory heritage (Gewürzberg) while maintaining extreme professional clarity.",
   "colors": {
-    "background": "#FBF9F6",
+    "background": "#FAFAFA",
     "surface": "#FFFFFF",
-    "primary": "#C15C3D",
-    "primary_hover": "#A84E31",
-    "secondary": "#4A6741",
-    "secondary_hover": "#3B5233",
-    "accent": "#E4A753",
-    "border": "#E8E3DB",
-    "text_primary": "#2D2A26",
-    "text_secondary": "#757169",
-    "danger": "#D34949",
-    "success": "#4A6741",
-    "warning": "#E4A753",
-    "sidebar_bg": "#F5F2EB"
-  },
-  "typography": {
-    "heading_font": "Outfit",
-    "body_font": "IBM Plex Sans",
-    "hierarchy": {
-      "h1": "text-3xl md:text-4xl font-semibold tracking-tight text-[#2D2A26]",
-      "h2": "text-xl md:text-2xl font-semibold tracking-tight text-[#2D2A26]",
-      "h3": "text-lg font-medium text-[#2D2A26]",
-      "body": "text-sm text-[#757169] leading-relaxed",
-      "label": "text-xs font-semibold uppercase tracking-[0.2em] text-[#757169]"
-    }
-  },
-  "spacing_and_layout": {
-    "strategy": "control_room_grid",
-    "padding_scale": "generous",
-    "container_padding": "p-6",
-    "grid_gaps": "gap-4 md:gap-6",
-    "border_radius": "rounded-xl"
-  },
-  "surface_styles": {
-    "cards": "bg-white border border-[#E8E3DB] shadow-sm hover:shadow-md transition-shadow",
-    "sidebar": "bg-[#F5F2EB] border-r border-[#E8E3DB]",
-    "header": "bg-[#FBF9F6]/90 backdrop-blur-md border-b border-[#E8E3DB]",
-    "interactive": "hover:-translate-y-0.5 transition-transform duration-200"
-  },
-  "components": {
-    "buttons": {
-      "primary": "bg-[#C15C3D] text-white hover:bg-[#A84E31] rounded-lg px-4 py-2 font-medium transition-colors shadow-sm",
-      "secondary": "bg-[#4A6741] text-white hover:bg-[#3B5233] rounded-lg px-4 py-2 font-medium transition-colors shadow-sm",
-      "outline": "border border-[#E8E3DB] text-[#2D2A26] hover:bg-[#F5F2EB] rounded-lg px-4 py-2 font-medium transition-colors",
-      "ghost": "text-[#757169] hover:text-[#2D2A26] hover:bg-[#F5F2EB] rounded-lg px-4 py-2 transition-colors"
-    },
-    "tables": "Use Shadcn Table. Apply bg-[#FBF9F6] to headers with text-xs uppercase tracking-wider text-[#757169]. Row hover should be bg-[#F5F2EB].",
-    "inputs": "Use Shadcn Input. bg-white border-[#E8E3DB] text-[#2D2A26] focus:ring-2 focus:ring-[#C15C3D]/20 focus:border-[#C15C3D]",
-    "maps": "React Map GL (or equivalent) with a custom Mapbox style emphasizing warm tones (light beige/sand). Use primary color (#C15C3D) for route paths and markers.",
-    "badges": "rounded-full px-2.5 py-0.5 text-xs font-medium"
-  },
-  "icons_library": "@phosphor-icons/react",
-  "media": {
-    "images": [
-      {
-        "url": "https://images.unsplash.com/photo-1649509857227-f63b234545f8",
-        "description": "Plate surrounded by spices and herbs. Use for auth/login screen background, empty states, or as a subtle textured header background in the recipe module.",
-        "category": "background"
-      },
-      {
-        "url": "https://images.pexels.com/photos/36823725/pexels-photo-36823725.jpeg",
-        "description": "Modern food production plant interior. Use for factory management screens or Daily Reports headers.",
-        "category": "header_image"
-      },
-      {
-        "url": "https://images.unsplash.com/photo-1749034189524-5dee25c44b92",
-        "description": "Miniature truck traveling on a map. Perfect for the Route Planner module's empty state or intro card.",
-        "category": "illustration"
-      }
+    "primary": "#BA4323",
+    "primary_hover": "#8C3118",
+    "text_main": "#09090B",
+    "text_muted": "#52525B",
+    "border": "#E4E4E7",
+    "accent_warning": "#F59E0B",
+    "accent_success": "#10B981",
+    "rules": [
+      "No generic full-screen gradients. Color is for function only.",
+      "Tint neutral greys with cool/zinc tones to feel industrial and crisp.",
+      "Primary color (Deep Rust) used exclusively for CTAs, active states, and key data highlights."
     ]
   },
-  "module_specific_guidelines": {
-    "dashboard": "Follow 'Control Room Grid'. Top row: 3-4 summary metric cards (col-span-1). Middle row: Wide analytical chart (col-span-2 or 3) + Calendar/Visit Planning widget (col-span-1). Bottom row: Recent orders feed. Use Recharts with the earthy color palette.",
-    "leads_and_orders": "High-density data tables. Utilize Shadcn's Sheet or Drawer component for quick-viewing lead/order details instead of full page redirects to preserve context.",
-    "recipes_and_specifications": "Bento-style layout for managing spice/binder formulas. Use visual progress bars in the secondary color (#4A6741) to show ingredient percentage limits. Specifications should have a distinct 'PDF preview' pane.",
-    "route_planner": "Split view: 1/3 list of stops on the left, 2/3 interactive map on the right. Map styling MUST feel integrated into the app (avoid default Google Maps colors; aim for desaturated, warm tones).",
-    "lead_finder": "AI-powered tool interface. Use the accent color (#E4A753, ochre/amber) for an 'AI glow' or badge to separate this intelligent feature from standard CRM actions. Include a 'scanning' micro-interaction during searches."
+  "typography": {
+    "headings": {
+      "font_family": "Cabinet Grotesk",
+      "import_url": "https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500,400&display=swap",
+      "weights": ["700", "800"],
+      "usage": "Authoritative, tight letter-spacing (tracking-tight) for dashboard headers and modal titles. Never use Inter."
+    },
+    "body": {
+      "font_family": "IBM Plex Sans",
+      "import_url": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap",
+      "weights": ["400", "500", "600"],
+      "usage": "Data-dense tables, lists, and forms. Legible at small sizes."
+    },
+    "hierarchy": {
+      "h1": "text-3xl sm:text-4xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
+      "h3": "text-xl font-semibold",
+      "h4": "text-lg font-semibold",
+      "body": "text-sm",
+      "labels": "text-xs tracking-[0.1em] uppercase font-medium"
+    }
+  },
+  "layout_and_spacing": {
+    "grid_system": "MODE B (The 'Control Room' Grid) for Dashboards.",
+    "spacing_scale": "Dense and compact for data, but generous for structural padding. Use p-6 or p-8 for main cards. gap-4 or gap-6 for grids.",
+    "border_radius": "Subtle roundness. max 8px (rounded-md). No pill-shaped buttons unless explicitly requested.",
+    "alignment": "Optical alignment over geometrical. Left-align dense content and tables."
+  },
+  "surface_styles": {
+    "dashboard_cards": "Grid Borders (Technical Look). Flat background (bg-white), 1px subtle border (border-zinc-200), no drop shadow by default.",
+    "interactive_cards": "Hover: Slight lift (-translate-y-0.5) and subtle shadow (shadow-md).",
+    "headers": "Solid background with a hard bottom border. If scrolling content goes under, use Crystal Glass (backdrop-blur-xl bg-white/80 border-b border-zinc-200/50)."
+  },
+  "components": {
+    "tables": "Dense rows, left-aligned, muted text for secondary data, stick to 'IBM Plex Sans' for tabular numbers.",
+    "buttons": "Flat, sharp edges (rounded-md), solid Deep Rust for primary, outline/ghost for secondary. Always define hover state explicitly (hover:bg-[#8C3118] hover:text-white).",
+    "forms": "Use standard Shadcn inputs. No floating labels. Clear, bold label text above inputs. 1px border on inputs, subtle ring on focus (focus:ring-2 focus:ring-[#BA4323]/20 focus:border-[#BA4323]).",
+    "icons": "Phosphor Icons for dense dashboards (clean, legible at small sizes). Install via: yarn add @phosphor-icons/react"
+  },
+  "media_and_assets": {
+    "image_urls": [
+      {
+        "url": "https://images.unsplash.com/photo-1774116196662-a9e1e4fa1612?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDR8MHwxfHNlYXJjaHwyfHxsb2dpc3RpY3MlMjB0cnVjayUyMGhpZ2h3YXklMjBkZWxpdmVyeXxlbnwwfHx8fDE3NzUxNzE1NDl8MA&ixlib=rb-4.1.0&q=85",
+        "category": "logistics_truck",
+        "description": "Truck on highway. Use for the Route Planner or Shipments section background/hero if needed."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc1MTcxNTQ5fDA&ixlib=rb-4.1.0&q=85",
+        "category": "user_avatar_1",
+        "description": "Professional portrait for current user or contact profiles."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1689600944138-da3b150d9cb8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc1MTcxNTQ5fDA&ixlib=rb-4.1.0&q=85",
+        "category": "user_avatar_2",
+        "description": "Professional portrait for lead or customer profiles."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc1MTcxNTQ5fDA&ixlib=rb-4.1.0&q=85",
+        "category": "user_avatar_3",
+        "description": "Professional portrait for lead or customer profiles."
+      }
+    ],
+    "rules": [
+      "Never use placeholder image URLs like via.placeholder.com. Use only the provided Unsplash URLs.",
+      "Use Lucide-react (if pre-installed) or Phosphor Icons for UI adornments."
+    ]
+  },
+  "motion_and_interactions": {
+    "hover_states": "All interactive elements must change state visually. Contrast must be maintained.",
+    "transitions": "Use specific properties: 'transition-colors duration-200 ease-in-out' or 'transition-transform'.",
+    "accessibility": "Respect prefers-reduced-motion."
   },
   "testing": {
-    "requirements": "All interactive and key informational elements MUST include 'data-testid' attributes in kebab-case format based on role (e.g., 'submit-order-button', 'lead-row-123', 'add-ingredient-btn')."
+    "attributes": "All interactive elements MUST include a data-testid attribute formatted as kebab-case and role-based (e.g., data-testid='submit-order-button')."
   },
-  "instructions_to_main_agent": "Implement the B2B CRM dashboard for Gewürzberg GmbH using React, Tailwind CSS, and Shadcn UI. Strictly adhere to the 'Organic & Earthy' palette to give the interface a physical, grounded feel appropriate for a spice and binder factory. DO NOT use generic SaaS blue. Ensure data density using 'IBM Plex Sans' for body text, while maintaining an approachable feel with 'Outfit' for headers. Customize Shadcn UI borders, backgrounds, and shadows to match the warm stone/sand theme defined in this JSON. Ensure responsive 'Control Room' grid layouts for all dashboard views."
+  "instructions_to_main_agent": [
+    "Inject the font CDN links (Fontshare for Cabinet Grotesk, Google Fonts for IBM Plex Sans) into the index.html or global layout.",
+    "Update tailwind.config.js to include the custom font families and the custom colors (especially the 'Deep Rust' primary #BA4323).",
+    "Implement the 'Control Room' grid layout for the CRM dashboard screens.",
+    "Avoid using Shadcn 'Card' components where pure HTML/Tailwind achieves a better flat, grid-border look, but use Shadcn for complex logic (Tables, Dialogs, Selects, Calendars).",
+    "Remove all legacy orange/amber gradients. Replace with the specified #BA4323 (Deep Rust) primary color for specific call-to-actions, maintaining a high-contrast black/white/grey dominant UI.",
+    "Apply `Cabinet Grotesk` font family to all headings. Apply `IBM Plex Sans` for body.",
+    "Ensure the AI Lead Finder and Maps use the minimalist, data-dense styling defined in Archetype 4.",
+    "Ensure all buttons, inputs, and major interaction points have explicit data-testids."
+  ]
 }
