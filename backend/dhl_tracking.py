@@ -143,55 +143,71 @@ class DHLTracker:
             return {"success": False}
     
     async def _track_with_ai(self, tracking_number: str) -> Dict:
-        """Use AI to look up tracking info from DHL website"""
+        """Use AI with web search to get real DHL tracking info"""
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
             
-            system_prompt = """Sen bir kargo takip asistanısın. Kullanıcı DHL takip numarası verecek.
+            # Build DHL tracking URL for the AI to check
+            dhl_url = self._get_tracking_link(tracking_number)
+            
+            system_prompt = """Sen bir kargo takip asistanısın. 
 
-GÖREV: DHL web sitesinden bu kargonun GERÇEK durumunu kontrol et ve bildir.
+GÖREV: Verilen DHL takip numarasının GERÇEK durumunu internet üzerinden araştır ve bul.
 
-DHL Takip Linkleri:
-- Express: https://www.dhl.com/de-de/home/tracking/tracking-express.html?submit=1&tracking-id=NUMARA
-- Paket: https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=NUMARA
+ARAŞTIRMA KAYNAKLARI:
+1. DHL resmi takip sayfası
+2. Kargo takip siteleri (parcelsapp.com, 17track.net, track24.net)
+3. Google araması ile "DHL tracking CS638795253DE" gibi
 
-SADECE JSON formatında yanıt ver:
+ÖNEMLİ KURALLAR:
+- SADECE gerçek, doğrulanmış bilgileri ver
+- Eğer bilgiyi bulamazsan, "bulunamadı" de, uydurma
+- Tarihler GG.AA.YYYY formatında olmalı
+- Şehir ve ülke bilgilerini tam yaz
+
+JSON FORMATI:
 {
-    "status": "delivered/in_transit/out_for_delivery/picked_up/customs",
-    "status_text": "Durumun Türkçe açıklaması",
-    "current_location": "Son konum şehir ve ülke",
-    "estimated_delivery": "Tahmini teslimat tarihi veya null",
+    "status": "delivered/in_transit/out_for_delivery/picked_up/customs/not_found",
+    "status_text": "Türkçe durum",
+    "current_location": "Son konum - Şehir, Ülke",
+    "estimated_delivery": "Tarih veya null",
     "events": [
-        {"date": "GG.AA.YYYY", "time": "SS:DD", "location": "Şehir, Ülke", "description": "Ne oldu"}
+        {"date": "GG.AA.YYYY", "time": "SS:DD", "location": "Şehir, Ülke", "description": "Açıklama"}
     ]
 }
 
-ÖNEMLİ: 
-- GERÇEK takip bilgilerini DHL sitesinden kontrol et
-- Kargo Almanya'dan çıkıp başka ülkeye gidebilir (mesela Yunanistan)
-- Tüm geçmiş hareketleri listele
-- SADECE JSON döndür"""
+SADECE JSON döndür, açıklama yapma."""
 
             user_prompt = f"""DHL Takip Numarası: {tracking_number}
+DHL Takip Linki: {dhl_url}
 
-Bu kargonun DHL sitesindeki GERÇEK takip bilgilerini bul.
-Kargonun nereden nereye gittiğini, tüm durakları ve son durumunu göster.
+Bu kargonun GERÇEK takip bilgilerini internet üzerinden araştır ve bul.
+Kargonun tüm hareketlerini (nereden nereye gittiğini) listele.
 
-JSON formatında yanıt ver."""
+Eğer bu takip numarası için bilgi bulamazsan:
+{{"status": "not_found", "status_text": "Bilgi bulunamadı", "current_location": "", "events": []}}
+
+JSON formatında yanıt ver:"""
 
             chat = LlmChat(
                 api_key=self.api_key,
-                session_id=f"dhl-{tracking_number}-{datetime.now().timestamp()}",
+                session_id=f"dhl-{tracking_number}-{datetime.now().strftime('%H%M%S')}",
                 system_message=system_prompt
             ).with_model("gemini", "gemini-2.0-flash")
             
             message = UserMessage(text=user_prompt)
             response = await asyncio.wait_for(
                 chat.send_message(message),
-                timeout=30.0
+                timeout=45.0
             )
             
-            return self._parse_ai_response(response, tracking_number)
+            result = self._parse_ai_response(response, tracking_number)
+            
+            # If AI returned not_found, return with proper message
+            if result.get("success") and result.get("status") == "not_found":
+                result["message"] = "Bu takip numarası için bilgi bulunamadı. DHL sitesinden manuel kontrol edin."
+            
+            return result
             
         except asyncio.TimeoutError:
             logger.warning("AI tracking timeout")
