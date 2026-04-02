@@ -33,19 +33,51 @@ const API = `${BACKEND_URL}/api`;
 
 // Ülkeler ve şehirler
 const COUNTRIES = {
-  "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Düsseldorf"],
-  "Greece": ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa"],
-  "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya"],
-  "Netherlands": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht"],
-  "Austria": ["Vienna", "Graz", "Salzburg", "Linz"],
-  "France": ["Paris", "Lyon", "Marseille", "Toulouse"],
-  "Belgium": ["Brussels", "Antwerp", "Ghent"],
-  "UK": ["London", "Manchester", "Birmingham"],
-  "Poland": ["Warsaw", "Krakow", "Wroclaw", "Poznan"],
-  "Romania": ["Bucharest", "Cluj-Napoca", "Timisoara"],
-  "Bulgaria": ["Sofia", "Plovdiv", "Varna"],
-  "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca"],
-  "UAE": ["Dubai", "Abu Dhabi", "Sharjah"],
+  // Europe
+  "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Düsseldorf", "Stuttgart", "Dortmund", "Essen", "Leipzig"],
+  "Greece": ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Kavala"],
+  "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya", "Adana", "Gaziantep", "Konya"],
+  "Spain": ["Madrid", "Barcelona", "Valencia", "Seville", "Zaragoza", "Málaga", "Murcia", "Bilbao"],
+  "France": ["Paris", "Lyon", "Marseille", "Toulouse", "Nice", "Nantes", "Strasbourg", "Bordeaux"],
+  "Italy": ["Rome", "Milan", "Naples", "Turin", "Palermo", "Genoa", "Bologna", "Florence"],
+  "Netherlands": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven", "Tilburg"],
+  "Belgium": ["Brussels", "Antwerp", "Ghent", "Charleroi", "Liège", "Bruges"],
+  "Austria": ["Vienna", "Graz", "Salzburg", "Linz", "Innsbruck"],
+  "Switzerland": ["Zurich", "Geneva", "Basel", "Bern", "Lausanne"],
+  "United Kingdom": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Liverpool"],
+  "Poland": ["Warsaw", "Krakow", "Wroclaw", "Poznan", "Gdansk", "Lodz"],
+  "Czech Republic": ["Prague", "Brno", "Ostrava", "Pilsen"],
+  "Hungary": ["Budapest", "Debrecen", "Szeged", "Miskolc"],
+  "Romania": ["Bucharest", "Cluj-Napoca", "Timisoara", "Iasi", "Constanta"],
+  "Bulgaria": ["Sofia", "Plovdiv", "Varna", "Burgas"],
+  "Croatia": ["Zagreb", "Split", "Rijeka", "Osijek"],
+  "Serbia": ["Belgrade", "Novi Sad", "Niš"],
+  "Slovenia": ["Ljubljana", "Maribor"],
+  "Slovakia": ["Bratislava", "Košice"],
+  "Portugal": ["Lisbon", "Porto", "Braga"],
+  "Sweden": ["Stockholm", "Gothenburg", "Malmö"],
+  "Denmark": ["Copenhagen", "Aarhus", "Odense"],
+  "Norway": ["Oslo", "Bergen", "Trondheim"],
+  "Finland": ["Helsinki", "Espoo", "Tampere"],
+  // Middle East
+  "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca", "Medina", "Dammam"],
+  "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman"],
+  "Kuwait": ["Kuwait City", "Hawalli"],
+  "Qatar": ["Doha", "Al Wakrah"],
+  "Bahrain": ["Manama", "Riffa"],
+  "Oman": ["Muscat", "Salalah"],
+  "Jordan": ["Amman", "Zarqa", "Irbid"],
+  "Lebanon": ["Beirut", "Tripoli", "Sidon"],
+  "Israel": ["Tel Aviv", "Jerusalem", "Haifa"],
+  "Egypt": ["Cairo", "Alexandria", "Giza"],
+  // North Africa
+  "Morocco": ["Casablanca", "Rabat", "Marrakech", "Fes"],
+  "Tunisia": ["Tunis", "Sfax", "Sousse"],
+  "Algeria": ["Algiers", "Oran", "Constantine"],
+  // Other
+  "Australia": ["Sydney", "Melbourne", "Brisbane", "Perth"],
+  "Canada": ["Toronto", "Montreal", "Vancouver", "Calgary"],
+  "United States": ["New York", "Los Angeles", "Chicago", "Houston", "Miami"],
 };
 
 const texts = {
@@ -130,7 +162,7 @@ const LeadFinder = () => {
         keywords: ['döner', 'gyros', 'kebab', 'meat factory', 'meat processing'],
         location: city || 'All',
         country: country,
-        limit: 30
+        limit: 100
       });
       
       if (response.data.leads && response.data.leads.length > 0) {
