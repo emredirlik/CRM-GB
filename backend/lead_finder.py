@@ -1,6 +1,6 @@
 """
 Lead Finder Module - Real Business Data via SerpAPI (Google Maps)
-Uses Google Maps Local Results to find REAL factories
+Uses Google Maps Local Results to find REAL factories - NO LIMIT
 """
 import asyncio
 import logging
@@ -28,7 +28,7 @@ class FoundLead(BaseModel):
 
 
 class LeadFinder:
-    """Factory finder using SerpAPI Google Maps for REAL business data"""
+    """Factory finder using SerpAPI Google Maps for REAL business data - UNLIMITED"""
     
     def __init__(self):
         self.serpapi_key = os.environ.get('SERPAPI_KEY')
@@ -39,9 +39,9 @@ class LeadFinder:
         keywords: List[str], 
         location: str, 
         country: str,
-        limit: int = 100
+        limit: int = 500
     ) -> List[FoundLead]:
-        """Search for factories using SerpAPI Google Maps"""
+        """Search for factories using SerpAPI Google Maps - NO LIMIT"""
         
         # First try SerpAPI for real data
         if self.serpapi_key:
@@ -62,14 +62,12 @@ class LeadFinder:
         country: str, 
         limit: int
     ) -> List[FoundLead]:
-        """Use SerpAPI Google Maps to find REAL factories"""
+        """Use SerpAPI Google Maps to find REAL factories - MULTIPLE SEARCHES"""
         try:
             from serpapi import GoogleSearch
             
             leads = []
-            
-            # Build search query
-            keyword_str = " ".join(keywords[:3])  # Use first 3 keywords
+            seen_names = set()
             
             # Location string for Google Maps
             if location and location.lower() != 'all':
@@ -77,14 +75,43 @@ class LeadFinder:
             else:
                 search_location = country
             
-            # Search queries to try
-            search_queries = [
-                f"{keyword_str} production {search_location}",
-                f"{keyword_str} factory {search_location}",
-                f"{keyword_str} manufacturer {search_location}",
+            # Generate multiple search queries to get more results
+            base_keywords = keywords[:5]  # Use first 5 keywords
+            
+            # Different search query patterns
+            search_patterns = [
+                "{kw} production {loc}",
+                "{kw} factory {loc}",
+                "{kw} manufacturer {loc}",
+                "{kw} producer {loc}",
+                "{kw} wholesale {loc}",
+                "{kw} fabrik {loc}",
+                "{kw} produktion {loc}",
+                "{kw} hersteller {loc}",
+                "{kw} üretim {loc}",
+                "{kw} fabrika {loc}",
             ]
             
-            seen_names = set()
+            # Generate all search queries
+            search_queries = []
+            for kw in base_keywords:
+                for pattern in search_patterns:
+                    query = pattern.format(kw=kw, loc=search_location)
+                    if query not in search_queries:
+                        search_queries.append(query)
+            
+            # Also add combined keyword searches
+            combined_kw = " ".join(base_keywords[:3])
+            search_queries.extend([
+                f"{combined_kw} {search_location}",
+                f"döner kebab gyros factory {search_location}",
+                f"meat processing plant {search_location}",
+                f"halal meat production {search_location}",
+                f"fleischverarbeitung {search_location}",
+                f"et işleme tesisi {search_location}",
+            ])
+            
+            logger.info(f"Running {len(search_queries)} search queries for {country}")
             
             for query in search_queries:
                 if len(leads) >= limit:
@@ -112,13 +139,13 @@ class LeadFinder:
                         name = item.get("title", "")
                         
                         # Skip duplicates
-                        if name.lower() in seen_names:
+                        name_key = name.lower().strip()
+                        if name_key in seen_names:
                             continue
-                        seen_names.add(name.lower())
+                        seen_names.add(name_key)
                         
                         # Skip restaurants
-                        name_lower = name.lower()
-                        if self._is_restaurant(name_lower, item):
+                        if self._is_restaurant(name_key, item):
                             logger.info(f"Filtered out (restaurant): {name}")
                             continue
                         
@@ -130,7 +157,6 @@ class LeadFinder:
                         # Get city from address
                         city_name = location if location and location.lower() != 'all' else ""
                         if not city_name and address:
-                            # Try to extract city from address
                             parts = address.split(",")
                             if len(parts) >= 2:
                                 city_name = parts[-2].strip()
@@ -168,13 +194,14 @@ class LeadFinder:
                     continue
             
             # If Google Maps didn't return enough, try Google Search
-            if len(leads) < 5:
+            if len(leads) < limit // 2:
                 google_leads = await self._search_google_organic(keywords, location, country, limit - len(leads))
                 for lead in google_leads:
-                    if lead.company_name.lower() not in seen_names:
+                    if lead.company_name.lower().strip() not in seen_names:
                         leads.append(lead)
-                        seen_names.add(lead.company_name.lower())
+                        seen_names.add(lead.company_name.lower().strip())
             
+            logger.info(f"Total leads found: {len(leads)}")
             return leads
             
         except Exception as e:
@@ -193,52 +220,72 @@ class LeadFinder:
             from serpapi import GoogleSearch
             
             leads = []
+            seen_names = set()
+            
+            # Multiple search queries for organic results
             keyword_str = " ".join(keywords[:3])
             
-            if location and location.lower() != 'all':
-                query = f"{keyword_str} fabrika {location} {country}"
-            else:
-                query = f"{keyword_str} fabrika {country}"
+            search_queries = [
+                f"{keyword_str} fabrika {location} {country}",
+                f"{keyword_str} factory {location} {country}",
+                f"{keyword_str} production company {country}",
+                f"döner kebab manufacturer {country}",
+                f"gyros production factory {country}",
+            ]
             
-            params = {
-                "engine": "google",
-                "q": query,
-                "api_key": self.serpapi_key,
-                "num": min(limit, 20),
-            }
-            
-            search = GoogleSearch(params)
-            results = search.get_dict()
-            
-            organic_results = results.get("organic_results", [])
-            
-            for item in organic_results:
+            for query in search_queries:
                 if len(leads) >= limit:
                     break
                 
-                title = item.get("title", "")
-                link = item.get("link", "")
-                snippet = item.get("snippet", "")
-                
-                # Skip if looks like restaurant
-                if self._is_restaurant(title.lower(), {"snippet": snippet}):
+                try:
+                    params = {
+                        "engine": "google",
+                        "q": query,
+                        "api_key": self.serpapi_key,
+                        "num": 20,
+                    }
+                    
+                    search = GoogleSearch(params)
+                    results = search.get_dict()
+                    
+                    organic_results = results.get("organic_results", [])
+                    
+                    for item in organic_results:
+                        if len(leads) >= limit:
+                            break
+                        
+                        title = item.get("title", "")
+                        link = item.get("link", "")
+                        snippet = item.get("snippet", "")
+                        
+                        # Skip if looks like restaurant
+                        if self._is_restaurant(title.lower(), {"snippet": snippet}):
+                            continue
+                        
+                        # Extract company name from title
+                        company_name = title.split(" - ")[0].split(" | ")[0].strip()
+                        
+                        if len(company_name) < 3:
+                            continue
+                        
+                        name_key = company_name.lower().strip()
+                        if name_key in seen_names:
+                            continue
+                        seen_names.add(name_key)
+                        
+                        lead = FoundLead(
+                            company_name=company_name,
+                            city=location if location and location.lower() != 'all' else "",
+                            country=country,
+                            website=link,
+                            business_type=self._determine_business_type(company_name, snippet, keywords),
+                            notes="Google Search result"
+                        )
+                        leads.append(lead)
+                        
+                except Exception as e:
+                    logger.error(f"Google organic search error: {e}")
                     continue
-                
-                # Extract company name from title
-                company_name = title.split(" - ")[0].split(" | ")[0].strip()
-                
-                if len(company_name) < 3:
-                    continue
-                
-                lead = FoundLead(
-                    company_name=company_name,
-                    city=location if location and location.lower() != 'all' else "",
-                    country=country,
-                    website=link,
-                    business_type=self._determine_business_type(company_name, snippet, keywords),
-                    notes="Google Search result"
-                )
-                leads.append(lead)
             
             return leads
             
@@ -321,18 +368,19 @@ class LeadFinder:
 1. **SADECE ÜRETİM TESİSLERİ** - Restoran, imbiss, fast food KESİNLİKLE YASAK
 2. **GERÇEK ŞİRKETLER** - İnternette aranabilir, var olan şirketler
 3. **YASAL EK GEREKLİ**: GmbH, S.A., S.L., S.R.L., Ltd, A.Ş., vb.
+4. **EN AZ 50 FABRIKA BUL** - Mümkün olduğunca çok fabrika bul
 
 ## ÇIKTI FORMATI (JSON Array):
 [
   {{"company_name": "Şirket Adı", "city": "Şehir", "phone": "Telefon", "business_type": "Üretim Tipi", "notes": "Bilgi"}}
 ]
 
-SADECE JSON döndür."""
+SADECE JSON döndür. En az 50 fabrika bul."""
 
             user_prompt = f"""{country} ülkesinde {location_str} şu anahtar kelimelere uygun ÜRETİM FABRİKALARI bul:
 {keywords_str}
 
-SADECE üretim tesisleri - restoran YASAK. JSON array döndür:"""
+SADECE üretim tesisleri - restoran YASAK. EN AZ 50 FABRİKA BUL. JSON array döndür:"""
 
             chat = LlmChat(
                 api_key=self.gemini_key,
@@ -343,7 +391,7 @@ SADECE üretim tesisleri - restoran YASAK. JSON array döndür:"""
             message = UserMessage(text=user_prompt)
             response = await asyncio.wait_for(
                 chat.send_message(message),
-                timeout=90.0
+                timeout=120.0
             )
             
             return self._parse_ai_response(response, country, location, limit)

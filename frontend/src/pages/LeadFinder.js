@@ -183,7 +183,7 @@ const LeadFinder = () => {
         keywords: keywordList,
         location: city || 'All',
         country: country,
-        limit: 100
+        limit: 500  // No limit - get all available results
       });
       
       if (response.data.leads && response.data.leads.length > 0) {
