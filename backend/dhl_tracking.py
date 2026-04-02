@@ -1,13 +1,11 @@
 """
-DHL Tracking Service - Uses AI to fetch real tracking data
-Supports both DHL Paket and DHL Express
+DHL Tracking Service - Using Official DHL API
 """
 import asyncio
 import aiohttp
 import logging
 import os
 import re
-import json
 from datetime import datetime, timezone
 from typing import Dict, List
 from dotenv import load_dotenv
@@ -17,15 +15,12 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 class DHLTracker:
-    """DHL package tracking with AI-powered web lookup"""
+    """DHL package tracking using official DHL API"""
     
     def __init__(self):
-        self.api_key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('GEMINI_API_KEY')
-        self.headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json, text/html',
-            'Accept-Language': 'de-DE,de;q=0.9'
-        }
+        # DHL API Key
+        self.api_key = os.environ.get('DHL_API_KEY', 'MARGzS9fwu8yG2HCnbQiGmmLYYmtzlWS')
+        self.api_base = "https://api-eu.dhl.com/track/shipments"
     
     async def track_package(self, tracking_number: str) -> Dict:
         """Track a DHL package by tracking number"""
@@ -38,32 +33,22 @@ class DHLTracker:
             return self._error_response(tracking_number, "Geçersiz takip numarası")
         
         try:
-            # Check tracking number format
-            is_express = bool(re.match(r'^[A-Z]{2}\d+[A-Z]{2}$', tracking_number)) or tracking_number.startswith('JD')
+            result = await self._track_via_api(tracking_number)
             
-            # Try DHL Paket API first (for domestic German shipments)
-            if not is_express:
-                result = await self._track_paket(tracking_number)
-                if result.get("success") and result.get("status") not in ["not_found", "error"]:
-                    return result
+            if result.get("success"):
+                return result
             
-            # Use AI to look up tracking info online
-            if self.api_key:
-                result = await self._track_with_ai(tracking_number)
-                if result.get("success"):
-                    return result
-            
-            # Return with link for manual check
+            # Return not found
             return {
                 "success": True,
                 "tracking_number": tracking_number,
-                "status": "check_online",
-                "status_text": "Online Kontrol Gerekli",
+                "status": "not_found",
+                "status_text": "Kargo bulunamadı",
                 "current_location": "",
                 "events": [],
                 "estimated_delivery": None,
                 "last_update": datetime.now(timezone.utc).isoformat(),
-                "message": "Takip bilgisi için DHL linkine tıklayın",
+                "message": "Bu takip numarası DHL sisteminde bulunamadı.",
                 "dhl_link": self._get_tracking_link(tracking_number)
             }
             
@@ -72,60 +57,116 @@ class DHLTracker:
             return self._error_response(tracking_number, str(e))
     
     def _get_tracking_link(self, tracking_number: str) -> str:
-        """Get appropriate DHL tracking URL"""
+        """Get DHL tracking URL"""
         if re.match(r'^[A-Z]{2}\d+[A-Z]{2}$', tracking_number) or tracking_number.startswith('JD'):
             return f"https://www.dhl.com/de-de/home/tracking/tracking-express.html?submit=1&tracking-id={tracking_number}"
         return f"https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode={tracking_number}"
     
-    async def _track_paket(self, tracking_number: str) -> Dict:
-        """Track via DHL Paket API"""
+    async def _track_via_api(self, tracking_number: str) -> Dict:
+        """Track via official DHL API"""
         try:
+            url = f"{self.api_base}?trackingNumber={tracking_number}"
+            
+            headers = {
+                'DHL-API-Key': self.api_key,
+                'Accept': 'application/json',
+                'User-Agent': 'GewurzbergCRM/1.0'
+            }
+            
             async with aiohttp.ClientSession() as session:
-                url = f"https://www.dhl.de/int-verfolgen/data/search?piececode={tracking_number}&language=de"
-                
                 async with session.get(
                     url,
-                    headers=self.headers,
-                    timeout=aiohttp.ClientTimeout(total=10)
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=15)
                 ) as response:
                     
+                    logger.info(f"DHL API response status: {response.status}")
+                    
                     if response.status == 200:
-                        content_type = response.headers.get('Content-Type', '')
-                        if 'json' in content_type:
-                            data = await response.json()
-                            return self._parse_paket_response(data, tracking_number)
-        
+                        data = await response.json()
+                        return self._parse_api_response(data, tracking_number)
+                    elif response.status == 404:
+                        logger.info(f"Tracking {tracking_number} not found")
+                        return {"success": False}
+                    else:
+                        error_text = await response.text()
+                        logger.error(f"DHL API error {response.status}: {error_text}")
+                        return {"success": False}
+            
+        except asyncio.TimeoutError:
+            logger.warning("DHL API timeout")
+            return {"success": False}
         except Exception as e:
-            logger.error(f"Paket API error: {e}")
-        
-        return {"success": False}
+            logger.error(f"DHL API error: {e}")
+            return {"success": False}
     
-    def _parse_paket_response(self, data: Dict, tracking_number: str) -> Dict:
-        """Parse DHL Paket JSON response"""
+    def _parse_api_response(self, data: Dict, tracking_number: str) -> Dict:
+        """Parse official DHL API response"""
         try:
-            sendungen = data.get("sendungen", [])
-            if not sendungen:
+            shipments = data.get("shipments", [])
+            
+            if not shipments:
                 return {"success": False}
             
-            shipment = sendungen[0]
-            details = shipment.get("sendungsdetails", {})
-            verlauf = details.get("sendungsverlauf", {})
+            shipment = shipments[0]
             
-            status_raw = verlauf.get("aktuellerStatus", "")
-            kurzstatus = verlauf.get("kurzStatus", "")
+            # Get status
+            status_obj = shipment.get("status", {})
+            status_code = status_obj.get("statusCode", "")
+            description = status_obj.get("description", "")
             
-            status, status_text = self._map_status(status_raw, kurzstatus)
+            # Map status
+            status, status_text = self._map_status(status_code, description)
             
+            # Get current location
+            location = ""
+            location_obj = status_obj.get("location", {})
+            if location_obj:
+                address = location_obj.get("address", {})
+                city = address.get("addressLocality", "")
+                country = address.get("countryCode", "")
+                if city:
+                    location = f"{city}, {country}" if country else city
+            
+            # Get estimated delivery
+            estimated_delivery = None
+            eta = shipment.get("estimatedTimeOfDelivery")
+            if eta:
+                estimated_delivery = eta
+            
+            # Get events
             events = []
-            for event in verlauf.get("events", [])[:10]:
+            for event in shipment.get("events", []):
+                # Parse timestamp
+                timestamp = event.get("timestamp", "")
+                event_date = ""
+                event_time = ""
+                
+                if timestamp:
+                    try:
+                        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        event_date = dt.strftime("%d.%m.%Y")
+                        event_time = dt.strftime("%H:%M")
+                    except:
+                        event_date = timestamp[:10] if len(timestamp) >= 10 else ""
+                
+                # Get event location
+                event_location = ""
+                event_loc_obj = event.get("location", {})
+                if event_loc_obj:
+                    event_addr = event_loc_obj.get("address", {})
+                    event_city = event_addr.get("addressLocality", "")
+                    event_country = event_addr.get("countryCode", "")
+                    if event_city:
+                        event_location = f"{event_city}, {event_country}" if event_country else event_city
+                
                 events.append({
-                    "date": event.get("datum", ""),
-                    "time": event.get("uhrzeit", ""),
-                    "location": event.get("ort", ""),
-                    "description": event.get("status", "")
+                    "date": event_date,
+                    "time": event_time,
+                    "location": event_location,
+                    "description": event.get("description", ""),
+                    "status": event.get("statusCode", "")
                 })
-            
-            location = events[0].get("location", "") if events else ""
             
             return {
                 "success": True,
@@ -133,6 +174,7 @@ class DHLTracker:
                 "status": status,
                 "status_text": status_text,
                 "current_location": location,
+                "estimated_delivery": estimated_delivery,
                 "events": events,
                 "last_update": datetime.now(timezone.utc).isoformat(),
                 "dhl_link": self._get_tracking_link(tracking_number)
@@ -142,138 +184,26 @@ class DHLTracker:
             logger.error(f"Parse error: {e}")
             return {"success": False}
     
-    async def _track_with_ai(self, tracking_number: str) -> Dict:
-        """Use AI with web search to get real DHL tracking info"""
-        try:
-            from emergentintegrations.llm.chat import LlmChat, UserMessage
-            
-            # Build DHL tracking URL for the AI to check
-            dhl_url = self._get_tracking_link(tracking_number)
-            
-            system_prompt = """Sen bir kargo takip asistanısın. 
-
-GÖREV: Verilen DHL takip numarasının GERÇEK durumunu internet üzerinden araştır ve bul.
-
-ARAŞTIRMA KAYNAKLARI:
-1. DHL resmi takip sayfası
-2. Kargo takip siteleri (parcelsapp.com, 17track.net, track24.net)
-3. Google araması ile "DHL tracking CS638795253DE" gibi
-
-ÖNEMLİ KURALLAR:
-- SADECE gerçek, doğrulanmış bilgileri ver
-- Eğer bilgiyi bulamazsan, "bulunamadı" de, uydurma
-- Tarihler GG.AA.YYYY formatında olmalı
-- Şehir ve ülke bilgilerini tam yaz
-
-JSON FORMATI:
-{
-    "status": "delivered/in_transit/out_for_delivery/picked_up/customs/not_found",
-    "status_text": "Türkçe durum",
-    "current_location": "Son konum - Şehir, Ülke",
-    "estimated_delivery": "Tarih veya null",
-    "events": [
-        {"date": "GG.AA.YYYY", "time": "SS:DD", "location": "Şehir, Ülke", "description": "Açıklama"}
-    ]
-}
-
-SADECE JSON döndür, açıklama yapma."""
-
-            user_prompt = f"""DHL Takip Numarası: {tracking_number}
-DHL Takip Linki: {dhl_url}
-
-Bu kargonun GERÇEK takip bilgilerini internet üzerinden araştır ve bul.
-Kargonun tüm hareketlerini (nereden nereye gittiğini) listele.
-
-Eğer bu takip numarası için bilgi bulamazsan:
-{{"status": "not_found", "status_text": "Bilgi bulunamadı", "current_location": "", "events": []}}
-
-JSON formatında yanıt ver:"""
-
-            chat = LlmChat(
-                api_key=self.api_key,
-                session_id=f"dhl-{tracking_number}-{datetime.now().strftime('%H%M%S')}",
-                system_message=system_prompt
-            ).with_model("gemini", "gemini-2.0-flash")
-            
-            message = UserMessage(text=user_prompt)
-            response = await asyncio.wait_for(
-                chat.send_message(message),
-                timeout=45.0
-            )
-            
-            result = self._parse_ai_response(response, tracking_number)
-            
-            # If AI returned not_found, return with proper message
-            if result.get("success") and result.get("status") == "not_found":
-                result["message"] = "Bu takip numarası için bilgi bulunamadı. DHL sitesinden manuel kontrol edin."
-            
-            return result
-            
-        except asyncio.TimeoutError:
-            logger.warning("AI tracking timeout")
-            return {"success": False}
-        except Exception as e:
-            logger.error(f"AI tracking error: {e}")
-            return {"success": False}
-    
-    def _parse_ai_response(self, response: str, tracking_number: str) -> Dict:
-        """Parse AI response"""
-        try:
-            text = response.strip()
-            
-            # Remove markdown code blocks
-            if text.startswith("```"):
-                text = text.split("```")[1]
-                if text.startswith("json"):
-                    text = text[4:]
-            if text.endswith("```"):
-                text = text[:-3]
-            
-            # Find JSON
-            start_idx = text.find('{')
-            end_idx = text.rfind('}') + 1
-            
-            if start_idx >= 0 and end_idx > start_idx:
-                json_str = text[start_idx:end_idx]
-                data = json.loads(json_str)
-                
-                return {
-                    "success": True,
-                    "tracking_number": tracking_number,
-                    "status": data.get("status", "in_transit"),
-                    "status_text": data.get("status_text", ""),
-                    "current_location": data.get("current_location", ""),
-                    "estimated_delivery": data.get("estimated_delivery"),
-                    "events": data.get("events", [])[:10],
-                    "last_update": datetime.now(timezone.utc).isoformat(),
-                    "dhl_link": self._get_tracking_link(tracking_number)
-                }
-            
-            return {"success": False}
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON parse error: {e}")
-            return {"success": False}
-        except Exception as e:
-            logger.error(f"Parse error: {e}")
-            return {"success": False}
-    
-    def _map_status(self, status_raw: str, kurzstatus: str) -> tuple:
-        """Map DHL status to standard status"""
-        combined = f"{status_raw} {kurzstatus}".lower()
+    def _map_status(self, code: str, description: str) -> tuple:
+        """Map DHL status code to our status"""
+        code_lower = (code or "").lower()
+        desc_lower = (description or "").lower()
+        combined = f"{code_lower} {desc_lower}"
         
-        if any(word in combined for word in ["zugestellt", "delivered"]):
+        if any(word in combined for word in ['delivered', 'zugestellt', 'teslim']):
             return ("delivered", "Teslim Edildi")
-        elif any(word in combined for word in ["zustellung", "delivery"]):
+        elif any(word in combined for word in ['out for delivery', 'in zustellung', 'with delivery courier']):
             return ("out_for_delivery", "Dağıtımda")
-        elif any(word in combined for word in ["paketzentrum", "transit", "transport"]):
+        elif any(word in combined for word in ['transit', 'processed', 'departed', 'arrived', 'forwarded']):
             return ("in_transit", "Yolda")
-        elif any(word in combined for word in ["angenommen", "picked"]):
+        elif any(word in combined for word in ['picked', 'collected', 'shipment information received']):
             return ("picked_up", "Teslim Alındı")
-        elif any(word in combined for word in ["zoll", "customs"]):
+        elif any(word in combined for word in ['customs', 'clearance', 'zoll']):
             return ("customs", "Gümrükte")
+        elif any(word in combined for word in ['exception', 'failed', 'undeliverable']):
+            return ("exception", "Sorun Var")
         else:
-            return ("in_transit", kurzstatus or "İşleniyor")
+            return ("in_transit", description or "İşleniyor")
     
     def _error_response(self, tracking_number: str, error: str) -> Dict:
         return {
@@ -298,7 +228,7 @@ STATUS_LABELS = {
         'delivered': 'Teslim Edildi',
         'customs': 'Gümrükte',
         'exception': 'Sorun Var',
-        'check_online': 'Online Kontrol',
+        'not_found': 'Bulunamadı',
         'error': 'Hata'
     },
     'de': {
@@ -308,7 +238,7 @@ STATUS_LABELS = {
         'delivered': 'Zugestellt',
         'customs': 'Im Zoll',
         'exception': 'Ausnahme',
-        'check_online': 'Online prüfen',
+        'not_found': 'Nicht gefunden',
         'error': 'Fehler'
     }
 }
