@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -12,13 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { 
   Search, 
   Loader2, 
   Building2, 
-  Mail, 
   Phone, 
   MapPin,
   ExternalLink,
@@ -26,8 +24,6 @@ import {
   CheckCircle,
   Factory,
   Globe,
-  Filter,
-  X,
   Sparkles
 } from 'lucide-react';
 import axios from 'axios';
@@ -35,446 +31,116 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// ALL countries with major cities
-const LOCATIONS = {
-  // Europe
-  "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Düsseldorf", "Stuttgart", "Dortmund"],
-  "Greece": ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa", "Volos", "Ioannina", "Kavala", "Rhodes", "Corfu"],
-  "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya", "Adana", "Konya", "Gaziantep"],
-  "Netherlands": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht", "Eindhoven", "Tilburg"],
-  "Poland": ["Warsaw", "Krakow", "Lodz", "Wroclaw", "Poznan", "Gdansk", "Szczecin"],
-  "Austria": ["Vienna", "Graz", "Salzburg", "Linz", "Innsbruck"],
-  "France": ["Paris", "Lyon", "Marseille", "Toulouse", "Nice", "Bordeaux", "Lille"],
-  "Belgium": ["Brussels", "Antwerp", "Ghent", "Bruges", "Liege"],
-  "Italy": ["Rome", "Milan", "Naples", "Turin", "Florence", "Venice", "Bologna"],
-  "Spain": ["Madrid", "Barcelona", "Valencia", "Seville", "Malaga", "Bilbao"],
-  "UK": ["London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Liverpool"],
-  "Switzerland": ["Zurich", "Geneva", "Basel", "Bern", "Lausanne"],
-  "Sweden": ["Stockholm", "Gothenburg", "Malmö", "Uppsala"],
-  "Denmark": ["Copenhagen", "Aarhus", "Odense"],
-  "Norway": ["Oslo", "Bergen", "Trondheim", "Stavanger"],
-  "Finland": ["Helsinki", "Tampere", "Turku", "Oulu"],
-  "Portugal": ["Lisbon", "Porto", "Braga", "Faro"],
-  "Czech Republic": ["Prague", "Brno", "Ostrava", "Plzen"],
-  "Hungary": ["Budapest", "Debrecen", "Szeged", "Pécs"],
-  "Romania": ["Bucharest", "Cluj-Napoca", "Timisoara", "Iasi", "Constanta", "Brasov"],
-  "Bulgaria": ["Sofia", "Plovdiv", "Varna", "Burgas", "Ruse"],
-  "Croatia": ["Zagreb", "Split", "Rijeka", "Osijek"],
-  "Serbia": ["Belgrade", "Novi Sad", "Niš", "Kragujevac"],
-  "Slovenia": ["Ljubljana", "Maribor", "Celje"],
-  "Slovakia": ["Bratislava", "Košice", "Prešov"],
-  "Ukraine": ["Kyiv", "Kharkiv", "Odessa", "Lviv", "Dnipro"],
-  "Russia": ["Moscow", "Saint Petersburg", "Novosibirsk", "Yekaterinburg"],
-  "Ireland": ["Dublin", "Cork", "Galway", "Limerick"],
-  "Luxembourg": ["Luxembourg City"],
-  "Malta": ["Valletta", "Birkirkara"],
-  "Cyprus": ["Nicosia", "Limassol", "Larnaca"],
-  "Iceland": ["Reykjavik"],
-  "Estonia": ["Tallinn", "Tartu"],
-  "Latvia": ["Riga", "Daugavpils"],
-  "Lithuania": ["Vilnius", "Kaunas", "Klaipėda"],
-  "Albania": ["Tirana", "Durrës", "Vlorë"],
-  "North Macedonia": ["Skopje", "Bitola"],
-  "Montenegro": ["Podgorica", "Nikšić"],
-  "Bosnia": ["Sarajevo", "Banja Luka"],
-  "Kosovo": ["Pristina", "Prizren"],
-  "Moldova": ["Chișinău"],
-  "Belarus": ["Minsk", "Gomel", "Mogilev"],
-  
-  // Middle East
-  "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca", "Medina", "Dammam"],
-  "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman"],
-  "Qatar": ["Doha", "Al Wakrah"],
-  "Kuwait": ["Kuwait City", "Hawalli"],
-  "Bahrain": ["Manama", "Riffa"],
-  "Oman": ["Muscat", "Salalah"],
-  "Jordan": ["Amman", "Zarqa", "Irbid"],
-  "Lebanon": ["Beirut", "Tripoli", "Sidon"],
-  "Israel": ["Tel Aviv", "Jerusalem", "Haifa"],
-  "Iraq": ["Baghdad", "Basra", "Erbil", "Mosul"],
-  "Iran": ["Tehran", "Mashhad", "Isfahan", "Tabriz"],
-  "Syria": ["Damascus", "Aleppo", "Homs"],
-  "Yemen": ["Sana'a", "Aden"],
-  
-  // Africa
-  "Egypt": ["Cairo", "Alexandria", "Giza", "Sharm El Sheikh"],
-  "Morocco": ["Casablanca", "Marrakech", "Rabat", "Fes", "Tangier"],
-  "Tunisia": ["Tunis", "Sfax", "Sousse"],
-  "Algeria": ["Algiers", "Oran", "Constantine"],
-  "Libya": ["Tripoli", "Benghazi"],
-  "South Africa": ["Johannesburg", "Cape Town", "Durban", "Pretoria"],
-  "Nigeria": ["Lagos", "Abuja", "Kano"],
-  "Kenya": ["Nairobi", "Mombasa"],
-  "Ghana": ["Accra", "Kumasi"],
-  "Ethiopia": ["Addis Ababa"],
-  
-  // Americas
-  "USA": ["New York", "Los Angeles", "Chicago", "Houston", "Miami", "Dallas", "Atlanta"],
-  "Canada": ["Toronto", "Montreal", "Vancouver", "Calgary", "Ottawa"],
-  "Mexico": ["Mexico City", "Guadalajara", "Monterrey", "Cancún"],
-  "Brazil": ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador"],
-  "Argentina": ["Buenos Aires", "Córdoba", "Rosario"],
-  "Colombia": ["Bogotá", "Medellín", "Cali"],
-  "Chile": ["Santiago", "Valparaíso", "Concepción"],
-  "Peru": ["Lima", "Arequipa", "Cusco"],
-  
-  // Asia
-  "China": ["Beijing", "Shanghai", "Guangzhou", "Shenzhen", "Hong Kong"],
-  "Japan": ["Tokyo", "Osaka", "Kyoto", "Nagoya", "Yokohama"],
-  "South Korea": ["Seoul", "Busan", "Incheon", "Daegu"],
-  "India": ["Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata"],
-  "Pakistan": ["Karachi", "Lahore", "Islamabad", "Rawalpindi"],
-  "Bangladesh": ["Dhaka", "Chittagong"],
-  "Indonesia": ["Jakarta", "Surabaya", "Bandung", "Bali"],
-  "Malaysia": ["Kuala Lumpur", "George Town", "Johor Bahru"],
-  "Singapore": ["Singapore"],
-  "Thailand": ["Bangkok", "Chiang Mai", "Phuket", "Pattaya"],
-  "Vietnam": ["Ho Chi Minh City", "Hanoi", "Da Nang"],
-  "Philippines": ["Manila", "Cebu", "Davao"],
-  "Taiwan": ["Taipei", "Kaohsiung", "Taichung"],
-  
-  // Oceania
-  "Australia": ["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide"],
-  "New Zealand": ["Auckland", "Wellington", "Christchurch"],
+// Ülkeler ve şehirler
+const COUNTRIES = {
+  "Germany": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Düsseldorf"],
+  "Greece": ["Athens", "Thessaloniki", "Patras", "Heraklion", "Larissa"],
+  "Turkey": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya"],
+  "Netherlands": ["Amsterdam", "Rotterdam", "The Hague", "Utrecht"],
+  "Austria": ["Vienna", "Graz", "Salzburg", "Linz"],
+  "France": ["Paris", "Lyon", "Marseille", "Toulouse"],
+  "Belgium": ["Brussels", "Antwerp", "Ghent"],
+  "UK": ["London", "Manchester", "Birmingham"],
+  "Poland": ["Warsaw", "Krakow", "Wroclaw", "Poznan"],
+  "Romania": ["Bucharest", "Cluj-Napoca", "Timisoara"],
+  "Bulgaria": ["Sofia", "Plovdiv", "Varna"],
+  "Saudi Arabia": ["Riyadh", "Jeddah", "Mecca"],
+  "UAE": ["Dubai", "Abu Dhabi", "Sharjah"],
 };
 
-// Keyword presets
-const KEYWORD_PRESETS = {
-  en: [
-    { id: 'gyros', label: 'Gyros', keywords: ['gyros', 'gyro'] },
-    { id: 'doner', label: 'Döner', keywords: ['döner', 'doner', 'kebab'] },
-    { id: 'meat', label: 'Meat Processing', keywords: ['meat', 'meat processing', 'meat factory'] },
-    { id: 'poultry', label: 'Poultry', keywords: ['poultry', 'chicken', 'turkey'] },
-    { id: 'sausage', label: 'Sausage', keywords: ['sausage', 'wurst', 'salami'] },
-    { id: 'halal', label: 'Halal', keywords: ['halal', 'halal meat'] },
-    { id: 'spice', label: 'Spice Factory', keywords: ['spice', 'seasoning', 'baharat'] },
-    { id: 'food', label: 'Food Production', keywords: ['food', 'food factory', 'food production'] },
-  ],
-  tr: [
-    { id: 'gyros', label: 'Gyros', keywords: ['gyros', 'gyro'] },
-    { id: 'doner', label: 'Döner', keywords: ['döner', 'doner', 'kebap'] },
-    { id: 'meat', label: 'Et İşleme', keywords: ['et', 'et işleme', 'et fabrikası'] },
-    { id: 'poultry', label: 'Tavuk/Kanatlı', keywords: ['tavuk', 'kanatlı', 'hindi'] },
-    { id: 'sausage', label: 'Sucuk/Sosis', keywords: ['sucuk', 'sosis', 'salam'] },
-    { id: 'halal', label: 'Helal', keywords: ['helal', 'helal et'] },
-    { id: 'spice', label: 'Baharat', keywords: ['baharat', 'baharat fabrikası'] },
-    { id: 'food', label: 'Gıda Üretimi', keywords: ['gıda', 'gıda fabrikası'] },
-  ],
-  de: [
-    { id: 'gyros', label: 'Gyros', keywords: ['gyros', 'gyro'] },
-    { id: 'doner', label: 'Döner', keywords: ['döner', 'doner', 'kebab'] },
-    { id: 'meat', label: 'Fleischverarbeitung', keywords: ['fleisch', 'fleischverarbeitung'] },
-    { id: 'poultry', label: 'Geflügel', keywords: ['geflügel', 'hähnchen', 'pute'] },
-    { id: 'sausage', label: 'Wurst', keywords: ['wurst', 'salami', 'bratwurst'] },
-    { id: 'halal', label: 'Halal', keywords: ['halal', 'halal fleisch'] },
-    { id: 'spice', label: 'Gewürzfabrik', keywords: ['gewürz', 'gewürzfabrik'] },
-    { id: 'food', label: 'Lebensmittelproduktion', keywords: ['lebensmittel', 'lebensmittelfabrik'] },
-  ],
-  pl: [
-    { id: 'gyros', label: 'Gyros', keywords: ['gyros', 'gyro'] },
-    { id: 'doner', label: 'Döner', keywords: ['döner', 'doner', 'kebab'] },
-    { id: 'meat', label: 'Przetwórstwo mięsa', keywords: ['mięso', 'przetwórstwo mięsa'] },
-    { id: 'poultry', label: 'Drób', keywords: ['drób', 'kurczak', 'indyk'] },
-    { id: 'sausage', label: 'Kiełbasa', keywords: ['kiełbasa', 'wędliny'] },
-    { id: 'halal', label: 'Halal', keywords: ['halal'] },
-    { id: 'spice', label: 'Fabryka przypraw', keywords: ['przyprawy', 'fabryka przypraw'] },
-    { id: 'food', label: 'Produkcja żywności', keywords: ['żywność', 'fabryka żywności'] },
-  ],
-};
-
-// Translations
 const texts = {
-  en: {
-    title: 'Find Factories',
-    subtitle: 'Find Döner, Gyros and Kebab factories with AI-powered search',
-    country: 'Country',
-    city: 'City',
-    selectCountry: 'Select country',
-    selectCity: 'Select city',
-    allCities: 'All Cities',
-    orTypeCity: 'or Type City',
-    customCity: 'Custom city...',
-    keywords: 'Keywords',
-    customKeyword: 'Custom keyword',
-    customKeywordPlaceholder: 'Enter your own keyword...',
-    selectKeywords: 'Select or enter custom keywords',
-    quickSearch: 'Quick Search',
-    search: 'AI Search',
-    searching: 'AI is searching...',
-    foundFactories: 'Found Factories',
-    factoriesFound: 'factories found',
-    selectAll: 'Select All',
-    deselectAll: 'Deselect All',
-    addSelected: 'Add Selected',
-    notSelected: 'Not Selected',
-    startSearch: 'Start AI Search',
-    startSearchDesc: 'Select country and city, enter keywords, then let AI find real factories',
-    searchingIn: 'AI is searching factories in',
-    error: 'Error',
-    selectCityCountry: 'Select city and country',
-    searchComplete: 'Search Complete!',
-    factoriesFoundIn: 'factories found',
-    noResults: 'No results found',
-    tryDifferent: 'Try different keywords or location',
-    searchFailed: 'Search failed',
-    imported: 'Imported!',
-    factoriesAdded: 'factories added to customer list',
-    warning: 'Warning',
-    couldNotAdd: 'records could not be added (may already exist)',
-    selectAtLeast: 'Select at least one factory',
-    allCountries: 'All Countries',
-    filterByRegion: 'Filter by Region',
-    europe: 'Europe',
-    middleEast: 'Middle East',
-    asia: 'Asia',
-    africa: 'Africa',
-    americas: 'Americas',
-    oceania: 'Oceania',
-    aiPowered: 'AI-Powered Real-Time Search',
-    aiNote: 'Searches for real factories using AI - no cached database',
-  },
   tr: {
     title: 'Fabrika Bul',
-    subtitle: 'AI destekli arama ile Döner, Gyros ve Kebap fabrikalarını bulun',
+    subtitle: 'Döner, Gyros ve Kebap fabrikalarını AI ile bulun',
     country: 'Ülke',
     city: 'Şehir',
-    selectCountry: 'Ülke seçin',
-    selectCity: 'Şehir seçin',
     allCities: 'Tüm Şehirler',
-    orTypeCity: 'veya Şehir Yazın',
-    customCity: 'Özel şehir...',
-    keywords: 'Anahtar Kelimeler',
-    customKeyword: 'Özel anahtar kelime',
-    customKeywordPlaceholder: 'Kendi anahtar kelimenizi yazın...',
-    selectKeywords: 'Seçin veya özel anahtar kelime girin',
-    quickSearch: 'Hızlı Arama',
-    search: 'AI ile Ara',
+    search: 'Fabrika Ara',
     searching: 'AI arıyor...',
-    foundFactories: 'Bulunan Fabrikalar',
-    factoriesFound: 'fabrika bulundu',
-    selectAll: 'Tümünü Seç',
-    deselectAll: 'Seçimi Kaldır',
+    found: 'fabrika bulundu',
     addSelected: 'Seçilenleri Ekle',
-    notSelected: 'Seçili Değil',
-    startSearch: 'AI Araması Başlat',
-    startSearchDesc: 'Ülke ve şehir seçin, anahtar kelime girin, AI gerçek fabrikaları bulsun',
-    searchingIn: 'AI fabrikaları arıyor',
-    error: 'Hata',
-    selectCityCountry: 'Şehir ve ülke seçin',
-    searchComplete: 'Arama Tamamlandı!',
-    factoriesFoundIn: 'fabrika bulundu',
+    selectAll: 'Tümünü Seç',
     noResults: 'Sonuç bulunamadı',
-    tryDifferent: 'Farklı anahtar kelime veya konum deneyin',
-    searchFailed: 'Arama başarısız',
-    imported: 'İçe Aktarıldı!',
-    factoriesAdded: 'fabrika müşteri listesine eklendi',
-    warning: 'Uyarı',
-    couldNotAdd: 'kayıt eklenemedi (muhtemelen zaten mevcut)',
-    selectAtLeast: 'En az bir fabrika seçin',
-    allCountries: 'Tüm Ülkeler',
-    filterByRegion: 'Bölgeye Göre Filtrele',
-    europe: 'Avrupa',
-    middleEast: 'Orta Doğu',
-    asia: 'Asya',
-    africa: 'Afrika',
-    americas: 'Amerika',
-    oceania: 'Okyanusya',
-    aiPowered: 'AI Destekli Gerçek Zamanlı Arama',
-    aiNote: 'AI kullanarak gerçek fabrikaları arar - önbellek yok',
+    startSearch: 'Aramaya başlayın',
+    startSearchDesc: 'Ülke seçin ve AI döner/gyros/kebap fabrikalarını bulsun',
+    added: 'eklendi',
+    error: 'Hata',
+  },
+  en: {
+    title: 'Find Factories',
+    subtitle: 'Find Döner, Gyros and Kebab factories with AI',
+    country: 'Country',
+    city: 'City',
+    allCities: 'All Cities',
+    search: 'Search Factories',
+    searching: 'AI searching...',
+    found: 'factories found',
+    addSelected: 'Add Selected',
+    selectAll: 'Select All',
+    noResults: 'No results found',
+    startSearch: 'Start searching',
+    startSearchDesc: 'Select a country and let AI find döner/gyros/kebab factories',
+    added: 'added',
+    error: 'Error',
   },
   de: {
     title: 'Fabriken finden',
-    subtitle: 'Finden Sie Döner-, Gyros- und Kebab-Fabriken mit KI-Suche',
+    subtitle: 'Finden Sie Döner-, Gyros- und Kebab-Fabriken mit KI',
     country: 'Land',
     city: 'Stadt',
-    selectCountry: 'Land auswählen',
-    selectCity: 'Stadt auswählen',
     allCities: 'Alle Städte',
-    orTypeCity: 'oder Stadt eingeben',
-    customCity: 'Andere Stadt...',
-    keywords: 'Suchbegriffe',
-    customKeyword: 'Eigener Suchbegriff',
-    customKeywordPlaceholder: 'Eigenen Suchbegriff eingeben...',
-    selectKeywords: 'Auswählen oder eigene Suchbegriffe eingeben',
-    quickSearch: 'Schnellsuche',
-    search: 'KI-Suche',
+    search: 'Fabriken suchen',
     searching: 'KI sucht...',
-    foundFactories: 'Gefundene Fabriken',
-    factoriesFound: 'Fabriken gefunden',
-    selectAll: 'Alle auswählen',
-    deselectAll: 'Auswahl aufheben',
+    found: 'Fabriken gefunden',
     addSelected: 'Ausgewählte hinzufügen',
-    notSelected: 'Nicht ausgewählt',
-    startSearch: 'KI-Suche starten',
-    startSearchDesc: 'Land und Stadt auswählen, Suchbegriffe eingeben, KI findet echte Fabriken',
-    searchingIn: 'KI sucht Fabriken in',
-    error: 'Fehler',
-    selectCityCountry: 'Stadt und Land auswählen',
-    searchComplete: 'Suche abgeschlossen!',
-    factoriesFoundIn: 'Fabriken gefunden',
+    selectAll: 'Alle auswählen',
     noResults: 'Keine Ergebnisse',
-    tryDifferent: 'Andere Suchbegriffe oder Standort versuchen',
-    searchFailed: 'Suche fehlgeschlagen',
-    imported: 'Importiert!',
-    factoriesAdded: 'Fabriken zur Kundenliste hinzugefügt',
-    warning: 'Warnung',
-    couldNotAdd: 'Einträge konnten nicht hinzugefügt werden',
-    selectAtLeast: 'Mindestens eine Fabrik auswählen',
-    allCountries: 'Alle Länder',
-    filterByRegion: 'Nach Region filtern',
-    europe: 'Europa',
-    middleEast: 'Naher Osten',
-    asia: 'Asien',
-    africa: 'Afrika',
-    americas: 'Amerika',
-    oceania: 'Ozeanien',
-    aiPowered: 'KI-gestützte Echtzeit-Suche',
-    aiNote: 'Sucht echte Fabriken mit KI - kein Cache',
+    startSearch: 'Suche starten',
+    startSearchDesc: 'Wählen Sie ein Land und lassen Sie KI Döner/Gyros/Kebab-Fabriken finden',
+    added: 'hinzugefügt',
+    error: 'Fehler',
   },
-  pl: {
-    title: 'Znajdź fabryki',
-    subtitle: 'Szybko znajdź fabryki Döner, Gyros i Kebab z wyszukiwaniem AI',
-    country: 'Kraj',
-    city: 'Miasto',
-    selectCountry: 'Wybierz kraj',
-    selectCity: 'Wybierz miasto',
-    allCities: 'Wszystkie miasta',
-    orTypeCity: 'lub wpisz miasto',
-    customCity: 'Inne miasto...',
-    keywords: 'Słowa kluczowe',
-    customKeyword: 'Własne słowo kluczowe',
-    customKeywordPlaceholder: 'Wpisz własne słowo kluczowe...',
-    selectKeywords: 'Wybierz lub wpisz własne słowa kluczowe',
-    quickSearch: 'Szybkie wyszukiwanie',
-    search: 'Szukaj z AI',
-    searching: 'AI szuka...',
-    foundFactories: 'Znalezione fabryki',
-    factoriesFound: 'fabryk znalezionych',
-    selectAll: 'Zaznacz wszystko',
-    deselectAll: 'Odznacz wszystko',
-    addSelected: 'Dodaj wybrane',
-    notSelected: 'Nie wybrano',
-    startSearch: 'Rozpocznij wyszukiwanie AI',
-    startSearchDesc: 'Wybierz kraj i miasto, wpisz słowa kluczowe, AI znajdzie prawdziwe fabryki',
-    searchingIn: 'AI szuka fabryk w',
-    error: 'Błąd',
-    selectCityCountry: 'Wybierz miasto i kraj',
-    searchComplete: 'Wyszukiwanie zakończone!',
-    factoriesFoundIn: 'fabryk znalezionych',
-    noResults: 'Brak wyników',
-    tryDifferent: 'Spróbuj innych słów kluczowych lub lokalizacji',
-    searchFailed: 'Wyszukiwanie nie powiodło się',
-    imported: 'Zaimportowano!',
-    factoriesAdded: 'fabryk dodanych do listy klientów',
-    warning: 'Ostrzeżenie',
-    couldNotAdd: 'rekordów nie można dodać',
-    selectAtLeast: 'Wybierz co najmniej jedną fabrykę',
-    allCountries: 'Wszystkie kraje',
-    filterByRegion: 'Filtruj według regionu',
-    europe: 'Europa',
-    middleEast: 'Bliski Wschód',
-    asia: 'Azja',
-    africa: 'Afryka',
-    americas: 'Ameryka',
-    oceania: 'Oceania',
-    aiPowered: 'Wyszukiwanie AI w czasie rzeczywistym',
-    aiNote: 'Wyszukuje prawdziwe fabryki za pomocą AI - bez cache',
-  },
-};
-
-// Region groupings
-const REGIONS = {
-  europe: ["Germany", "Greece", "Netherlands", "Poland", "Austria", "France", "Belgium", "Italy", "Spain", "UK", "Switzerland", "Sweden", "Denmark", "Norway", "Finland", "Portugal", "Czech Republic", "Hungary", "Romania", "Bulgaria", "Croatia", "Serbia", "Slovenia", "Slovakia", "Ukraine", "Russia", "Ireland", "Luxembourg", "Malta", "Cyprus", "Iceland", "Estonia", "Latvia", "Lithuania", "Albania", "North Macedonia", "Montenegro", "Bosnia", "Kosovo", "Moldova", "Belarus"],
-  middleEast: ["Turkey", "Saudi Arabia", "UAE", "Qatar", "Kuwait", "Bahrain", "Oman", "Jordan", "Lebanon", "Israel", "Iraq", "Iran", "Syria", "Yemen"],
-  asia: ["China", "Japan", "South Korea", "India", "Pakistan", "Bangladesh", "Indonesia", "Malaysia", "Singapore", "Thailand", "Vietnam", "Philippines", "Taiwan"],
-  africa: ["Egypt", "Morocco", "Tunisia", "Algeria", "Libya", "South Africa", "Nigeria", "Kenya", "Ghana", "Ethiopia"],
-  americas: ["USA", "Canada", "Mexico", "Brazil", "Argentina", "Colombia", "Chile", "Peru"],
-  oceania: ["Australia", "New Zealand"],
 };
 
 const LeadFinder = () => {
   const { language } = useLanguage();
   const t = texts[language] || texts.en;
-  const keywordPresets = KEYWORD_PRESETS[language] || KEYWORD_PRESETS.en;
   
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [location, setLocation] = useState('');
   const [country, setCountry] = useState('Germany');
+  const [city, setCity] = useState('');
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
-  const [searchTime, setSearchTime] = useState(null);
-  const [selectedKeywords, setSelectedKeywords] = useState(['gyros', 'doner', 'meat']);
-  const [customKeyword, setCustomKeyword] = useState('');
-  const [regionFilter, setRegionFilter] = useState('all');
 
-  const cities = LOCATIONS[country] || [];
-  
-  // Filter countries by region
-  const getFilteredCountries = () => {
-    if (regionFilter === 'all') return Object.keys(LOCATIONS).sort();
-    return REGIONS[regionFilter]?.filter(c => LOCATIONS[c]) || [];
-  };
-
-  const toggleKeyword = (id) => {
-    setSelectedKeywords(prev => 
-      prev.includes(id) 
-        ? prev.filter(k => k !== id)
-        : [...prev, id]
-    );
-  };
-
-  const getSelectedKeywordsList = () => {
-    const presetKeywords = keywordPresets
-      .filter(p => selectedKeywords.includes(p.id))
-      .flatMap(p => p.keywords);
-    
-    // Add custom keyword if provided
-    if (customKeyword.trim()) {
-      presetKeywords.push(customKeyword.trim());
-    }
-    
-    return presetKeywords;
-  };
+  const cities = COUNTRIES[country] || [];
 
   const handleSearch = async () => {
     if (!country) {
-      toast.error(t.error, { description: t.selectCityCountry });
+      toast.error(t.error, { description: 'Ülke seçin' });
       return;
     }
 
     setLoading(true);
     setResults([]);
     setSelectedLeads(new Set());
-    const startTime = Date.now();
 
     try {
-      const keywords = getSelectedKeywordsList();
-      // Use "All" for city if not specified or "All Cities" selected
-      const searchLocation = location && location !== 'all' ? location : 'All';
-      
       const response = await axios.post(`${API}/leads/search`, {
-        keywords: keywords.length > 0 ? keywords : ['gyros', 'döner', 'kebab', 'meat factory'],
-        location: searchLocation,
+        keywords: ['döner', 'gyros', 'kebab', 'meat factory', 'meat processing'],
+        location: city || 'All',
         country: country,
-        limit: 50,
-        ai_only: true  // New flag to use only AI search
+        limit: 30
       });
-      
-      const endTime = Date.now();
-      setSearchTime(((endTime - startTime) / 1000).toFixed(1));
       
       if (response.data.leads && response.data.leads.length > 0) {
         setResults(response.data.leads);
-        toast.success(t.searchComplete, { 
-          description: `${response.data.leads.length} ${t.factoriesFoundIn} (${((endTime - startTime) / 1000).toFixed(1)}s)` 
-        });
+        toast.success(`${response.data.leads.length} ${t.found}`);
       } else {
-        toast.warning(t.noResults, { description: t.tryDifferent });
+        toast.warning(t.noResults);
       }
     } catch (error) {
-      console.error('Search failed:', error);
-      toast.error(t.searchFailed, { description: error.response?.data?.detail || 'Error' });
+      toast.error(t.error, { description: error.response?.data?.detail || 'Arama başarısız' });
     } finally {
       setLoading(false);
     }
@@ -500,13 +166,12 @@ const LeadFinder = () => {
 
   const importSelectedLeads = async () => {
     if (selectedLeads.size === 0) {
-      toast.error(t.error, { description: t.selectAtLeast });
+      toast.error(t.error, { description: 'En az bir fabrika seçin' });
       return;
     }
 
     setImporting(true);
     let imported = 0;
-    let failed = 0;
 
     for (const index of selectedLeads) {
       const lead = results[index];
@@ -518,112 +183,76 @@ const LeadFinder = () => {
           email: lead.email || '',
           phone: lead.phone || '',
           address: lead.address || '',
-          city: lead.city || location || '',
+          city: lead.city || city || '',
           country: lead.country || country,
           tax_number: '',
-          notes: `${lead.business_type || 'Factory'} - ${lead.website || 'No website'}`
+          notes: `${lead.business_type || 'Factory'} - ${lead.website || ''}`
         });
         imported++;
       } catch (error) {
         console.error('Import error:', error);
-        failed++;
       }
     }
 
     setImporting(false);
     
     if (imported > 0) {
-      toast.success(t.imported, { description: `${imported} ${t.factoriesAdded}` });
-      // Remove imported leads from results
+      toast.success(`${imported} ${t.added}`);
       const newResults = results.filter((_, i) => !selectedLeads.has(i));
       setResults(newResults);
       setSelectedLeads(new Set());
-    }
-    if (failed > 0) {
-      toast.warning(t.warning, { description: `${failed} ${t.couldNotAdd}` });
     }
   };
 
   return (
     <div className="space-y-6" data-testid="lead-finder-page">
       {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold tracking-tight font-['Manrope'] flex items-center gap-3">
-          <Factory className="w-10 h-10 text-orange-600" />
-          {t.title}
-        </h1>
-        <p className="text-muted-foreground mt-1">{t.subtitle}</p>
-      </div>
-
-      {/* AI Badge */}
-      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-        <Sparkles className="w-5 h-5 text-purple-600" />
+      <div className="flex items-center gap-4">
+        <div className="p-3 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl">
+          <Factory className="w-8 h-8 text-white" />
+        </div>
         <div>
-          <span className="font-semibold text-purple-800">{t.aiPowered}</span>
-          <span className="text-sm text-purple-600 ml-2">- {t.aiNote}</span>
+          <h1 className="text-3xl font-bold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground">{t.subtitle}</p>
         </div>
       </div>
 
-      {/* Search Form */}
+      {/* Search Card */}
       <Card className="border-2 border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50">
         <CardContent className="p-6">
-          {/* Region Filter */}
-          <div className="mb-4 pb-4 border-b border-orange-200">
-            <Label className="text-sm font-medium mb-2 block">{t.filterByRegion}</Label>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant={regionFilter === 'all' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setRegionFilter('all')}
-                className={regionFilter === 'all' ? 'bg-orange-600 hover:bg-orange-700' : ''}
-              >
-                {t.allCountries}
-              </Button>
-              {Object.entries(REGIONS).map(([key, _]) => (
-                <Button
-                  key={key}
-                  variant={regionFilter === key ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setRegionFilter(key)}
-                  className={regionFilter === key ? 'bg-orange-600 hover:bg-orange-700' : ''}
-                >
-                  {t[key]}
-                </Button>
-              ))}
-            </div>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-orange-600" />
+            <span className="font-medium text-orange-800">AI-Powered Search</span>
           </div>
-
+          
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            {/* Country Selection */}
+            {/* Ülke */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
+              <Label className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
                 {t.country}
               </Label>
-              <Select value={country} onValueChange={(val) => {
-                setCountry(val);
-                setLocation('');
-              }}>
+              <Select value={country} onValueChange={(val) => { setCountry(val); setCity(''); }}>
                 <SelectTrigger className="bg-white">
-                  <SelectValue placeholder={t.selectCountry} />
+                  <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {getFilteredCountries().map(c => (
+                <SelectContent>
+                  {Object.keys(COUNTRIES).map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* City Selection */}
+            {/* Şehir */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
+              <Label className="flex items-center gap-2">
                 <MapPin className="w-4 h-4" />
                 {t.city}
               </Label>
-              <Select value={location} onValueChange={setLocation}>
+              <Select value={city || "all"} onValueChange={(val) => setCity(val === "all" ? "" : val)}>
                 <SelectTrigger className="bg-white">
-                  <SelectValue placeholder={t.selectCity} />
+                  <SelectValue placeholder={t.allCities} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.allCities}</SelectItem>
@@ -634,13 +263,13 @@ const LeadFinder = () => {
               </Select>
             </div>
 
-            {/* Custom City Input */}
+            {/* Custom City */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">{t.orTypeCity}</Label>
+              <Label>veya şehir yazın</Label>
               <Input
-                value={location === 'all' ? '' : location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder={t.customCity}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Şehir adı..."
                 className="bg-white"
               />
             </div>
@@ -649,7 +278,7 @@ const LeadFinder = () => {
             <Button 
               onClick={handleSearch} 
               disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 h-10"
+              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 h-10"
               size="lg"
             >
               {loading ? (
@@ -659,83 +288,32 @@ const LeadFinder = () => {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5 mr-2" />
+                  <Search className="w-5 h-5 mr-2" />
                   {t.search}
                 </>
               )}
             </Button>
           </div>
 
-          {/* Keyword Filters */}
-          <div className="mt-4 pt-4 border-t border-orange-200">
-            <Label className="text-sm font-medium mb-2 flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              {t.keywords}
-            </Label>
-            <p className="text-xs text-muted-foreground mb-2">{t.selectKeywords}</p>
-            
-            {/* Preset Keywords */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {keywordPresets.map((preset) => (
-                <Button
-                  key={preset.id}
-                  variant={selectedKeywords.includes(preset.id) ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => toggleKeyword(preset.id)}
-                  className={selectedKeywords.includes(preset.id) ? 'bg-green-600 hover:bg-green-700' : 'bg-white'}
-                >
-                  {selectedKeywords.includes(preset.id) && <CheckCircle className="w-3 h-3 mr-1" />}
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
-            
-            {/* Custom Keyword Input */}
-            <div className="flex gap-2 items-center">
-              <Input
-                value={customKeyword}
-                onChange={(e) => setCustomKeyword(e.target.value)}
-                placeholder={t.customKeywordPlaceholder}
-                className="bg-white max-w-xs"
-                data-testid="custom-keyword-input"
-              />
-              {customKeyword && (
-                <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                  + {customKeyword}
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Search Buttons */}
-          <div className="mt-4 pt-4 border-t border-orange-200">
-            <p className="text-sm text-muted-foreground mb-2">{t.quickSearch}:</p>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
-                { city: 'Thessaloniki', country: 'Greece', flag: '🇬🇷' },
-                { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
-                { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
-                { city: 'Bucharest', country: 'Romania', flag: '🇷🇴' },
-                { city: 'Sofia', country: 'Bulgaria', flag: '🇧🇬' },
-                { city: 'Riyadh', country: 'Saudi Arabia', flag: '🇸🇦' },
-                { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
-              ].map(({ city, country: c, flag }) => (
-                <Button
-                  key={`${city}-${c}`}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setCountry(c);
-                    setLocation(city);
-                    setRegionFilter('all');
-                  }}
-                  className="bg-white hover:bg-orange-100"
-                >
-                  {flag} {city}
-                </Button>
-              ))}
-            </div>
+          {/* Quick Buttons */}
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-orange-200">
+            {[
+              { city: 'Berlin', country: 'Germany', flag: '🇩🇪' },
+              { city: 'Athens', country: 'Greece', flag: '🇬🇷' },
+              { city: 'Istanbul', country: 'Turkey', flag: '🇹🇷' },
+              { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱' },
+              { city: 'Dubai', country: 'UAE', flag: '🇦🇪' },
+            ].map(({ city: c, country: co, flag }) => (
+              <Button
+                key={`${c}-${co}`}
+                variant="outline"
+                size="sm"
+                onClick={() => { setCountry(co); setCity(c); }}
+                className="bg-white hover:bg-orange-100"
+              >
+                {flag} {c}
+              </Button>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -743,39 +321,29 @@ const LeadFinder = () => {
       {/* Results */}
       {results.length > 0 && (
         <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-['Manrope'] flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-green-600" />
-                  {t.foundFactories}
-                </CardTitle>
-                <CardDescription>
-                  {results.length} {t.factoriesFound} {searchTime && `(${searchTime}s)`}
-                </CardDescription>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-green-600" />
+                <span className="font-semibold">{results.length} {t.found}</span>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={selectAll}>
-                  {selectedLeads.size === results.length ? t.deselectAll : t.selectAll}
+                  {selectedLeads.size === results.length ? 'Seçimi Kaldır' : t.selectAll}
                 </Button>
                 <Button 
                   onClick={importSelectedLeads} 
                   disabled={selectedLeads.size === 0 || importing}
                   className="bg-green-600 hover:bg-green-700"
-                  data-testid="add-selected-btn"
+                  size="sm"
                 >
-                  {importing ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-2" />
-                  )}
-                  {selectedLeads.size > 0 ? `${selectedLeads.size} ${t.addSelected}` : t.notSelected}
+                  {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  {selectedLeads.size > 0 ? `${selectedLeads.size} ${t.addSelected}` : t.addSelected}
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {results.map((lead, index) => (
                 <div
                   key={index}
@@ -785,7 +353,6 @@ const LeadFinder = () => {
                       : 'border-gray-200 hover:border-orange-300 bg-white'
                   }`}
                   onClick={() => toggleSelection(index)}
-                  data-testid={`factory-card-${index}`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
@@ -795,7 +362,7 @@ const LeadFinder = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm truncate">{lead.company_name}</h3>
-                      <Badge variant="secondary" className="text-xs mt-1 mb-2">
+                      <Badge variant="secondary" className="text-xs mt-1 mb-2 bg-orange-100 text-orange-700">
                         <Factory className="w-3 h-3 mr-1" />
                         {lead.business_type || 'Factory'}
                       </Badge>
@@ -803,18 +370,12 @@ const LeadFinder = () => {
                       <div className="space-y-1 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          <span className="truncate">{lead.city}, {lead.country}</span>
+                          <span>{lead.city}, {lead.country}</span>
                         </div>
                         {lead.phone && (
                           <div className="flex items-center gap-1">
                             <Phone className="w-3 h-3" />
                             <span>{lead.phone}</span>
-                          </div>
-                        )}
-                        {lead.address && (
-                          <div className="flex items-center gap-1">
-                            <Building2 className="w-3 h-3" />
-                            <span className="truncate">{lead.address}</span>
                           </div>
                         )}
                         {lead.website && lead.website !== 'N/A' && (
@@ -826,7 +387,7 @@ const LeadFinder = () => {
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink className="w-3 h-3" />
-                            <span>Website</span>
+                            Website
                           </a>
                         )}
                       </div>
@@ -843,14 +404,9 @@ const LeadFinder = () => {
       {!loading && results.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
-            <Sparkles className="w-16 h-16 mx-auto mb-4 text-purple-300" />
+            <Factory className="w-16 h-16 mx-auto mb-4 text-orange-300" />
             <h3 className="text-xl font-semibold mb-2">{t.startSearch}</h3>
-            <p className="text-muted-foreground mb-4">{t.startSearchDesc}</p>
-            <div className="flex justify-center gap-2">
-              {keywordPresets.slice(0, 3).map(p => (
-                <Badge key={p.id} variant="outline">{p.label}</Badge>
-              ))}
-            </div>
+            <p className="text-muted-foreground">{t.startSearchDesc}</p>
           </CardContent>
         </Card>
       )}
@@ -859,14 +415,9 @@ const LeadFinder = () => {
       {loading && (
         <Card>
           <CardContent className="py-16 text-center">
-            <div className="relative">
-              <Sparkles className="w-12 h-12 mx-auto mb-4 text-purple-600 animate-pulse" />
-              <Loader2 className="w-6 h-6 absolute top-0 right-1/2 translate-x-8 text-purple-400 animate-spin" />
-            </div>
+            <Sparkles className="w-12 h-12 mx-auto mb-4 text-orange-600 animate-pulse" />
             <h3 className="text-xl font-semibold mb-2">{t.searching}</h3>
-            <p className="text-muted-foreground">
-              {location && location !== 'all' ? `${location}, ` : ''}{country} {t.searchingIn}
-            </p>
+            <p className="text-muted-foreground">Döner, Gyros, Kebap fabrikaları aranıyor...</p>
           </CardContent>
         </Card>
       )}

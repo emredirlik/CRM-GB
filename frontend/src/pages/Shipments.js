@@ -7,6 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -174,6 +181,7 @@ const Shipments = () => {
   const t = texts[language] || texts.en;
   
   const [shipments, setShipments] = useState([]);
+  const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -184,18 +192,35 @@ const Shipments = () => {
   const [quickTrackNumber, setQuickTrackNumber] = useState('');
   const [quickTrackResult, setQuickTrackResult] = useState(null);
   const [quickTracking, setQuickTracking] = useState(false);
+  const [detailViewShipment, setDetailViewShipment] = useState(null);
   
   // Form state
   const [formData, setFormData] = useState({
     tracking_number: '',
+    lead_id: '',
     recipient_name: '',
     recipient_address: '',
     notes: ''
   });
 
   useEffect(() => {
-    fetchShipments();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const [shipmentsRes, leadsRes] = await Promise.all([
+        axios.get(`${API}/shipments`),
+        axios.get(`${API}/leads`)
+      ]);
+      setShipments(shipmentsRes.data);
+      setLeads(leadsRes.data);
+    } catch (error) {
+      toast.error('Hata', { description: 'Veriler yüklenemedi' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchShipments = async () => {
     try {
@@ -203,8 +228,19 @@ const Shipments = () => {
       setShipments(response.data);
     } catch (error) {
       toast.error('Hata', { description: 'Kargolar yüklenemedi' });
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  const handleLeadSelect = (leadId) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      const address = [lead.address, lead.city, lead.country].filter(Boolean).join(', ');
+      setFormData({
+        ...formData,
+        lead_id: leadId,
+        recipient_name: lead.company_name,
+        recipient_address: address
+      });
     }
   };
 
@@ -228,6 +264,7 @@ const Shipments = () => {
     setSelectedShipment(null);
     setFormData({
       tracking_number: quickTrackNumber || '',
+      lead_id: '',
       recipient_name: '',
       recipient_address: '',
       notes: ''
@@ -242,7 +279,10 @@ const Shipments = () => {
     }
 
     try {
-      await axios.post(`${API}/shipments`, formData);
+      await axios.post(`${API}/shipments`, {
+        ...formData,
+        order_id: formData.lead_id || null
+      });
       toast.success('Başarılı', { description: 'Kargo eklendi ve takip başlatıldı' });
       setIsDialogOpen(false);
       setQuickTrackNumber('');
@@ -467,6 +507,14 @@ const Shipments = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setDetailViewShipment(shipment)}
+                          title="Detayları Görüntüle"
+                        >
+                          <Package className="w-4 h-4 text-amber-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleRefresh(shipment.id)}
                           disabled={refreshing}
                         >
@@ -529,10 +577,10 @@ const Shipments = () => {
 
       {/* Add Shipment Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{t.addShipment}</DialogTitle>
-            <DialogDescription>DHL takip numarasını girin</DialogDescription>
+            <DialogDescription>DHL takip numarasını girin ve müşteri seçin</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
@@ -544,6 +592,32 @@ const Shipments = () => {
                 placeholder="00340434161094015001"
                 className="font-mono"
               />
+            </div>
+            
+            {/* Müşteri Seçimi */}
+            <div className="space-y-2">
+              <Label>Müşteri Seç (Listeden)</Label>
+              <Select value={formData.lead_id} onValueChange={handleLeadSelect}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Müşteri seçin..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {leads.map((lead) => (
+                    <SelectItem key={lead.id} value={lead.id}>
+                      {lead.company_name} - {lead.city}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">veya manuel girin</span>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -583,6 +657,131 @@ const Shipments = () => {
               {t.save}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail View Dialog */}
+      <Dialog open={!!detailViewShipment} onOpenChange={() => setDetailViewShipment(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {detailViewShipment && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-3">
+                  <Truck className="w-6 h-6 text-amber-600" />
+                  Kargo Detayları
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-6 py-4">
+                {/* Status Banner */}
+                <div className={`p-4 rounded-lg ${getStatusConfig(detailViewShipment.status).color} border`}>
+                  <div className="flex items-center gap-3">
+                    {React.createElement(getStatusConfig(detailViewShipment.status).icon, { className: "w-8 h-8" })}
+                    <div>
+                      <p className="font-bold text-lg">
+                        {getStatusConfig(detailViewShipment.status).label[language] || detailViewShipment.status_text}
+                      </p>
+                      <p className="text-sm opacity-80">
+                        Son güncelleme: {formatDate(detailViewShipment.last_tracked)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Tracking Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Takip Numarası</p>
+                    <p className="font-mono font-bold">{detailViewShipment.tracking_number}</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Mevcut Konum</p>
+                    <p className="font-semibold flex items-center gap-1">
+                      <MapPin className="w-4 h-4 text-amber-600" />
+                      {detailViewShipment.current_location || '-'}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Alıcı</p>
+                    <p className="font-semibold">{detailViewShipment.recipient_name}</p>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Teslimat Adresi</p>
+                    <p className="text-sm">{detailViewShipment.recipient_address || '-'}</p>
+                  </div>
+                  {detailViewShipment.estimated_delivery && (
+                    <div className="p-3 bg-green-50 rounded-lg col-span-2">
+                      <p className="text-xs text-green-700 mb-1">Tahmini Teslimat</p>
+                      <p className="font-semibold text-green-800 flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {detailViewShipment.estimated_delivery}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Event Timeline */}
+                {detailViewShipment.events && detailViewShipment.events.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Takip Geçmişi ({detailViewShipment.events.length} adım)
+                    </h4>
+                    <div className="relative pl-6 border-l-2 border-amber-200 space-y-4">
+                      {detailViewShipment.events.map((event, idx) => (
+                        <div key={idx} className="relative">
+                          <div className={`absolute -left-[25px] w-4 h-4 rounded-full ${
+                            idx === 0 ? 'bg-amber-500' : 'bg-amber-200'
+                          }`} />
+                          <div className="bg-muted/50 p-3 rounded-lg">
+                            <p className="font-medium">{event.description}</p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {event.date}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {event.time}
+                              </span>
+                              {event.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {event.location}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Notes */}
+                {detailViewShipment.notes && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Notlar</p>
+                    <p>{detailViewShipment.notes}</p>
+                  </div>
+                )}
+              </div>
+              
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${detailViewShipment.tracking_number}`, '_blank')}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  DHL'de Görüntüle
+                </Button>
+                <Button onClick={() => { handleRefresh(detailViewShipment.id); setDetailViewShipment(null); }} className="bg-amber-600 hover:bg-amber-700">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Güncelle
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
