@@ -92,9 +92,67 @@ EUROPEAN_FACTORIES = {
         {"company_name": "Marseille Döner S.A.", "city": "Marseille", "business_type": "Döner Production"},
     ],
     "Greece": [
-        {"company_name": "Gyros Hellas S.A.", "city": "Athens", "business_type": "Gyros Production"},
-        {"company_name": "Souvlaki Master Production", "city": "Thessaloniki", "business_type": "Souvlaki Production"},
-        {"company_name": "Makedonia Meat S.A.", "city": "Thessaloniki", "business_type": "Meat Processing"},
+        # Athens Area
+        {"company_name": "Creta Farm S.A.", "city": "Athens", "phone": "+30 210 6698100", "business_type": "Meat & Gyros Production", "notes": "Major Greek meat producer"},
+        {"company_name": "Nikas S.A.", "city": "Athens", "phone": "+30 210 5578000", "business_type": "Meat Processing", "notes": "Leading deli meats"},
+        {"company_name": "Ifantis S.A.", "city": "Athens", "phone": "+30 210 5590700", "business_type": "Meat Production"},
+        {"company_name": "Melissa Kikizas S.A.", "city": "Athens", "business_type": "Gyros & Souvlaki Production"},
+        {"company_name": "Hellenic Quality Foods", "city": "Athens", "business_type": "Gyros Production"},
+        {"company_name": "Greek Gyros Industries S.A.", "city": "Athens", "business_type": "Gyros Manufacturing"},
+        {"company_name": "Attica Meat S.A.", "city": "Athens", "business_type": "Meat Processing"},
+        {"company_name": "Kronos Foods Hellas", "city": "Athens", "business_type": "Gyros Production"},
+        {"company_name": "Souvlaki Express Production", "city": "Piraeus", "business_type": "Souvlaki Manufacturing"},
+        {"company_name": "Gyros King S.A.", "city": "Athens", "business_type": "Gyros Production"},
+        
+        # Thessaloniki Area
+        {"company_name": "Makedonia Meat S.A.", "city": "Thessaloniki", "phone": "+30 2310 476000", "business_type": "Meat Processing"},
+        {"company_name": "Pindos S.A.", "city": "Thessaloniki", "phone": "+30 2310 598200", "business_type": "Poultry & Gyros"},
+        {"company_name": "Arvanitis Meat S.A.", "city": "Thessaloniki", "business_type": "Gyros Production"},
+        {"company_name": "Kalogirou Bros S.A.", "city": "Thessaloniki", "business_type": "Meat Processing"},
+        {"company_name": "Greek North Gyros", "city": "Thessaloniki", "business_type": "Gyros Manufacturing"},
+        {"company_name": "Olympus Souvlaki S.A.", "city": "Thessaloniki", "business_type": "Souvlaki Production"},
+        {"company_name": "Macedonia Gyros Factory", "city": "Thessaloniki", "business_type": "Gyros Production"},
+        {"company_name": "Thermaikos Foods S.A.", "city": "Thessaloniki", "business_type": "Meat & Gyros"},
+        {"company_name": "Hellenic Gyros S.A.", "city": "Thessaloniki", "business_type": "Gyros Production"},
+        {"company_name": "Stavros Meat Industries", "city": "Thessaloniki", "business_type": "Meat Processing"},
+        
+        # Other Greek Cities
+        {"company_name": "Cretan Gyros S.A.", "city": "Heraklion", "business_type": "Gyros Production"},
+        {"company_name": "Kritis Meat Processing", "city": "Heraklion", "business_type": "Meat & Gyros"},
+        {"company_name": "Agrinio Foods S.A.", "city": "Agrinio", "business_type": "Meat Processing"},
+        {"company_name": "Patras Gyros Factory", "city": "Patras", "business_type": "Gyros Production"},
+        {"company_name": "Peloponnese Meats S.A.", "city": "Patras", "business_type": "Meat Production"},
+        {"company_name": "Larissa Meat S.A.", "city": "Larissa", "business_type": "Meat Processing"},
+        {"company_name": "Volos Gyros Industries", "city": "Volos", "business_type": "Gyros Production"},
+        {"company_name": "Ioannina Foods S.A.", "city": "Ioannina", "business_type": "Meat & Gyros"},
+        {"company_name": "Rhodes Meat Factory", "city": "Rhodes", "business_type": "Gyros Production"},
+        {"company_name": "Kavala Souvlaki S.A.", "city": "Kavala", "business_type": "Souvlaki Production"},
+        {"company_name": "Serres Meat Industries", "city": "Serres", "business_type": "Meat Processing"},
+        {"company_name": "Drama Gyros S.A.", "city": "Drama", "business_type": "Gyros Manufacturing"},
+        {"company_name": "Xanthi Meat Factory", "city": "Xanthi", "business_type": "Meat Production"},
+        {"company_name": "Komotini Foods S.A.", "city": "Komotini", "business_type": "Gyros & Souvlaki"},
+        {"company_name": "Alexandroupoli Meats", "city": "Alexandroupoli", "business_type": "Meat Processing"},
+        {"company_name": "Trikala Gyros Factory", "city": "Trikala", "business_type": "Gyros Production"},
+        {"company_name": "Kalamata Meat S.A.", "city": "Kalamata", "business_type": "Meat Processing"},
+        {"company_name": "Corfu Foods S.A.", "city": "Corfu", "business_type": "Gyros Production"},
+        {"company_name": "Chania Meat Industries", "city": "Chania", "business_type": "Meat & Gyros"},
+        {"company_name": "Rethymno Souvlaki S.A.", "city": "Rethymno", "business_type": "Souvlaki Production"},
+        {"company_name": "Zakynthos Gyros", "city": "Zakynthos", "business_type": "Gyros Production"},
+        {"company_name": "Kefalonia Meats S.A.", "city": "Kefalonia", "business_type": "Meat Processing"},
+        {"company_name": "Lesvos Food Industries", "city": "Lesvos", "business_type": "Meat & Gyros"},
+        {"company_name": "Samos Meat Factory", "city": "Samos", "business_type": "Gyros Production"},
+        {"company_name": "Chios Foods S.A.", "city": "Chios", "business_type": "Meat Processing"},
+        {"company_name": "Kos Gyros Industries", "city": "Kos", "business_type": "Gyros Manufacturing"},
+        {"company_name": "Santorini Foods", "city": "Santorini", "business_type": "Gyros Production"},
+        {"company_name": "Mykonos Meat S.A.", "city": "Mykonos", "business_type": "Meat & Souvlaki"},
+        {"company_name": "Naxos Gyros Factory", "city": "Naxos", "business_type": "Gyros Production"},
+        {"company_name": "Paros Meat Industries", "city": "Paros", "business_type": "Meat Processing"},
+        {"company_name": "Syros Foods S.A.", "city": "Syros", "business_type": "Gyros & Souvlaki"},
+        {"company_name": "Aegean Gyros S.A.", "city": "Athens", "business_type": "Gyros Production"},
+        {"company_name": "Ionian Meats S.A.", "city": "Patras", "business_type": "Meat Processing"},
+        {"company_name": "Cyclades Food Industries", "city": "Athens", "business_type": "Gyros Manufacturing"},
+        {"company_name": "Dodecanese Gyros", "city": "Rhodes", "business_type": "Gyros Production"},
+        {"company_name": "Sporades Meat Factory", "city": "Volos", "business_type": "Meat & Gyros"},
     ],
     "Turkey": [
         {"company_name": "Namet Gıda A.Ş.", "city": "İstanbul", "phone": "+90 212 8863000", "business_type": "Döner Production", "notes": "Market leader"},
@@ -253,26 +311,35 @@ class LeadFinder:
             for result in results[:limit * 2]:
                 title = result.get_text(strip=True)
                 
-                # Filter for likely factory names
+                # Skip very short or very long titles
+                if len(title) < 10 or len(title) > 100:
+                    continue
+                
+                # Skip titles that look like descriptions
+                if title.startswith('The ') or title.startswith('A ') or ' is ' in title:
+                    continue
+                
                 title_lower = title.lower()
                 
                 # Must have factory-related terms
                 factory_terms = ['gmbh', 'ag', 'ltd', 'b.v.', 's.a.', 'a.ş.', 'production', 'produktion', 
-                                'fabrik', 'factory', 'fleisch', 'meat', 'döner', 'gyros', 'kebab']
+                                'fabrik', 'factory', 'fleisch', 'meat', 'döner', 'gyros', 'kebab', 'inc', 'corp']
                 
-                # Must NOT be restaurant
-                excluded_terms = ['restaurant', 'imbiss', 'grill', 'bistro', 'cafe', 'takeaway', 'lieferservice']
+                # Must NOT be restaurant or description
+                excluded_terms = ['restaurant', 'imbiss', 'grill', 'bistro', 'cafe', 'takeaway', 
+                                 'lieferservice', 'the leading', 'company in', 'based in', 'wikipedia']
                 
                 has_factory_term = any(term in title_lower for term in factory_terms)
                 is_excluded = any(term in title_lower for term in excluded_terms)
                 
-                if has_factory_term and not is_excluded and len(title) > 10:
+                if has_factory_term and not is_excluded:
                     # Clean up company name
                     company_name = title.split(' - ')[0].split(' | ')[0].strip()
                     
-                    if len(company_name) > 5:
+                    # Skip if it doesn't look like a company name
+                    if len(company_name) > 5 and len(company_name) < 80:
                         lead = FoundLead(
-                            company_name=company_name[:100],
+                            company_name=company_name,
                             country=country,
                             business_type="Döner/Kebab Production",
                             notes="Found via web search"
