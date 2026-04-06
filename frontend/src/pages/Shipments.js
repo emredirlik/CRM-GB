@@ -46,7 +46,8 @@ import {
   Navigation,
   Calendar,
   Search,
-  ExternalLink
+  ExternalLink,
+  Bell
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -462,8 +463,17 @@ const Shipments = () => {
   const handleRefreshAll = async () => {
     setRefreshing(true);
     try {
-      const response = await axios.post(`${API}/shipments/refresh-all`);
-      toast.success(`${response.data.updated_count} ${t.shipmentsUpdated}`);
+      // Get admin email from settings for delivery notifications
+      const settingsRes = await axios.get(`${API}/company-settings`);
+      const adminEmail = settingsRes.data?.email || settingsRes.data?.smtp_username;
+      
+      const response = await axios.post(`${API}/shipments/refresh-all?notify_admin=true&admin_email=${adminEmail || ''}`);
+      
+      let message = `${response.data.updated_count} ${t.shipmentsUpdated}`;
+      if (response.data.delivered_count > 0) {
+        message += ` - ${response.data.delivered_count} kargo teslim edildi!`;
+      }
+      toast.success(message);
       fetchShipments();
     } catch (error) {
       toast.error(t.error, { description: t.bulkUpdateFailed });

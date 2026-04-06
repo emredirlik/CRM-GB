@@ -315,7 +315,7 @@ const MailPage = () => {
     <div className={`${isMobile ? 'w-full' : 'w-72'} bg-[#1f1f1f] h-full flex flex-col`}>
       {/* Header */}
       <div className="p-4 flex items-center gap-3">
-        <div className="text-2xl font-normal text-white">Mail</div>
+        <div className="text-xl font-semibold text-white">Gewürzberg Mail</div>
       </div>
 
       {/* Folders */}

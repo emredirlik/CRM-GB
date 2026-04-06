@@ -3401,17 +3401,21 @@ async def delete_shipment(shipment_id: str):
     return {"status": "deleted", "id": shipment_id}
 
 @api_router.post("/shipments/{shipment_id}/refresh")
-async def refresh_shipment_tracking(shipment_id: str):
-    """Refresh tracking status for a shipment"""
+async def refresh_shipment_tracking(shipment_id: str, notify_admin: bool = False, admin_email: str = None):
+    """Refresh tracking status for a shipment and optionally notify on delivery"""
     shipment = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
     if not shipment:
         raise HTTPException(status_code=404, detail="Shipment not found")
     
+    old_status = shipment.get("status", "unknown")
+    
     # Get updated tracking info
     tracking_info = await dhl_tracker.track_package(shipment["tracking_number"])
     
+    new_status = tracking_info.get("status", shipment.get("status", "unknown"))
+    
     update_data = {
-        "status": tracking_info.get("status", shipment.get("status", "unknown")),
+        "status": new_status,
         "status_text": tracking_info.get("status_text", ""),
         "current_location": tracking_info.get("current_location", ""),
         "estimated_delivery": tracking_info.get("estimated_delivery"),
@@ -3422,7 +3426,59 @@ async def refresh_shipment_tracking(shipment_id: str):
     
     await db.shipments.update_one({"id": shipment_id}, {"$set": update_data})
     updated = await db.shipments.find_one({"id": shipment_id}, {"_id": 0})
-    return updated
+    
+    # Send notification if status changed to delivered
+    notification_sent = False
+    if new_status == "delivered" and old_status != "delivered" and notify_admin and admin_email:
+        try:
+            settings = await db.company_settings.find_one({}, {"_id": 0})
+            if settings and settings.get('smtp_host'):
+                # Get lead info for customer name
+                lead = await db.leads.find_one({"id": shipment.get('lead_id')}, {"_id": 0})
+                customer_name = lead.get('company') if lead else shipment.get('company_name', 'Bilinmiyor')
+                
+                subject = f"📦 Kargo Teslim Edildi - {shipment['tracking_number']}"
+                body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background: #d1fae5; padding: 30px; border-radius: 10px;">
+                        <h2 style="color: #059669;">✅ Kargo Teslim Edildi!</h2>
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p><strong>Takip No:</strong> {shipment['tracking_number']}</p>
+                            <p><strong>Müşteri:</strong> {customer_name}</p>
+                            <p><strong>Konum:</strong> {tracking_info.get('current_location', 'Belirtilmedi')}</p>
+                            <p><strong>Teslim Tarihi:</strong> {datetime.now(timezone.utc).strftime('%d.%m.%Y %H:%M')}</p>
+                        </div>
+                        <p style="color: #6b7280; font-size: 12px;">Bu bildirim otomatik olarak gönderilmiştir.</p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg = MIMEMultipart()
+                msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+                msg['To'] = admin_email
+                msg['Subject'] = subject
+                msg.attach(MIMEText(body, 'html', 'utf-8'))
+                
+                smtp_host = settings['smtp_host']
+                smtp_port = int(settings.get('smtp_port', 587))
+                
+                if settings.get('use_ssl'):
+                    server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+                else:
+                    server = smtplib.SMTP(smtp_host, smtp_port)
+                    if settings.get('use_tls', True):
+                        server.starttls()
+                
+                server.login(settings['smtp_username'], settings['smtp_password'])
+                server.send_message(msg)
+                server.quit()
+                notification_sent = True
+        except Exception as e:
+            logger.error(f"Delivery notification failed: {e}")
+    
+    return {**updated, "notification_sent": notification_sent, "status_changed": old_status != new_status}
 
 @api_router.get("/tracking/{tracking_number}")
 async def track_package(tracking_number: str):
@@ -3431,8 +3487,8 @@ async def track_package(tracking_number: str):
     return result
 
 @api_router.post("/shipments/refresh-all")
-async def refresh_all_shipments():
-    """Refresh tracking for all active shipments"""
+async def refresh_all_shipments(notify_admin: bool = False, admin_email: str = None):
+    """Refresh tracking for all active shipments and send delivery notifications"""
     # Get all non-delivered shipments
     shipments = await db.shipments.find(
         {"status": {"$nin": ["delivered", "exception"]}},
@@ -3440,12 +3496,16 @@ async def refresh_all_shipments():
     ).to_list(100)
     
     updated_count = 0
+    delivered_notifications = []
+    
     for shipment in shipments:
         try:
+            old_status = shipment.get("status", "unknown")
             tracking_info = await dhl_tracker.track_package(shipment["tracking_number"])
+            new_status = tracking_info.get("status", shipment.get("status"))
             
             update_data = {
-                "status": tracking_info.get("status", shipment.get("status")),
+                "status": new_status,
                 "status_text": tracking_info.get("status_text", ""),
                 "current_location": tracking_info.get("current_location", ""),
                 "estimated_delivery": tracking_info.get("estimated_delivery"),
@@ -3457,13 +3517,75 @@ async def refresh_all_shipments():
             await db.shipments.update_one({"id": shipment["id"]}, {"$set": update_data})
             updated_count += 1
             
+            # Track delivered shipments for notification
+            if new_status == "delivered" and old_status != "delivered":
+                delivered_notifications.append({
+                    "tracking_number": shipment["tracking_number"],
+                    "lead_id": shipment.get("lead_id"),
+                    "company_name": shipment.get("company_name")
+                })
+            
             # Small delay to avoid rate limiting
             await asyncio.sleep(0.5)
             
         except Exception as e:
             logger.error(f"Failed to refresh shipment {shipment['id']}: {e}")
     
-    return {"status": "success", "updated_count": updated_count, "total": len(shipments)}
+    # Send consolidated notification if there are deliveries
+    if delivered_notifications and notify_admin and admin_email:
+        try:
+            settings = await db.company_settings.find_one({}, {"_id": 0})
+            if settings and settings.get('smtp_host'):
+                delivery_list = ""
+                for d in delivered_notifications:
+                    lead = await db.leads.find_one({"id": d.get('lead_id')}, {"_id": 0})
+                    customer = lead.get('company') if lead else d.get('company_name', 'Bilinmiyor')
+                    delivery_list += f"<li><strong>{d['tracking_number']}</strong> - {customer}</li>"
+                
+                subject = f"📦 {len(delivered_notifications)} Kargo Teslim Edildi!"
+                body = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <div style="max-width: 600px; margin: 0 auto; background: #d1fae5; padding: 30px; border-radius: 10px;">
+                        <h2 style="color: #059669;">✅ Teslim Edilen Kargolar</h2>
+                        <p>Aşağıdaki kargolar başarıyla teslim edildi:</p>
+                        <ul style="background: white; padding: 20px 20px 20px 40px; border-radius: 8px;">
+                            {delivery_list}
+                        </ul>
+                        <p style="color: #6b7280; font-size: 12px; margin-top: 20px;">Bu bildirim otomatik kargo takip sistemi tarafından gönderilmiştir.</p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg = MIMEMultipart()
+                msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+                msg['To'] = admin_email
+                msg['Subject'] = subject
+                msg.attach(MIMEText(body, 'html', 'utf-8'))
+                
+                smtp_host = settings['smtp_host']
+                smtp_port = int(settings.get('smtp_port', 587))
+                
+                if settings.get('use_ssl'):
+                    server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+                else:
+                    server = smtplib.SMTP(smtp_host, smtp_port)
+                    if settings.get('use_tls', True):
+                        server.starttls()
+                
+                server.login(settings['smtp_username'], settings['smtp_password'])
+                server.send_message(msg)
+                server.quit()
+        except Exception as e:
+            logger.error(f"Bulk delivery notification failed: {e}")
+    
+    return {
+        "status": "success", 
+        "updated_count": updated_count, 
+        "total": len(shipments),
+        "delivered_count": len(delivered_notifications)
+    }
 
 # ===================== AI SERVICES ENDPOINTS =====================
 

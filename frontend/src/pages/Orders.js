@@ -96,6 +96,10 @@ const Orders = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [previewOrder, setPreviewOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -337,31 +341,43 @@ const Orders = () => {
     }
   };
 
-  // Send order via email
-  const sendOrderByEmail = async (order) => {
+  // Open email dialog for order
+  const openEmailDialog = (order) => {
+    setSelectedOrder(order);
     const lead = leads.find(l => l.id === order.lead_id);
-    if (!lead?.email) {
-      toast.error('Hata', { description: 'Müşteri e-posta adresi bulunamadı' });
+    setEmailTo(lead?.email || '');
+    setEmailSubject(`Sipariş Formu - ${order.company_name || lead?.company || ''}`);
+    setIsEmailDialogOpen(true);
+  };
+
+  // Send order via email to custom address
+  const sendOrderByEmail = async () => {
+    if (!emailTo) {
+      toast.error('Hata', { description: 'E-posta adresi gerekli' });
       return;
     }
     
+    setSendingEmail(true);
     try {
       // Generate PDF and send
-      const pdfResponse = await axios.get(`${API}/orders/${order.id}/pdf?lang=${language}`, {
+      const pdfResponse = await axios.get(`${API}/orders/${selectedOrder.id}/pdf?lang=${language}`, {
         responseType: 'blob'
       });
       
       const formData = new FormData();
-      formData.append('to', lead.email);
-      formData.append('subject', `Sipariş Formu - ${order.company_name || lead.company}`);
-      formData.append('body', `<p>Sayın ${lead.company || order.company_name},</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla</p>`);
+      formData.append('to', emailTo);
+      formData.append('subject', emailSubject);
+      formData.append('body', `<p>Sayın Yetkili,</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla</p>`);
       formData.append('html', 'true');
-      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `siparis_${order.id.slice(0,8)}.pdf`);
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `siparis_${selectedOrder.id.slice(0,8)}.pdf`);
       
       await axios.post(`${API}/mail/send-with-attachments`, formData);
-      toast.success('Mail Gönderildi', { description: `Sipariş ${lead.email} adresine gönderildi` });
+      toast.success('Mail Gönderildi', { description: `Sipariş ${emailTo} adresine gönderildi` });
+      setIsEmailDialogOpen(false);
     } catch (error) {
       toast.error('Hata', { description: 'Mail gönderilemedi' });
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -585,7 +601,7 @@ const Orders = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => sendOrderByEmail(order)}
+                        onClick={() => openEmailDialog(order)}
                         title="Mail ile Gönder"
                         className="h-8 w-8 p-0"
                         data-testid={`email-order-${order.id}`}
@@ -977,6 +993,49 @@ const Orders = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Send Dialog */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Siparişi Mail ile Gönder</DialogTitle>
+            <DialogDescription>
+              Sipariş PDF'ini istediğiniz e-posta adresine gönderin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>E-posta Adresi</Label>
+              <Input
+                type="email"
+                value={emailTo}
+                onChange={(e) => setEmailTo(e.target.value)}
+                placeholder="ornek@email.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Konu</Label>
+              <Input
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Mail konusu"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
+              İptal
+            </Button>
+            <Button 
+              onClick={sendOrderByEmail} 
+              disabled={sendingEmail || !emailTo}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {sendingEmail ? 'Gönderiliyor...' : 'Gönder'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

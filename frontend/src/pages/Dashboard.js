@@ -933,7 +933,7 @@ const Dashboard = () => {
                   <SelectItem value="">No customer</SelectItem>
                   {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
-                      {lead.company_name} - {lead.city}
+                      {lead.company || lead.company_name} - {lead.city}
                     </SelectItem>
                   ))}
                 </SelectContent>
