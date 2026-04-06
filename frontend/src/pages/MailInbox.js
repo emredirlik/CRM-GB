@@ -64,6 +64,7 @@ const CATEGORIES = [
 const MailPage = () => {
   const { t } = useLanguage();
   const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [emails, setEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -81,6 +82,7 @@ const MailPage = () => {
   const [replyMode, setReplyMode] = useState(null);
   const [signature, setSignature] = useState('');
   const [isSignatureOpen, setIsSignatureOpen] = useState(false);
+  const [attachments, setAttachments] = useState([]);
 
   // Gmail-style folders
   const folders = [
@@ -168,6 +170,33 @@ const MailPage = () => {
     editorRef.current?.focus();
   };
 
+  // Handle attachment selection
+  const handleAttachmentSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      const newAttachments = files.map(file => ({
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }));
+      setAttachments(prev => [...prev, ...newAttachments]);
+      toast.success(`${files.length} dosya eklendi`);
+    }
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const handleSendEmail = async () => {
     if (!composeData.to || !composeData.subject) {
       toast.error('Alıcı ve konu gerekli');
@@ -176,15 +205,32 @@ const MailPage = () => {
     const bodyWithSignature = (editorRef.current?.innerHTML || '') + signature;
     setSending(true);
     try {
-      await axios.post(`${API}/mail/send`, {
-        to: composeData.to,
-        subject: composeData.subject,
-        body: bodyWithSignature,
-        html: true
-      });
+      // If there are attachments, send as FormData
+      if (attachments.length > 0) {
+        const formData = new FormData();
+        formData.append('to', composeData.to);
+        formData.append('subject', composeData.subject);
+        formData.append('body', bodyWithSignature);
+        formData.append('html', 'true');
+        attachments.forEach((att, index) => {
+          formData.append(`attachments`, att.file);
+        });
+        
+        await axios.post(`${API}/mail/send-with-attachments`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        await axios.post(`${API}/mail/send`, {
+          to: composeData.to,
+          subject: composeData.subject,
+          body: bodyWithSignature,
+          html: true
+        });
+      }
       toast.success('Mail gönderildi');
       setIsComposeOpen(false);
       setComposeData({ to: '', cc: '', bcc: '', subject: '', body: '' });
+      setAttachments([]);
       if (editorRef.current) editorRef.current.innerHTML = '';
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Gönderilemedi');
@@ -195,6 +241,7 @@ const MailPage = () => {
 
   const handleReply = (email, mode = 'reply') => {
     setReplyMode(mode);
+    setAttachments([]); // Clear attachments on reply
     const replyBody = mode === 'forward' 
       ? `<br><br><div style="border-left: 3px solid #3b82f6; padding-left: 12px; margin-left: 0; color: #9ca3af;">
           <p style="margin:0"><b>Kimden:</b> ${email.from_name} &lt;${email.from_email}&gt;</p>
@@ -221,6 +268,7 @@ const MailPage = () => {
   const openCompose = () => {
     setReplyMode(null);
     setComposeData({ to: '', cc: '', bcc: '', subject: '', body: '' });
+    setAttachments([]);
     setIsComposeOpen(true);
     setTimeout(() => {
       if (editorRef.current) editorRef.current.innerHTML = '';
@@ -688,10 +736,44 @@ const MailPage = () => {
             <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]" onClick={() => execCommand('insertUnorderedList')}>
               <List className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <Paperclip className="w-4 h-4" />
             </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleAttachmentSelect}
+            />
           </div>
+          
+          {/* Attachments Preview */}
+          {attachments.length > 0 && (
+            <div className="px-4 py-2 border-t border-[#3c4043] flex flex-wrap gap-2">
+              {attachments.map((att, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[#3c4043] rounded-lg text-sm text-[#e8eaed]"
+                >
+                  <Paperclip className="w-3 h-3 text-[#9aa0a6]" />
+                  <span className="max-w-[150px] truncate">{att.name}</span>
+                  <span className="text-[10px] text-[#9aa0a6]">({formatFileSize(att.size)})</span>
+                  <button 
+                    onClick={() => removeAttachment(index)}
+                    className="ml-1 text-[#9aa0a6] hover:text-red-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           
           {/* Footer */}
           <div className="flex items-center justify-between px-3 py-2.5 border-t border-[#3c4043] bg-[#2d2d2d] rounded-b-lg">

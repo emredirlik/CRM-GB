@@ -71,6 +71,7 @@ const Recipes = () => {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailLang, setEmailLang] = useState('tr'); // Language for email translation
 
   useEffect(() => {
     fetchData();
@@ -233,9 +234,58 @@ const Recipes = () => {
     setSelectedRecipe(recipe);
     const lead = leads.find(l => l.id === recipe.lead_id);
     setSelectedLeadId(recipe.lead_id || '');
-    setEmailSubject(`Reçete: ${recipe.name} (${recipe.product_code})`);
-    setEmailBody(`Sayın ${lead?.company_name || 'Müşteri'},\n\nEkte ${recipe.name} reçetesini bulabilirsiniz.\n\nÜrün Kodu: ${recipe.product_code}\n\nSaygılarımızla,\nGewürzberg GmbH`);
+    setEmailLang('tr'); // Default to Turkish
+    
+    // Set email content based on language
+    const langTemplates = {
+      tr: {
+        subject: `Reçete: ${recipe.name} (${recipe.product_code})`,
+        body: `Sayın ${lead?.company || 'Müşteri'},\n\nEkte ${recipe.name} reçetesini bulabilirsiniz.\n\nÜrün Kodu: ${recipe.product_code}\n\nSaygılarımızla,\nGewürzberg GmbH`
+      },
+      de: {
+        subject: `Rezept: ${recipe.name} (${recipe.product_code})`,
+        body: `Sehr geehrte/r ${lead?.company || 'Kunde'},\n\nim Anhang finden Sie das Rezept für ${recipe.name}.\n\nProduktcode: ${recipe.product_code}\n\nMit freundlichen Grüßen,\nGewürzberg GmbH`
+      },
+      en: {
+        subject: `Recipe: ${recipe.name} (${recipe.product_code})`,
+        body: `Dear ${lead?.company || 'Customer'},\n\nPlease find attached the recipe for ${recipe.name}.\n\nProduct Code: ${recipe.product_code}\n\nBest regards,\nGewürzberg GmbH`
+      },
+      pl: {
+        subject: `Przepis: ${recipe.name} (${recipe.product_code})`,
+        body: `Szanowni Państwo ${lead?.company || 'Klient'},\n\nW załączniku znajduje się przepis na ${recipe.name}.\n\nKod produktu: ${recipe.product_code}\n\nZ poważaniem,\nGewürzberg GmbH`
+      }
+    };
+    
+    setEmailSubject(langTemplates.tr.subject);
+    setEmailBody(langTemplates.tr.body);
     setIsEmailDialogOpen(true);
+  };
+
+  const updateEmailLanguage = (lang) => {
+    setEmailLang(lang);
+    const lead = leads.find(l => l.id === selectedLeadId);
+    
+    const langTemplates = {
+      tr: {
+        subject: `Reçete: ${selectedRecipe?.name} (${selectedRecipe?.product_code})`,
+        body: `Sayın ${lead?.company || 'Müşteri'},\n\nEkte ${selectedRecipe?.name} reçetesini bulabilirsiniz.\n\nÜrün Kodu: ${selectedRecipe?.product_code}\n\nSaygılarımızla,\nGewürzberg GmbH`
+      },
+      de: {
+        subject: `Rezept: ${selectedRecipe?.name} (${selectedRecipe?.product_code})`,
+        body: `Sehr geehrte/r ${lead?.company || 'Kunde'},\n\nim Anhang finden Sie das Rezept für ${selectedRecipe?.name}.\n\nProduktcode: ${selectedRecipe?.product_code}\n\nMit freundlichen Grüßen,\nGewürzberg GmbH`
+      },
+      en: {
+        subject: `Recipe: ${selectedRecipe?.name} (${selectedRecipe?.product_code})`,
+        body: `Dear ${lead?.company || 'Customer'},\n\nPlease find attached the recipe for ${selectedRecipe?.name}.\n\nProduct Code: ${selectedRecipe?.product_code}\n\nBest regards,\nGewürzberg GmbH`
+      },
+      pl: {
+        subject: `Przepis: ${selectedRecipe?.name} (${selectedRecipe?.product_code})`,
+        body: `Szanowni Państwo ${lead?.company || 'Klient'},\n\nW załączniku znajduje się przepis na ${selectedRecipe?.name}.\n\nKod produktu: ${selectedRecipe?.product_code}\n\nZ poważaniem,\nGewürzberg GmbH`
+      }
+    };
+    
+    setEmailSubject(langTemplates[lang].subject);
+    setEmailBody(langTemplates[lang].body);
   };
 
   const sendRecipeEmail = async () => {
@@ -740,9 +790,23 @@ const Recipes = () => {
                 <SelectContent>
                   {leads.map(lead => (
                     <SelectItem key={lead.id} value={lead.id}>
-                      {lead.company_name} - {lead.email}
+                      {lead.company || lead.company_name} - {lead.email}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Dil / Language</Label>
+              <Select value={emailLang} onValueChange={updateEmailLanguage}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Dil seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tr">🇹🇷 Türkçe</SelectItem>
+                  <SelectItem value="de">🇩🇪 Deutsch</SelectItem>
+                  <SelectItem value="en">🇬🇧 English</SelectItem>
+                  <SelectItem value="pl">🇵🇱 Polski</SelectItem>
                 </SelectContent>
               </Select>
             </div>

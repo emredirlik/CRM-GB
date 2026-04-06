@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -317,6 +317,64 @@ const Orders = () => {
     }
   };
 
+  // Send payment reminder
+  const sendPaymentReminder = async (orderId) => {
+    try {
+      const settings = await axios.get(`${API}/company-settings`);
+      const adminEmail = settings.data?.email || settings.data?.smtp_username;
+      
+      const response = await axios.post(`${API}/orders/${orderId}/send-payment-reminder?admin_email=${adminEmail}`);
+      if (response.data.customer_sent) {
+        toast.success('Hatırlatma Gönderildi', { description: `Müşteriye ödeme hatırlatma maili gönderildi (${response.data.days_overdue} gün gecikmiş)` });
+      } else {
+        toast.warning('Kısmi Başarı', { description: 'Müşteri e-postası bulunamadı, sadece admin bilgilendirildi' });
+      }
+      if (response.data.admin_sent) {
+        toast.info('Admin Bildirimi', { description: 'Size de bildirim gönderildi' });
+      }
+    } catch (error) {
+      toast.error('Hata', { description: 'Hatırlatma gönderilemedi' });
+    }
+  };
+
+  // Send order via email
+  const sendOrderByEmail = async (order) => {
+    const lead = leads.find(l => l.id === order.lead_id);
+    if (!lead?.email) {
+      toast.error('Hata', { description: 'Müşteri e-posta adresi bulunamadı' });
+      return;
+    }
+    
+    try {
+      // Generate PDF and send
+      const pdfResponse = await axios.get(`${API}/orders/${order.id}/pdf?lang=${language}`, {
+        responseType: 'blob'
+      });
+      
+      const formData = new FormData();
+      formData.append('to', lead.email);
+      formData.append('subject', `Sipariş Formu - ${order.company_name || lead.company}`);
+      formData.append('body', `<p>Sayın ${lead.company || order.company_name},</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla</p>`);
+      formData.append('html', 'true');
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `siparis_${order.id.slice(0,8)}.pdf`);
+      
+      await axios.post(`${API}/mail/send-with-attachments`, formData);
+      toast.success('Mail Gönderildi', { description: `Sipariş ${lead.email} adresine gönderildi` });
+    } catch (error) {
+      toast.error('Hata', { description: 'Mail gönderilemedi' });
+    }
+  };
+
+  // Calculate days overdue for an order
+  const getDaysOverdue = (order) => {
+    if (!order.payment_due_date) return 0;
+    const today = new Date();
+    const dueDate = new Date(order.payment_due_date);
+    const diffTime = today - dueDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 0;
+  };
+
   const filteredOrders = orders.filter(order => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -478,6 +536,16 @@ const Orders = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {/* Show days overdue indicator */}
+                      {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3 text-red-500" />
+                          <span className="text-xs text-red-600 font-medium">{getDaysOverdue(order)} gün gecikmiş</span>
+                        </div>
+                      )}
+                      {order.payment_due_date && order.payment_status !== 'paid' && (
+                        <p className="text-xs text-muted-foreground mt-0.5">Vade: {order.payment_due_date}</p>
+                      )}
                     </div>
                   </div>
 
@@ -514,6 +582,29 @@ const Orders = () => {
                       >
                         <FileDown className="w-4 h-4 text-blue-600" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => sendOrderByEmail(order)}
+                        title="Mail ile Gönder"
+                        className="h-8 w-8 p-0"
+                        data-testid={`email-order-${order.id}`}
+                      >
+                        <Mail className="w-4 h-4 text-purple-600" />
+                      </Button>
+                      {/* Payment reminder button - only show if payment overdue */}
+                      {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => sendPaymentReminder(order.id)}
+                          title="Ödeme Hatırlatması Gönder"
+                          className="h-8 w-8 p-0"
+                          data-testid={`payment-reminder-${order.id}`}
+                        >
+                          <Bell className="w-4 h-4 text-orange-500" />
+                        </Button>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button

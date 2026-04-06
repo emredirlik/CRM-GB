@@ -1930,8 +1930,13 @@ async def get_order_pdf(order_id: str, lang: str = 'tr'):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
+    # Get lead info for customer details (email, phone, address, tax)
+    lead_info = None
+    if order.get('lead_id'):
+        lead_info = await db.leads.find_one({"id": order['lead_id']}, {"_id": 0})
+    
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_order_pdf(order, settings, lang=lang)
+    pdf_content = generate_order_pdf(order, settings, lang=lang, lead_info=lead_info)
     
     return Response(
         content=pdf_content,
@@ -1951,15 +1956,21 @@ async def export_leads_pdf(lang: str = 'en'):
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     
-    # Register DejaVu fonts for Turkish/Polish character support
+    # Register fonts for Turkish/Polish character support (FreeSans has better coverage)
     try:
-        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
-        FONT = 'DejaVu'
-        FONT_BOLD = 'DejaVu-Bold'
+        pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/freefont/FreeSans.ttf'))
+        pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf'))
+        FONT = 'FreeSans'
+        FONT_BOLD = 'FreeSans-Bold'
     except:
-        FONT = 'Helvetica'
-        FONT_BOLD = 'Helvetica-Bold'
+        try:
+            pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
+            pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
+            FONT = 'FreeSans'
+            FONT_BOLD = 'FreeSans-Bold'
+        except:
+            FONT = 'Helvetica'
+            FONT_BOLD = 'Helvetica-Bold'
     
     # Multi-language labels
     labels = {
@@ -2021,8 +2032,13 @@ async def get_recipe_pdf(recipe_id: str, lang: str = 'en'):
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     
+    # Get lead info for customer details
+    lead_info = None
+    if recipe.get('lead_id'):
+        lead_info = await db.leads.find_one({"id": recipe['lead_id']}, {"_id": 0})
+    
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
-    pdf_content = generate_recipe_pdf(recipe, settings, lang=lang)
+    pdf_content = generate_recipe_pdf(recipe, settings, lang=lang, lead_info=lead_info)
     
     return Response(
         content=pdf_content,
@@ -2037,14 +2053,19 @@ async def email_recipe(recipe_id: str, to_email: str, background_tasks: Backgrou
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     
+    # Get lead info for customer details
+    lead_info = None
+    if recipe.get('lead_id'):
+        lead_info = await db.leads.find_one({"id": recipe['lead_id']}, {"_id": 0})
+    
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
     smtp_settings = await db.smtp_settings.find_one({}, {"_id": 0})
     
     if not smtp_settings:
         raise HTTPException(status_code=400, detail="SMTP settings not configured")
     
-    # Generate PDF using new function
-    pdf_content = generate_recipe_pdf(recipe, settings)
+    # Generate PDF using new function with lead info
+    pdf_content = generate_recipe_pdf(recipe, settings, lead_info=lead_info)
     
     # Send email with attachment
     async def send_recipe_email():
@@ -3571,6 +3592,7 @@ class MailSendRequest(BaseModel):
     to: str
     subject: str
     body: str
+    html: bool = False
 
 @api_router.get("/mail/inbox")
 async def get_mail_inbox():
@@ -3696,7 +3718,12 @@ async def send_mail(request: MailSendRequest):
         msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
         msg['To'] = request.to
         msg['Subject'] = request.subject
-        msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
+        
+        # Use HTML content if html flag is set
+        if request.html:
+            msg.attach(MIMEText(request.body, 'html', 'utf-8'))
+        else:
+            msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
         
         smtp_host = settings['smtp_host']
         smtp_port = int(settings.get('smtp_port', 587))
@@ -3727,6 +3754,69 @@ async def send_mail(request: MailSendRequest):
         logger.error(f"SMTP error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/mail/send-with-attachments")
+async def send_mail_with_attachments(
+    to: str = Form(...),
+    subject: str = Form(...),
+    body: str = Form(...),
+    html: str = Form("false"),
+    attachments: List[UploadFile] = File(default=[])
+):
+    """Send email with attachments via SMTP"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('smtp_host'):
+        raise HTTPException(status_code=400, detail="SMTP not configured")
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+        msg['To'] = to
+        msg['Subject'] = subject
+        
+        # Use HTML content if html flag is set
+        if html.lower() == 'true':
+            msg.attach(MIMEText(body, 'html', 'utf-8'))
+        else:
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+        
+        # Attach files
+        for attachment in attachments:
+            content = await attachment.read()
+            part = MIMEApplication(content, Name=attachment.filename)
+            part['Content-Disposition'] = f'attachment; filename="{attachment.filename}"'
+            msg.attach(part)
+        
+        smtp_host = settings['smtp_host']
+        smtp_port = int(settings.get('smtp_port', 587))
+        
+        if settings.get('use_ssl'):
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            if settings.get('use_tls', True):
+                server.starttls()
+        
+        server.login(settings['smtp_username'], settings['smtp_password'])
+        server.send_message(msg)
+        server.quit()
+        
+        # Log to email_log
+        await db.email_log.insert_one({
+            "id": str(uuid.uuid4()),
+            "to": to,
+            "subject": subject,
+            "body": body,
+            "attachments": [a.filename for a in attachments],
+            "status": "sent",
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {"success": True, "message": "Email sent with attachments"}
+    except Exception as e:
+        logger.error(f"SMTP error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ===================== PRODUCT VIDEOS ROUTES =====================
 
 import shutil
@@ -3750,7 +3840,8 @@ async def upload_product_video(
     file: UploadFile = File(...),
     title: str = Form(...),
     description: str = Form(''),
-    product_id: str = Form(None)
+    product_id: str = Form(None),
+    folder_id: str = Form(None)
 ):
     """Upload a product video"""
     # Validate file type
@@ -3777,6 +3868,7 @@ async def upload_product_video(
             "title": title,
             "description": description,
             "product_id": product_id,
+            "folder_id": folder_id,
             "filename": filename,
             "url": f"/api/product-videos/stream/{video_id}",
             "file_size": file_size,
@@ -3830,6 +3922,70 @@ async def delete_product_video(video_id: str):
     await db.product_videos.delete_one({"id": video_id})
     
     return {"message": "Video deleted"}
+
+@api_router.put("/product-videos/{video_id}/move")
+async def move_video_to_folder(video_id: str, folder_id: str = None):
+    """Move a video to a different folder (or root if folder_id is null)"""
+    video = await db.product_videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    # Validate folder if provided
+    if folder_id:
+        folder = await db.video_folders.find_one({"id": folder_id}, {"_id": 0})
+        if not folder:
+            raise HTTPException(status_code=404, detail="Folder not found")
+    
+    await db.product_videos.update_one(
+        {"id": video_id},
+        {"$set": {"folder_id": folder_id}}
+    )
+    
+    return {"message": "Video moved", "video_id": video_id, "folder_id": folder_id}
+
+@api_router.post("/product-videos/{video_id}/copy")
+async def copy_video_to_folder(video_id: str, folder_id: str = None):
+    """Copy a video to a different folder"""
+    video = await db.product_videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    # Validate folder if provided
+    if folder_id:
+        folder = await db.video_folders.find_one({"id": folder_id}, {"_id": 0})
+        if not folder:
+            raise HTTPException(status_code=404, detail="Folder not found")
+    
+    # Create new video record (copy)
+    new_video_id = str(uuid.uuid4())
+    
+    # Copy the actual file
+    old_file_path = UPLOAD_DIR / video['filename']
+    if not old_file_path.exists():
+        raise HTTPException(status_code=404, detail="Video file not found")
+    
+    ext = video['filename'].split('.')[-1] if '.' in video['filename'] else 'mp4'
+    new_filename = f"{new_video_id}.{ext}"
+    new_file_path = UPLOAD_DIR / new_filename
+    
+    shutil.copy2(old_file_path, new_file_path)
+    
+    new_video_data = {
+        "id": new_video_id,
+        "title": f"{video['title']} (Kopya)",
+        "description": video.get('description', ''),
+        "product_id": video.get('product_id'),
+        "folder_id": folder_id,
+        "filename": new_filename,
+        "url": f"/api/product-videos/stream/{new_video_id}",
+        "file_size": video.get('file_size', 0),
+        "content_type": video.get('content_type', 'video/mp4'),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.product_videos.insert_one(new_video_data)
+    
+    return {"message": "Video copied", "new_video_id": new_video_id, "folder_id": folder_id}
 
 # ===================== ADMIN USER MANAGEMENT =====================
 
@@ -4915,10 +5071,10 @@ async def generate_activity_pdf_report(request: ActivityReportRequest):
     import io
     import base64
     
-    # Register font
+    # Register font for Turkish character support
     try:
-        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-        font_name = 'DejaVu'
+        pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/freefont/FreeSans.ttf'))
+        font_name = 'FreeSans'
     except:
         font_name = 'Helvetica'
     
@@ -5384,6 +5540,217 @@ async def get_segment_recommendations(segment_key: str):
         "priority": "unknown",
         "contact_frequency": "N/A"
     })
+
+# ============== PAYMENT REMINDER SYSTEM ==============
+
+@api_router.get("/orders/overdue")
+async def get_overdue_orders():
+    """Get all orders with overdue payments including days overdue"""
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    orders = await db.orders.find({
+        "payment_status": {"$in": ["pending", "partial"]}
+    }, {"_id": 0}).to_list(500)
+    
+    overdue_orders = []
+    for order in orders:
+        due_date = order.get('payment_due_date')
+        if due_date and due_date < today:
+            # Calculate days overdue
+            due_dt = datetime.strptime(due_date, '%Y-%m-%d')
+            today_dt = datetime.strptime(today, '%Y-%m-%d')
+            days_overdue = (today_dt - due_dt).days
+            
+            # Get customer info
+            lead = await db.leads.find_one({"id": order.get('lead_id')}, {"_id": 0})
+            
+            overdue_orders.append({
+                **order,
+                "days_overdue": days_overdue,
+                "customer_name": lead.get('company', '') if lead else order.get('company_name', ''),
+                "customer_email": lead.get('email', '') if lead else '',
+                "customer_phone": lead.get('phone', '') if lead else ''
+            })
+    
+    # Sort by days overdue (most overdue first)
+    overdue_orders.sort(key=lambda x: x.get('days_overdue', 0), reverse=True)
+    
+    return overdue_orders
+
+@api_router.post("/orders/{order_id}/send-payment-reminder")
+async def send_payment_reminder(order_id: str, admin_email: str = None):
+    """Send payment reminder email to customer and notification to admin"""
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Get customer and company settings
+    lead = await db.leads.find_one({"id": order.get('lead_id')}, {"_id": 0})
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('smtp_host'):
+        raise HTTPException(status_code=400, detail="SMTP not configured")
+    
+    # Calculate days overdue
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    due_date = order.get('payment_due_date', today)
+    days_overdue = 0
+    if due_date < today:
+        due_dt = datetime.strptime(due_date, '%Y-%m-%d')
+        today_dt = datetime.strptime(today, '%Y-%m-%d')
+        days_overdue = (today_dt - due_dt).days
+    
+    customer_email = lead.get('email') if lead else None
+    customer_name = lead.get('company', order.get('company_name', '')) if lead else order.get('company_name', 'Değerli Müşterimiz')
+    order_total = order.get('total_price', 0)
+    
+    # Send reminder to customer if email exists
+    results = {"customer_sent": False, "admin_sent": False}
+    
+    if customer_email:
+        try:
+            customer_subject = f"Ödeme Hatırlatma - Sipariş #{order_id[:8].upper()}"
+            customer_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background: #f9fafb; padding: 30px; border-radius: 10px;">
+                    <h2 style="color: #4f46e5;">Ödeme Hatırlatması</h2>
+                    <p>Sayın <strong>{customer_name}</strong>,</p>
+                    <p>Aşağıdaki siparişinizin ödeme vadesi {'<span style="color:red;font-weight:bold;">' + str(days_overdue) + ' gün önce</span>' if days_overdue > 0 else 'bugün'} {'geçmiştir' if days_overdue > 0 else 'dolmaktadır'}:</p>
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4f46e5;">
+                        <p><strong>Sipariş No:</strong> #{order_id[:8].upper()}</p>
+                        <p><strong>Tutar:</strong> €{order_total:,.2f}</p>
+                        <p><strong>Vade Tarihi:</strong> {due_date}</p>
+                        {'<p style="color:red;"><strong>Gecikme:</strong> ' + str(days_overdue) + ' gün</p>' if days_overdue > 0 else ''}
+                    </div>
+                    <p>Ödemenizi en kısa sürede gerçekleştirmenizi rica ederiz.</p>
+                    <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">Saygılarımızla,<br/>{settings.get('company_name', 'Gewürzberg GmbH')}</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg = MIMEMultipart()
+            msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+            msg['To'] = customer_email
+            msg['Subject'] = customer_subject
+            msg.attach(MIMEText(customer_body, 'html', 'utf-8'))
+            
+            smtp_host = settings['smtp_host']
+            smtp_port = int(settings.get('smtp_port', 587))
+            
+            if settings.get('use_ssl'):
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port)
+                if settings.get('use_tls', True):
+                    server.starttls()
+            
+            server.login(settings['smtp_username'], settings['smtp_password'])
+            server.send_message(msg)
+            server.quit()
+            
+            results["customer_sent"] = True
+            
+            # Log to reminder history
+            await db.payment_reminders.insert_one({
+                "id": str(uuid.uuid4()),
+                "order_id": order_id,
+                "customer_email": customer_email,
+                "days_overdue": days_overdue,
+                "sent_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+        except Exception as e:
+            logger.error(f"Customer reminder failed: {e}")
+    
+    # Send notification to admin
+    if admin_email:
+        try:
+            admin_subject = f"Ödeme Hatırlatması Gönderildi - {customer_name}"
+            admin_body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background: #fef3c7; padding: 30px; border-radius: 10px;">
+                    <h2 style="color: #d97706;">📢 Ödeme Hatırlatması Bildirimi</h2>
+                    <p>Aşağıdaki müşteriye ödeme hatırlatması gönderildi:</p>
+                    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p><strong>Müşteri:</strong> {customer_name}</p>
+                        <p><strong>E-posta:</strong> {customer_email or 'Yok'}</p>
+                        <p><strong>Sipariş No:</strong> #{order_id[:8].upper()}</p>
+                        <p><strong>Tutar:</strong> €{order_total:,.2f}</p>
+                        <p><strong>Vade Tarihi:</strong> {due_date}</p>
+                        <p style="color: {'red' if days_overdue > 0 else 'green'};"><strong>Durum:</strong> {str(days_overdue) + ' gün gecikmiş' if days_overdue > 0 else 'Vade bugün'}</p>
+                    </div>
+                    <p style="color: #6b7280; font-size: 12px;">Bu bildirim otomatik olarak gönderilmiştir.</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg = MIMEMultipart()
+            msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+            msg['To'] = admin_email
+            msg['Subject'] = admin_subject
+            msg.attach(MIMEText(admin_body, 'html', 'utf-8'))
+            
+            if settings.get('use_ssl'):
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port)
+                if settings.get('use_tls', True):
+                    server.starttls()
+            
+            server.login(settings['smtp_username'], settings['smtp_password'])
+            server.send_message(msg)
+            server.quit()
+            
+            results["admin_sent"] = True
+            
+        except Exception as e:
+            logger.error(f"Admin notification failed: {e}")
+    
+    return {
+        "success": True,
+        "order_id": order_id,
+        "days_overdue": days_overdue,
+        "customer_email": customer_email,
+        **results
+    }
+
+@api_router.post("/orders/send-bulk-payment-reminders")
+async def send_bulk_payment_reminders(admin_email: str = None, min_days_overdue: int = 1):
+    """Send payment reminders to all overdue orders"""
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    orders = await db.orders.find({
+        "payment_status": {"$in": ["pending", "partial"]}
+    }, {"_id": 0}).to_list(500)
+    
+    sent_count = 0
+    failed_count = 0
+    
+    for order in orders:
+        due_date = order.get('payment_due_date')
+        if due_date and due_date < today:
+            due_dt = datetime.strptime(due_date, '%Y-%m-%d')
+            today_dt = datetime.strptime(today, '%Y-%m-%d')
+            days_overdue = (today_dt - due_dt).days
+            
+            if days_overdue >= min_days_overdue:
+                try:
+                    result = await send_payment_reminder(order['id'], admin_email)
+                    if result.get('customer_sent'):
+                        sent_count += 1
+                except:
+                    failed_count += 1
+    
+    return {
+        "success": True,
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "admin_notified": admin_email is not None
+    }
 
 # Include router after all endpoints are defined
 app.include_router(api_router)

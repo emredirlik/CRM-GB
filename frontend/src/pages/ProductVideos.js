@@ -31,11 +31,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { 
   Video, Upload, Play, Trash2, Share2, Search,
   MessageCircle, Mail, Eye, Pencil, Plus, Loader2,
-  Film, FileVideo, X, Check, Folder, FolderPlus, ChevronRight, ArrowLeft
+  Film, FileVideo, X, Check, Folder, FolderPlus, ChevronRight, ArrowLeft,
+  Copy, Move, MoreVertical
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -57,8 +65,11 @@ const ProductVideos = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isFolderDeleteOpen, setIsFolderDeleteOpen] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [targetFolderId, setTargetFolderId] = useState('');
+  const [moveMode, setMoveMode] = useState('move'); // 'move' or 'copy'
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -317,6 +328,31 @@ const ProductVideos = () => {
     setIsShareOpen(true);
   };
 
+  const openMoveDialog = (video, mode = 'move') => {
+    setSelectedVideo(video);
+    setMoveMode(mode);
+    setTargetFolderId(video.folder_id || '');
+    setIsMoveDialogOpen(true);
+  };
+
+  const handleMoveOrCopy = async () => {
+    if (!selectedVideo) return;
+    
+    try {
+      if (moveMode === 'move') {
+        await axios.put(`${API}/product-videos/${selectedVideo.id}/move?folder_id=${targetFolderId || ''}`);
+        toast.success('Video taşındı');
+      } else {
+        await axios.post(`${API}/product-videos/${selectedVideo.id}/copy?folder_id=${targetFolderId || ''}`);
+        toast.success('Video kopyalandı');
+      }
+      setIsMoveDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      toast.error(moveMode === 'move' ? 'Video taşınamadı' : 'Video kopyalanamadı');
+    }
+  };
+
   const openUploadDialog = () => {
     setFormData({ 
       title: '', 
@@ -497,14 +533,31 @@ const ProductVideos = () => {
                     >
                       <Share2 className="w-4 h-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setIsDeleteOpen(true); }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openMoveDialog(video, 'move'); }}>
+                          <Move className="w-4 h-4 mr-2" />
+                          Taşı
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openMoveDialog(video, 'copy'); }}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Kopyala
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={(e) => { e.stopPropagation(); setSelectedVideo(video); setIsDeleteOpen(true); }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Sil
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
@@ -818,6 +871,54 @@ const ProductVideos = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Move/Copy Dialog */}
+      <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{moveMode === 'move' ? 'Video Taşı' : 'Video Kopyala'}</DialogTitle>
+            <DialogDescription>
+              "{selectedVideo?.title}" videosunu {moveMode === 'move' ? 'taşımak' : 'kopyalamak'} için hedef klasörü seçin
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Hedef Klasör</Label>
+              <Select value={targetFolderId} onValueChange={setTargetFolderId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Klasör seçin (veya Ana Klasör)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">🏠 Ana Klasör (Kök)</SelectItem>
+                  {folders.map(folder => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      📁 {folder.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMoveDialogOpen(false)}>
+              İptal
+            </Button>
+            <Button onClick={handleMoveOrCopy}>
+              {moveMode === 'move' ? (
+                <>
+                  <Move className="w-4 h-4 mr-2" />
+                  Taşı
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Kopyala
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

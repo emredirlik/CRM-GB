@@ -13,15 +13,22 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Paragraph
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
-# Register DejaVu fonts for Turkish character support
+# Register fonts for Turkish character support (ş, ı, ğ, ü, ö, ç)
+# Priority: FreeSans > Liberation > Helvetica (fallback)
 try:
-    pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-    pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
-    FONT_REGULAR = 'DejaVu'
-    FONT_BOLD = 'DejaVu-Bold'
+    pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/freefont/FreeSans.ttf'))
+    pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf'))
+    FONT_REGULAR = 'FreeSans'
+    FONT_BOLD = 'FreeSans-Bold'
 except:
-    FONT_REGULAR = 'Helvetica'
-    FONT_BOLD = 'Helvetica-Bold'
+    try:
+        pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
+        pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
+        FONT_REGULAR = 'FreeSans'
+        FONT_BOLD = 'FreeSans-Bold'
+    except:
+        FONT_REGULAR = 'Helvetica'
+        FONT_BOLD = 'Helvetica-Bold'
 
 # Colors matching the app design - INDIGO THEME
 PRIMARY_COLOR = HexColor('#4F46E5')    # indigo-600
@@ -93,8 +100,8 @@ def draw_wrapped_text(c, text: str, x: float, y: float, max_width: float,
     return y
 
 
-def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = 'tr') -> bytes:
-    """Generate a modern, professionally styled order PDF - NO TOTAL PRICES"""
+def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = 'tr', lead_info: dict = None) -> bytes:
+    """Generate a modern, professionally styled order PDF - NO STATUS BADGE, WITH CUSTOMER DETAILS"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -105,7 +112,12 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     labels = {
         'tr': {
             'order_form': 'Sipariş Formu',
-            'customer': 'MÜŞTERİ',
+            'customer': 'MÜŞTERİ BİLGİLERİ',
+            'contact': 'İletişim',
+            'email': 'E-posta',
+            'phone': 'Telefon',
+            'address': 'Adres',
+            'tax_number': 'Vergi No',
             'date': 'TARİH',
             'product_details': 'ÜRÜN DETAYLARI',
             'product_name': 'ÜRÜN ADI',
@@ -113,18 +125,16 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'quantity': 'MİKTAR',
             'unit_price': 'BİRİM FİYAT',
             'notes': 'NOTLAR',
-            'created': 'Oluşturulma',
-            'status': {
-                'pending': 'BEKLEMEDE',
-                'confirmed': 'ONAYLANDI',
-                'shipped': 'GÖNDERİLDİ',
-                'delivered': 'TESLİM EDİLDİ',
-                'cancelled': 'İPTAL'
-            }
+            'created': 'Oluşturulma'
         },
         'de': {
             'order_form': 'Bestellformular',
-            'customer': 'KUNDE',
+            'customer': 'KUNDENINFORMATIONEN',
+            'contact': 'Kontakt',
+            'email': 'E-Mail',
+            'phone': 'Telefon',
+            'address': 'Adresse',
+            'tax_number': 'Steuernr.',
             'date': 'DATUM',
             'product_details': 'PRODUKTDETAILS',
             'product_name': 'PRODUKTNAME',
@@ -132,18 +142,16 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'quantity': 'MENGE',
             'unit_price': 'STÜCKPREIS',
             'notes': 'NOTIZEN',
-            'created': 'Erstellt',
-            'status': {
-                'pending': 'AUSSTEHEND',
-                'confirmed': 'BESTÄTIGT',
-                'shipped': 'VERSENDET',
-                'delivered': 'GELIEFERT',
-                'cancelled': 'STORNIERT'
-            }
+            'created': 'Erstellt'
         },
         'en': {
             'order_form': 'Order Form',
-            'customer': 'CUSTOMER',
+            'customer': 'CUSTOMER INFORMATION',
+            'contact': 'Contact',
+            'email': 'Email',
+            'phone': 'Phone',
+            'address': 'Address',
+            'tax_number': 'Tax ID',
             'date': 'DATE',
             'product_details': 'PRODUCT DETAILS',
             'product_name': 'PRODUCT NAME',
@@ -151,18 +159,16 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'quantity': 'QUANTITY',
             'unit_price': 'UNIT PRICE',
             'notes': 'NOTES',
-            'created': 'Created',
-            'status': {
-                'pending': 'PENDING',
-                'confirmed': 'CONFIRMED',
-                'shipped': 'SHIPPED',
-                'delivered': 'DELIVERED',
-                'cancelled': 'CANCELLED'
-            }
+            'created': 'Created'
         },
         'pl': {
             'order_form': 'Formularz Zamówienia',
-            'customer': 'KLIENT',
+            'customer': 'INFORMACJE O KLIENCIE',
+            'contact': 'Kontakt',
+            'email': 'E-mail',
+            'phone': 'Telefon',
+            'address': 'Adres',
+            'tax_number': 'NIP',
             'date': 'DATA',
             'product_details': 'SZCZEGÓŁY PRODUKTU',
             'product_name': 'NAZWA PRODUKTU',
@@ -170,14 +176,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'quantity': 'ILOŚĆ',
             'unit_price': 'CENA JEDN.',
             'notes': 'UWAGI',
-            'created': 'Utworzono',
-            'status': {
-                'pending': 'OCZEKUJĄCE',
-                'confirmed': 'POTWIERDZONE',
-                'shipped': 'WYSŁANE',
-                'delivered': 'DOSTARCZONE',
-                'cancelled': 'ANULOWANE'
-            }
+            'created': 'Utworzono'
         }
     }
     
@@ -208,14 +207,25 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     
     y = height - 6*cm
     
-    # Customer info card with rounded corners
+    # Customer info card with rounded corners - EXPANDED with email, address, phone, tax
+    # Calculate dynamic height based on available customer info
+    lead = lead_info or {}
+    has_email = bool(lead.get('email') or order.get('lead_email'))
+    has_phone = bool(lead.get('phone') or order.get('lead_phone'))
+    has_address = bool(lead.get('address') or order.get('lead_address'))
+    has_tax = bool(lead.get('tax_number') or order.get('lead_tax_number'))
+    
+    extra_lines = sum([has_email, has_phone, has_address, has_tax])
+    card_height = 3.5*cm + (extra_lines * 0.5*cm)
+    
     c.setFillColor(BG_LIGHT)
-    c.roundRect(1.5*cm, y - 3.2*cm, width - 3*cm, 3.2*cm, 8, fill=True, stroke=False)
+    c.roundRect(1.5*cm, y - card_height, width - 3*cm, card_height, 8, fill=True, stroke=False)
     
     # Left accent bar
     c.setFillColor(PRIMARY_COLOR)
-    c.rect(1.5*cm, y - 3.2*cm, 0.25*cm, 3.2*cm, fill=True, stroke=False)
+    c.rect(1.5*cm, y - card_height, 0.25*cm, card_height, fill=True, stroke=False)
     
+    # Customer name section
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 9)
     c.drawString(2.2*cm, y - 0.8*cm, L['customer'])
@@ -224,16 +234,53 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     c.drawString(2.2*cm, y - 1.6*cm, order.get('company_name', ''))
     c.setFont(FONT_REGULAR, 11)
     c.setFillColor(TEXT_MUTED)
-    c.drawString(2.2*cm, y - 2.4*cm, order.get('lead_name', ''))
+    c.drawString(2.2*cm, y - 2.3*cm, order.get('lead_name', ''))
     
+    # Customer contact details (email, phone, address, tax)
+    contact_y = y - 3.0*cm
+    c.setFont(FONT_REGULAR, 9)
+    
+    email_val = lead.get('email') or order.get('lead_email', '')
+    phone_val = lead.get('phone') or order.get('lead_phone', '')
+    address_val = lead.get('address') or order.get('lead_address', '')
+    tax_val = lead.get('tax_number') or order.get('lead_tax_number', '')
+    
+    if email_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2.2*cm, contact_y, f"{L['email']}: ")
+        c.setFillColor(TEXT_DARK)
+        c.drawString(4*cm, contact_y, email_val[:40])
+        contact_y -= 0.5*cm
+    
+    if phone_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2.2*cm, contact_y, f"{L['phone']}: ")
+        c.setFillColor(TEXT_DARK)
+        c.drawString(4*cm, contact_y, phone_val)
+        contact_y -= 0.5*cm
+    
+    if address_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2.2*cm, contact_y, f"{L['address']}: ")
+        c.setFillColor(TEXT_DARK)
+        c.drawString(4*cm, contact_y, address_val[:50])
+        contact_y -= 0.5*cm
+    
+    if tax_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2.2*cm, contact_y, f"{L['tax_number']}: ")
+        c.setFillColor(TEXT_DARK)
+        c.drawString(4*cm, contact_y, tax_val)
+    
+    # Date on right side
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 9)
-    c.drawString(11*cm, y - 0.8*cm, L['date'])
+    c.drawString(12*cm, y - 0.8*cm, L['date'])
     c.setFillColor(TEXT_DARK)
     c.setFont(FONT_BOLD, 12)
-    c.drawString(11*cm, y - 1.6*cm, datetime.now().strftime('%d.%m.%Y'))
+    c.drawString(12*cm, y - 1.6*cm, datetime.now().strftime('%d.%m.%Y'))
     
-    y -= 4.5*cm
+    y -= (card_height + 1*cm)
     
     # Product details header
     c.setFillColor(PRIMARY_COLOR)
@@ -325,24 +372,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     
     y -= 0.5*cm
     
-    # Status badge (modern pill shape)
-    status_colors = {
-        'pending': YELLOW_COLOR,
-        'confirmed': BLUE_COLOR,
-        'shipped': PURPLE_COLOR,
-        'delivered': SUCCESS_COLOR,
-        'cancelled': RED_COLOR
-    }
-    status_labels = L['status']
-    
-    status = order.get('status', 'pending')
-    c.setFillColor(status_colors.get(status, TEXT_MUTED))
-    c.roundRect(2*cm, y - 1*cm, 4.5*cm, 1*cm, 5, fill=True, stroke=False)
-    c.setFillColor(white)
-    c.setFont(FONT_BOLD, 10)
-    c.drawCentredString(4.25*cm, y - 0.7*cm, status_labels.get(status, status.upper()))
-    
-    # Notes section
+    # Notes section (STATUS BADGE REMOVED PER USER REQUEST)
     if order.get('notes'):
         y -= 2*cm
         c.setFillColor(TEXT_MUTED)
@@ -370,8 +400,8 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     return buffer.getvalue()
 
 
-def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str = 'en') -> bytes:
-    """Generate a professionally styled recipe PDF matching the UI design with multilingual support"""
+def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str = 'en', lead_info: dict = None) -> bytes:
+    """Generate a professionally styled recipe PDF matching the UI design with multilingual support and customer details"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -383,6 +413,10 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
         'en': {
             'title': 'Production Recipe',
             'customer': 'Customer',
+            'email': 'Email',
+            'phone': 'Phone',
+            'address': 'Address',
+            'tax_number': 'Tax ID',
             'main_ingredients': 'MAIN INGREDIENTS',
             'meat': 'Meat Amount',
             'water': 'Water Amount',
@@ -399,6 +433,10 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
         'tr': {
             'title': 'Üretim Reçetesi',
             'customer': 'Müşteri',
+            'email': 'E-posta',
+            'phone': 'Telefon',
+            'address': 'Adres',
+            'tax_number': 'Vergi No',
             'main_ingredients': 'ANA MALZEMELER',
             'meat': 'Et Miktarı',
             'water': 'Su Miktarı',
@@ -415,6 +453,10 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
         'de': {
             'title': 'Produktionsrezept',
             'customer': 'Kunde',
+            'email': 'E-Mail',
+            'phone': 'Telefon',
+            'address': 'Adresse',
+            'tax_number': 'Steuernr.',
             'main_ingredients': 'HAUPTZUTATEN',
             'meat': 'Fleischmenge',
             'water': 'Wassermenge',
@@ -431,6 +473,10 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
         'pl': {
             'title': 'Receptura Produkcji',
             'customer': 'Klient',
+            'email': 'E-mail',
+            'phone': 'Telefon',
+            'address': 'Adres',
+            'tax_number': 'NIP',
             'main_ingredients': 'GŁÓWNE SKŁADNIKI',
             'meat': 'Ilość Mięsa',
             'water': 'Ilość Wody',
@@ -462,9 +508,17 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
     
     y = height - 5.5*cm
     
-    # Recipe title card
+    # Recipe title card with customer details
+    lead = lead_info or {}
+    has_email = bool(lead.get('email') or recipe.get('lead_email'))
+    has_phone = bool(lead.get('phone') or recipe.get('lead_phone'))
+    has_address = bool(lead.get('address') or recipe.get('lead_address'))
+    has_tax = bool(lead.get('tax_number') or recipe.get('lead_tax_number'))
+    extra_lines = sum([has_email, has_phone, has_address, has_tax])
+    card_height = 2.5*cm + (extra_lines * 0.4*cm)
+    
     c.setFillColor(BG_LIGHT)
-    c.roundRect(1.5*cm, y - 2.5*cm, width - 3*cm, 2.5*cm, 5, fill=True, stroke=False)
+    c.roundRect(1.5*cm, y - card_height, width - 3*cm, card_height, 5, fill=True, stroke=False)
     
     c.setFillColor(black)
     c.setFont(FONT_BOLD, 18)
@@ -473,7 +527,32 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
     c.setFont(FONT_REGULAR, 11)
     c.drawString(2*cm, y - 1.8*cm, f"{L['customer']}: {recipe.get('company_name', '')}")
     
-    y -= 4*cm
+    # Customer contact details
+    contact_y = y - 2.4*cm
+    c.setFont(FONT_REGULAR, 9)
+    
+    email_val = lead.get('email') or recipe.get('lead_email', '')
+    phone_val = lead.get('phone') or recipe.get('lead_phone', '')
+    address_val = lead.get('address') or recipe.get('lead_address', '')
+    tax_val = lead.get('tax_number') or recipe.get('lead_tax_number', '')
+    
+    if email_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2*cm, contact_y, f"{L['email']}: {email_val[:40]}")
+        contact_y -= 0.4*cm
+    if phone_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2*cm, contact_y, f"{L['phone']}: {phone_val}")
+        contact_y -= 0.4*cm
+    if address_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2*cm, contact_y, f"{L['address']}: {address_val[:45]}")
+        contact_y -= 0.4*cm
+    if tax_val:
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(2*cm, contact_y, f"{L['tax_number']}: {tax_val}")
+    
+    y -= (card_height + 1.5*cm)
     
     # Main ingredients header
     c.setFillColor(ACCENT_COLOR)
