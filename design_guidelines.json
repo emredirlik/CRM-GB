@@ -1,107 +1,108 @@
 {
-  "theme": "Light",
-  "archetype": "Archetype 4 (Swiss & High-Contrast)",
-  "domain": "B2B CRM / SaaS Dashboard for Spice Factory (Gewürzberg GmbH)",
-  "design_philosophy": "Modernize the legacy orange-gradient design into a premium, enterprise-grade B2B CRM. Leverage 'Control Room' grids, high-density data layouts, and strict functional typography. Replace generic gradients with stark contrasts and a mature 'Deep Rust' accent to nod to the spice factory heritage (Gewürzberg) while maintaining extreme professional clarity.",
+  "theme": "LIGHT",
+  "archetype": "Archetype 4: Swiss & High-Contrast",
+  "design_philosophy": "E1 'Control Room' Dashboard: A brutally efficient, cardless design that prioritizes data hierarchy through a dense, 1px seamless grid. We abandon generic soft drop-shadows and rounded corners in favor of absolute clarity, employing sharp edges, 'Technical Look' grid borders, and radical typography weight contrast. The AI Sales Forecast uses a terminal-inspired dark module to create visual tension against the crisp white canvas.",
   "colors": {
-    "background": "#FAFAFA",
-    "surface": "#FFFFFF",
-    "primary": "#BA4323",
-    "primary_hover": "#8C3118",
-    "text_main": "#09090B",
-    "text_muted": "#52525B",
-    "border": "#E4E4E7",
-    "accent_warning": "#F59E0B",
-    "accent_success": "#10B981",
-    "rules": [
-      "No generic full-screen gradients. Color is for function only.",
-      "Tint neutral greys with cool/zinc tones to feel industrial and crisp.",
-      "Primary color (Deep Rust) used exclusively for CTAs, active states, and key data highlights."
-    ]
+    "background_primary": "bg-zinc-50",
+    "background_secondary": "bg-white",
+    "text_primary": "text-zinc-950",
+    "text_secondary": "text-zinc-500",
+    "border": "border-zinc-200",
+    "primary_accent": "#002FA7",
+    "primary_accent_class": "bg-[#002FA7]",
+    "warning": "#FFC107",
+    "danger": "#E53935",
+    "success": "#10B981",
+    "ai_module_bg": "bg-zinc-950",
+    "ai_module_text": "text-[#00FF41]"
   },
   "typography": {
-    "headings": {
-      "font_family": "Cabinet Grotesk",
-      "import_url": "https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,700,500,400&display=swap",
-      "weights": ["700", "800"],
-      "usage": "Authoritative, tight letter-spacing (tracking-tight) for dashboard headers and modal titles. Never use Inter."
-    },
-    "body": {
-      "font_family": "IBM Plex Sans",
-      "import_url": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap",
-      "weights": ["400", "500", "600"],
-      "usage": "Data-dense tables, lists, and forms. Legible at small sizes."
-    },
-    "hierarchy": {
-      "h1": "text-3xl sm:text-4xl tracking-tight font-bold",
-      "h2": "text-2xl sm:text-3xl tracking-tight font-bold",
-      "h3": "text-xl font-semibold",
-      "h4": "text-lg font-semibold",
-      "body": "text-sm",
-      "labels": "text-xs tracking-[0.1em] uppercase font-medium"
-    }
+    "heading_font": "Cabinet Grotesk",
+    "body_font": "IBM Plex Sans",
+    "mono_font": "IBM Plex Mono",
+    "h1": "text-4xl md:text-5xl font-black tracking-tighter",
+    "h2": "text-2xl md:text-3xl font-bold tracking-tight",
+    "h3": "text-xl font-bold tracking-tight",
+    "h4": "text-base font-semibold uppercase tracking-[0.1em]",
+    "body": "text-sm text-zinc-950 leading-relaxed",
+    "metric_number": "text-4xl lg:text-5xl font-black tracking-tighter leading-none text-zinc-950",
+    "metric_label": "text-xs font-mono uppercase tracking-[0.15em] text-zinc-500",
+    "font_installation": "Use Google Fonts for IBM Plex Sans & IBM Plex Mono. Use Fontshare API or local asset for Cabinet Grotesk."
   },
-  "layout_and_spacing": {
-    "grid_system": "MODE B (The 'Control Room' Grid) for Dashboards.",
-    "spacing_scale": "Dense and compact for data, but generous for structural padding. Use p-6 or p-8 for main cards. gap-4 or gap-6 for grids.",
-    "border_radius": "Subtle roundness. max 8px (rounded-md). No pill-shaped buttons unless explicitly requested.",
-    "alignment": "Optical alignment over geometrical. Left-align dense content and tables."
-  },
-  "surface_styles": {
-    "dashboard_cards": "Grid Borders (Technical Look). Flat background (bg-white), 1px subtle border (border-zinc-200), no drop shadow by default.",
-    "interactive_cards": "Hover: Slight lift (-translate-y-0.5) and subtle shadow (shadow-md).",
-    "headers": "Solid background with a hard bottom border. If scrolling content goes under, use Crystal Glass (backdrop-blur-xl bg-white/80 border-b border-zinc-200/50)."
+  "layout": {
+    "container": "w-full max-w-[1600px] mx-auto p-4 md:p-8",
+    "grid_system": "The 'Control Room' Grid (Gapless). Use a parent with 'grid grid-cols-1 md:grid-cols-12 border-t border-l border-zinc-200'. All children must have 'border-r border-b border-zinc-200' and 'bg-white' or 'bg-zinc-50'.",
+    "spacing_scale": "Dense internal padding for widgets: p-6 or p-8. No rounded corners except for specific internal badges (max rounded-sm)."
   },
   "components": {
-    "tables": "Dense rows, left-aligned, muted text for secondary data, stick to 'IBM Plex Sans' for tabular numbers.",
-    "buttons": "Flat, sharp edges (rounded-md), solid Deep Rust for primary, outline/ghost for secondary. Always define hover state explicitly (hover:bg-[#8C3118] hover:text-white).",
-    "forms": "Use standard Shadcn inputs. No floating labels. Clear, bold label text above inputs. 1px border on inputs, subtle ring on focus (focus:ring-2 focus:ring-[#BA4323]/20 focus:border-[#BA4323]).",
-    "icons": "Phosphor Icons for dense dashboards (clean, legible at small sizes). Install via: yarn add @phosphor-icons/react"
+    "stats_cards": {
+      "style": "Cardless grid item. Left-aligned metric label (mono), massive metric number below it. Minimalist 1px SVG sparkline anchored to the bottom right of the cell.",
+      "col_span": "md:col-span-3 lg:col-span-3"
+    },
+    "ai_sales_forecast": {
+      "style": "Retro-Futuristic Terminal block. bg-zinc-950 text-[#00FF41] font-mono p-6. Displays predicted revenue and AI insights. Creates high contrast on the dashboard.",
+      "col_span": "md:col-span-12 lg:col-span-12"
+    },
+    "financial_summary": {
+      "style": "Area chart spanning large width. Use Recharts. Hide all axes lines except horizontal dashed grids. Chart line color: #002FA7. Chart fill: gentle gradient of #002FA7 to transparent.",
+      "col_span": "md:col-span-12 lg:col-span-8 row-span-2"
+    },
+    "annual_goal_progress": {
+      "style": "Segmented brutalist progress bar. Instead of one continuous bar, use 10 separate rectangular blocks (e.g., 7 filled with #002FA7, 3 empty/gray).",
+      "col_span": "md:col-span-12 lg:col-span-4"
+    },
+    "calendar_upcoming_visits": {
+      "style": "Dense, technical list. Time displayed in IBM Plex Mono. Rows separated by 1px borders. Use hover state: hover:bg-zinc-100 hover:text-zinc-950.",
+      "col_span": "md:col-span-12 lg:col-span-8"
+    },
+    "top_customers": {
+      "style": "Avatar list with absolute precision. Use sharp square avatars or purely typographic initials [AB]. Include revenue aligned right in Mono font.",
+      "col_span": "md:col-span-12 lg:col-span-4 row-span-2"
+    },
+    "sidebar_navigation": {
+      "style": "Left sidebar. 1px right border. Extremely clean, monochrome icons (Phosphor Icons). Active state indicated by a bold 2px left border in #002FA7, not a background blob."
+    }
   },
-  "media_and_assets": {
-    "image_urls": [
+  "motion_interactions": {
+    "hover_states": "Interactive rows (customers, visits) change background from white to zinc-100 instantly. Fast, mechanical feel.",
+    "active_states": "Buttons use sharp translation: active:translate-y-[1px].",
+    "focus": "focus:ring-2 focus:ring-[#002FA7] focus:outline-none focus:ring-offset-1"
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "style": "Regular or Light weight. No duotone for dashboards."
+  },
+  "media": {
+    "avatars": [
       {
-        "url": "https://images.unsplash.com/photo-1774116196662-a9e1e4fa1612?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA3MDR8MHwxfHNlYXJjaHwyfHxsb2dpc3RpY3MlMjB0cnVjayUyMGhpZ2h3YXklMjBkZWxpdmVyeXxlbnwwfHx8fDE3NzUxNzE1NDl8MA&ixlib=rb-4.1.0&q=85",
-        "category": "logistics_truck",
-        "description": "Truck on highway. Use for the Route Planner or Shipments section background/hero if needed."
+        "url": "https://images.unsplash.com/photo-1581065178047-8ee15951ede6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0fGVufDB8fHx8MTc3NTQ5NDQwNnww&ixlib=rb-4.1.0&q=85",
+        "category": "Customer Avatar",
+        "description": "Woman in black blazer, smiling"
       },
       {
-        "url": "https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc1MTcxNTQ5fDA&ixlib=rb-4.1.0&q=85",
-        "category": "user_avatar_1",
-        "description": "Professional portrait for current user or contact profiles."
+        "url": "https://images.unsplash.com/photo-1629507208649-70919ca33793?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2ODl8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0fGVufDB8fHx8MTc3NTQ5NDQwNnww&ixlib=rb-4.1.0&q=85",
+        "category": "Customer Avatar",
+        "description": "Man in blue shirt"
       },
       {
-        "url": "https://images.unsplash.com/photo-1689600944138-da3b150d9cb8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc1MTcxNTQ5fDA&ixlib=rb-4.1.0&q=85",
-        "category": "user_avatar_2",
-        "description": "Professional portrait for lead or customer profiles."
-      },
-      {
-        "url": "https://images.unsplash.com/photo-1576558656222-ba66febe3dec?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMHBvcnRyYWl0JTIwaGVhZHNob3R8ZW58MHx8fHwxNzc1MTcxNTQ5fDA&ixlib=rb-4.1.0&q=85",
-        "category": "user_avatar_3",
-        "description": "Professional portrait for lead or customer profiles."
+        "url": "https://images.pexels.com/photos/36645466/pexels-photo-36645466.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "Customer Avatar",
+        "description": "Confident businessman"
       }
-    ],
-    "rules": [
-      "Never use placeholder image URLs like via.placeholder.com. Use only the provided Unsplash URLs.",
-      "Use Lucide-react (if pre-installed) or Phosphor Icons for UI adornments."
     ]
   },
-  "motion_and_interactions": {
-    "hover_states": "All interactive elements must change state visually. Contrast must be maintained.",
-    "transitions": "Use specific properties: 'transition-colors duration-200 ease-in-out' or 'transition-transform'.",
-    "accessibility": "Respect prefers-reduced-motion."
-  },
-  "testing": {
-    "attributes": "All interactive elements MUST include a data-testid attribute formatted as kebab-case and role-based (e.g., data-testid='submit-order-button')."
+  "accessibility_and_testing": {
+    "testing_attributes": "All interactive elements, metric cards, and charts MUST include data-testid. Examples: data-testid='metric-total-customers', data-testid='btn-add-visit'.",
+    "contrast": "Text contrast must meet APCA standards. Black/Dark Gray text on White/Zinc-50 background."
   },
   "instructions_to_main_agent": [
-    "Inject the font CDN links (Fontshare for Cabinet Grotesk, Google Fonts for IBM Plex Sans) into the index.html or global layout.",
-    "Update tailwind.config.js to include the custom font families and the custom colors (especially the 'Deep Rust' primary #BA4323).",
-    "Implement the 'Control Room' grid layout for the CRM dashboard screens.",
-    "Avoid using Shadcn 'Card' components where pure HTML/Tailwind achieves a better flat, grid-border look, but use Shadcn for complex logic (Tables, Dialogs, Selects, Calendars).",
-    "Remove all legacy orange/amber gradients. Replace with the specified #BA4323 (Deep Rust) primary color for specific call-to-actions, maintaining a high-contrast black/white/grey dominant UI.",
-    "Apply `Cabinet Grotesk` font family to all headings. Apply `IBM Plex Sans` for body.",
-    "Ensure the AI Lead Finder and Maps use the minimalist, data-dense styling defined in Archetype 4.",
-    "Ensure all buttons, inputs, and major interaction points have explicit data-testids."
+    "DO NOT use Shadcn's default Card component with shadows and rounded corners. Build raw divs with `border-r border-b border-zinc-200` to create a seamless, gapless 'Technical Look' grid.",
+    "Install and use 'Cabinet Grotesk' for headings and 'IBM Plex Sans' for body text. Use 'IBM Plex Mono' for all numbers, metrics, and timestamps.",
+    "Implement the 'AI Sales Forecast' as a distinct, retro-futuristic dark module (bg-zinc-950, text-[#00FF41]) to stand out against the white dashboard.",
+    "For the Financial Summary, use Recharts to build an Area Chart. Use strict, minimalist styling: no vertical grid lines, no axis lines, only subtle dashed horizontal lines.",
+    "Use Phosphor Icons (@phosphor-icons/react) for all iconography.",
+    "Ensure the layout is responsive, stacking cleanly on mobile while preserving the 1px border aesthetic.",
+    "Translate all requested metrics and headers into Turkish (e.g., 'Toplam Müşteri', 'Finansal Özet', 'Yıllık Hedef', 'Yaklaşan Ziyaretler').",
+    "Wrap grid layouts with 'border-t border-l border-zinc-200' while children have 'border-r border-b border-zinc-200' to create the technical border matrix."
   ]
 }
