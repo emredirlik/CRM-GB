@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Lock, User, LogIn, AlertCircle, Globe } from 'lucide-react';
+import { Lock, User, LogIn, AlertCircle, Globe, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,16 +13,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const LANGUAGES = [
-  { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
-  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'pl', label: 'Polski', flag: '🇵🇱' }
-];
-
 const Login = () => {
   const { login } = useAuth();
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
+  
+  const LANGUAGES = [
+    { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
+    { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+    { code: 'en', label: 'English', flag: '🇬🇧' },
+    { code: 'pl', label: 'Polski', flag: '🇵🇱' }
+  ];
+  
+  const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -49,18 +51,22 @@ const Login = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
               <Globe className="w-4 h-4 mr-2" />
-              {LANGUAGES.find(l => l.code === language)?.flag} {LANGUAGES.find(l => l.code === language)?.label}
+              {currentLang.flag} {currentLang.label}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-[140px]">
             {LANGUAGES.map((lang) => (
               <DropdownMenuItem 
                 key={lang.code} 
-                onClick={() => setLanguage(lang.code)}
-                className={language === lang.code ? 'bg-indigo-50' : ''}
+                onClick={() => {
+                  console.log('Changing language to:', lang.code);
+                  setLanguage(lang.code);
+                }}
+                className={`cursor-pointer ${language === lang.code ? 'bg-indigo-100 text-indigo-700' : ''}`}
               >
                 <span className="mr-2">{lang.flag}</span>
                 {lang.label}
+                {language === lang.code && <Check className="w-4 h-4 ml-auto text-indigo-600" />}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -122,9 +128,9 @@ const Login = () => {
         {/* Login Card */}
         <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-bold text-center font-['Manrope']">Welcome</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center font-['Manrope']">{t('welcome')}</CardTitle>
             <CardDescription className="text-center">
-              Sign in to access your CRM dashboard
+              {t('signInDescription')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,14 +144,14 @@ const Login = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-sm font-medium">
-                  Username
+                  {t('username')}
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="username"
                     type="text"
-                    placeholder="Enter your username"
+                    placeholder={t('enterUsername')}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
@@ -157,14 +163,14 @@ const Login = () => {
               
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  {t('password')}
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
+                    placeholder={t('enterPassword')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
@@ -183,12 +189,12 @@ const Login = () => {
                 {loading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Signing in...</span>
+                    <span>{t('signingIn')}</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <LogIn className="w-4 h-4" />
-                    <span>Sign In</span>
+                    <span>{t('signIn')}</span>
                   </div>
                 )}
               </Button>

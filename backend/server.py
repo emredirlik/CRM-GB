@@ -600,6 +600,24 @@ async def get_smtp_settings():
     deserialize_datetime(settings, ['updated_at'])
     return settings
 
+# Helper function for SMTP connections (1&1 IONOS compatible)
+def create_smtp_connection(host: str, port: int, use_ssl: bool = False, use_tls: bool = True, timeout: int = 30):
+    """
+    Create SMTP connection with proper SSL/TLS handling.
+    Port 465 = SSL (SMTP_SSL)
+    Port 587 = STARTTLS
+    Port 25 = Plain (not recommended)
+    """
+    if use_ssl or port == 465:
+        server = smtplib.SMTP_SSL(host, port, timeout=timeout)
+    else:
+        server = smtplib.SMTP(host, port, timeout=timeout)
+        if use_tls or port == 587:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+    return server
+
 @api_router.post("/settings/smtp/test")
 async def test_smtp_connection():
     settings = await db.smtp_settings.find_one({}, {"_id": 0})
@@ -607,17 +625,26 @@ async def test_smtp_connection():
         raise HTTPException(status_code=400, detail="SMTP settings not configured")
     
     try:
-        if settings.get('use_tls', True):
-            server = smtplib.SMTP(settings['host'], settings['port'])
-            server.starttls()
-        else:
-            server = smtplib.SMTP_SSL(settings['host'], settings['port'])
+        host = settings['host']
+        port = int(settings['port'])
+        use_ssl = settings.get('use_ssl', False)
+        use_tls = settings.get('use_tls', True)
         
+        logger.info(f"Testing SMTP: {host}:{port} SSL={use_ssl} TLS={use_tls}")
+        
+        server = create_smtp_connection(host, port, use_ssl, use_tls)
         server.login(settings['username'], settings['password'])
         server.quit()
-        return {"success": True, "message": "SMTP connection successful"}
+        return {"success": True, "message": "SMTP bağlantısı başarılı!"}
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"SMTP Auth Error: {e}")
+        return {"success": False, "message": f"Kimlik doğrulama hatası: Kullanıcı adı veya şifre yanlış. ({str(e)})"}
+    except smtplib.SMTPConnectError as e:
+        logger.error(f"SMTP Connect Error: {e}")
+        return {"success": False, "message": f"Bağlantı hatası: Sunucuya bağlanılamadı. ({str(e)})"}
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        logger.error(f"SMTP Test Error: {e}")
+        return {"success": False, "message": f"Hata: {str(e)}"}
 
 # ===================== EMAIL SENDING ENDPOINTS =====================
 
@@ -1946,7 +1973,7 @@ async def get_order_pdf(order_id: str, lang: str = 'tr'):
 
 @api_router.get("/leads/export/pdf")
 async def export_leads_pdf(lang: str = 'en'):
-    """Export all leads as PDF with language support"""
+    """Export all leads as professional styled PDF"""
     leads = await db.leads.find({}, {"_id": 0}).to_list(1000)
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
     
@@ -1955,68 +1982,128 @@ async def export_leads_pdf(lang: str = 'en'):
     from reportlab.lib.units import cm
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib.colors import HexColor, white
     
-    # Register fonts for Turkish/Polish character support (FreeSans has better coverage)
+    # Register fonts
     try:
         pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/freefont/FreeSans.ttf'))
         pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf'))
         FONT = 'FreeSans'
         FONT_BOLD = 'FreeSans-Bold'
     except:
-        try:
-            pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
-            pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
-            FONT = 'FreeSans'
-            FONT_BOLD = 'FreeSans-Bold'
-        except:
-            FONT = 'Helvetica'
-            FONT_BOLD = 'Helvetica-Bold'
+        FONT = 'Helvetica'
+        FONT_BOLD = 'Helvetica-Bold'
+    
+    # Colors
+    PRIMARY = HexColor('#4f46e5')  # Indigo
+    SECONDARY = HexColor('#818cf8')
+    TEXT_DARK = HexColor('#1e293b')
+    TEXT_MUTED = HexColor('#64748b')
+    BG_LIGHT = HexColor('#f1f5f9')
     
     # Multi-language labels
     labels = {
         'en': {'title': 'Customer List', 'total': 'Total', 'customers': 'customers', 'date': 'Date',
-               'company': 'Company', 'contact': 'Contact', 'city': 'City', 'country': 'Country'},
+               'company': 'Company', 'contact': 'Contact', 'email': 'Email', 'phone': 'Phone', 
+               'city': 'City', 'country': 'Country', 'page': 'Page'},
         'tr': {'title': 'Müşteri Listesi', 'total': 'Toplam', 'customers': 'müşteri', 'date': 'Tarih',
-               'company': 'Firma', 'contact': 'Kişi', 'city': 'Şehir', 'country': 'Ülke'},
+               'company': 'Firma', 'contact': 'Yetkili Kişi', 'email': 'E-posta', 'phone': 'Telefon',
+               'city': 'Şehir', 'country': 'Ülke', 'page': 'Sayfa'},
         'de': {'title': 'Kundenliste', 'total': 'Gesamt', 'customers': 'Kunden', 'date': 'Datum',
-               'company': 'Firma', 'contact': 'Kontakt', 'city': 'Stadt', 'country': 'Land'},
+               'company': 'Firma', 'contact': 'Kontakt', 'email': 'E-Mail', 'phone': 'Telefon',
+               'city': 'Stadt', 'country': 'Land', 'page': 'Seite'},
         'pl': {'title': 'Lista Klientów', 'total': 'Razem', 'customers': 'klienci', 'date': 'Data',
-               'company': 'Firma', 'contact': 'Kontakt', 'city': 'Miasto', 'country': 'Kraj'}
+               'company': 'Firma', 'contact': 'Kontakt', 'email': 'E-mail', 'phone': 'Telefon',
+               'city': 'Miasto', 'country': 'Kraj', 'page': 'Strona'}
     }
     L = labels.get(lang, labels['en'])
+    company_name = settings.get('company_name', 'Gewürzberg GmbH') if settings else 'Gewürzberg GmbH'
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
+    page_num = 1
     
-    y = height - 2*cm
-    c.setFont(FONT_BOLD, 16)
-    c.drawString(2*cm, y, L['title'])
-    y -= 1*cm
-    c.setFont(FONT, 8)
-    c.drawString(2*cm, y, f"{L['total']}: {len(leads)} {L['customers']} | {L['date']}: {datetime.now().strftime('%d.%m.%Y')}")
-    y -= 1*cm
-    
-    c.setFont(FONT_BOLD, 9)
-    c.drawString(2*cm, y, L['company'])
-    c.drawString(7*cm, y, L['contact'])
-    c.drawString(11*cm, y, L['city'])
-    c.drawString(14*cm, y, L['country'])
-    y -= 0.5*cm
-    
-    c.setFont(FONT, 9)
-    for lead in leads:
-        if y < 2*cm:
-            c.showPage()
-            y = height - 2*cm
-            c.setFont(FONT, 9)
+    def draw_header():
+        # Modern header with gradient effect
+        c.setFillColor(PRIMARY)
+        c.rect(0, height - 3.5*cm, width, 3.5*cm, fill=True, stroke=False)
+        c.setFillColor(SECONDARY)
+        c.rect(0, height - 3.5*cm, width, 0.3*cm, fill=True, stroke=False)
         
-        c.drawString(2*cm, y, (lead.get('company_name', '')[:25]))
-        c.drawString(7*cm, y, f"{lead.get('first_name', '')} {lead.get('last_name', '')}"[:20])
-        c.drawString(11*cm, y, (lead.get('city', '') or '')[:15])
-        c.drawString(14*cm, y, (lead.get('country', '') or '')[:15])
-        y -= 0.4*cm
+        # Company name
+        c.setFillColor(white)
+        c.setFont(FONT_BOLD, 20)
+        c.drawString(2*cm, height - 1.8*cm, company_name)
+        c.setFont(FONT, 10)
+        c.drawString(2*cm, height - 2.6*cm, L['title'])
+        
+        # Date and total
+        c.setFont(FONT, 9)
+        c.drawRightString(width - 2*cm, height - 1.8*cm, f"{L['date']}: {datetime.now().strftime('%d.%m.%Y')}")
+        c.drawRightString(width - 2*cm, height - 2.6*cm, f"{L['total']}: {len(leads)} {L['customers']}")
+        
+        return height - 4.5*cm
     
+    def draw_table_header(y_pos):
+        # Table header background
+        c.setFillColor(BG_LIGHT)
+        c.rect(1.5*cm, y_pos - 0.7*cm, width - 3*cm, 0.9*cm, fill=True, stroke=False)
+        
+        # Column headers
+        c.setFillColor(TEXT_DARK)
+        c.setFont(FONT_BOLD, 8)
+        c.drawString(2*cm, y_pos - 0.4*cm, L['company'])
+        c.drawString(6*cm, y_pos - 0.4*cm, L['contact'])
+        c.drawString(9.5*cm, y_pos - 0.4*cm, L['email'])
+        c.drawString(13.5*cm, y_pos - 0.4*cm, L['phone'])
+        c.drawString(17*cm, y_pos - 0.4*cm, L['city'])
+        
+        return y_pos - 1.2*cm
+    
+    def draw_footer():
+        c.setFillColor(TEXT_MUTED)
+        c.setFont(FONT, 8)
+        c.drawCentredString(width/2, 1*cm, f"{L['page']} {page_num}")
+    
+    y = draw_header()
+    y = draw_table_header(y)
+    
+    row_height = 0.7*cm
+    for i, lead in enumerate(leads):
+        if y < 2.5*cm:
+            draw_footer()
+            c.showPage()
+            page_num += 1
+            y = draw_header()
+            y = draw_table_header(y)
+        
+        # Alternate row background
+        if i % 2 == 0:
+            c.setFillColor(HexColor('#f8fafc'))
+            c.rect(1.5*cm, y - 0.5*cm, width - 3*cm, row_height, fill=True, stroke=False)
+        
+        c.setFillColor(TEXT_DARK)
+        c.setFont(FONT, 8)
+        
+        company = (lead.get('company') or lead.get('company_name') or '')[:22]
+        contact = f"{lead.get('first_name', '')} {lead.get('last_name', '')}"[:18]
+        email = (lead.get('email') or '')[:22]
+        phone = (lead.get('phone') or '')[:14]
+        city = (lead.get('city') or '')[:12]
+        
+        c.drawString(2*cm, y - 0.3*cm, company)
+        c.setFillColor(TEXT_MUTED)
+        c.drawString(6*cm, y - 0.3*cm, contact)
+        c.setFillColor(PRIMARY)
+        c.drawString(9.5*cm, y - 0.3*cm, email)
+        c.setFillColor(TEXT_DARK)
+        c.drawString(13.5*cm, y - 0.3*cm, phone)
+        c.drawString(17*cm, y - 0.3*cm, city)
+        
+        y -= row_height
+    
+    draw_footer()
     c.save()
     buffer.seek(0)
     
@@ -3738,7 +3825,17 @@ async def get_mail_inbox():
         if not imap_user or not imap_pass:
             return {"status": "error", "emails": [], "message": "IMAP credentials not configured"}
         
-        mail = imaplib.IMAP4_SSL(imap_host, imap_port)
+        logger.info(f"Connecting to IMAP: {imap_host}:{imap_port} as {imap_user}")
+        
+        # Try SSL connection first (port 993)
+        try:
+            mail = imaplib.IMAP4_SSL(imap_host, imap_port)
+        except Exception as ssl_error:
+            logger.warning(f"SSL connection failed, trying STARTTLS: {ssl_error}")
+            # Try STARTTLS
+            mail = imaplib.IMAP4(imap_host, 143)
+            mail.starttls()
+        
         mail.login(imap_user, imap_pass)
         mail.select('INBOX')
         

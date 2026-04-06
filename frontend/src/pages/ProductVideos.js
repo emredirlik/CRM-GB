@@ -339,11 +339,12 @@ const ProductVideos = () => {
     if (!selectedVideo) return;
     
     try {
+      const folderParam = targetFolderId ? `?folder_id=${targetFolderId}` : '';
       if (moveMode === 'move') {
-        await axios.put(`${API}/product-videos/${selectedVideo.id}/move?folder_id=${targetFolderId || ''}`);
+        await axios.put(`${API}/product-videos/${selectedVideo.id}/move${folderParam}`);
         toast.success('Video taşındı');
       } else {
-        await axios.post(`${API}/product-videos/${selectedVideo.id}/copy?folder_id=${targetFolderId || ''}`);
+        await axios.post(`${API}/product-videos/${selectedVideo.id}/copy${folderParam}`);
         toast.success('Video kopyalandı');
       }
       setIsMoveDialogOpen(false);

@@ -2,6 +2,16 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const translations = {
   tr: {
+    // Login
+    welcome: 'Hoş Geldiniz',
+    signInDescription: 'CRM panelinize erişmek için giriş yapın',
+    username: 'Kullanıcı Adı',
+    password: 'Şifre',
+    enterUsername: 'Kullanıcı adınızı girin',
+    enterPassword: 'Şifrenizi girin',
+    signIn: 'Giriş Yap',
+    signingIn: 'Giriş yapılıyor...',
+    
     // Navigation
     dashboard: 'Kontrol Paneli',
     leads: 'Müşteriler',
@@ -382,6 +392,16 @@ const translations = {
     goBack: 'Geri Dön',
   },
   de: {
+    // Login
+    welcome: 'Willkommen',
+    signInDescription: 'Melden Sie sich an, um auf Ihr CRM-Dashboard zuzugreifen',
+    username: 'Benutzername',
+    password: 'Passwort',
+    enterUsername: 'Benutzername eingeben',
+    enterPassword: 'Passwort eingeben',
+    signIn: 'Anmelden',
+    signingIn: 'Anmeldung läuft...',
+    
     // Navigation
     dashboard: 'Dashboard',
     leads: 'Kunden',
@@ -761,6 +781,16 @@ const translations = {
     goBack: 'Zurück gehen',
   },
   en: {
+    // Login
+    welcome: 'Welcome',
+    signInDescription: 'Sign in to access your CRM dashboard',
+    username: 'Username',
+    password: 'Password',
+    enterUsername: 'Enter your username',
+    enterPassword: 'Enter your password',
+    signIn: 'Sign In',
+    signingIn: 'Signing in...',
+    
     // Navigation
     dashboard: 'Dashboard',
     leads: 'Leads',
@@ -1140,6 +1170,16 @@ const translations = {
     goBack: 'Go back',
   },
   pl: {
+    // Login
+    welcome: 'Witamy',
+    signInDescription: 'Zaloguj się, aby uzyskać dostęp do panelu CRM',
+    username: 'Nazwa użytkownika',
+    password: 'Hasło',
+    enterUsername: 'Wprowadź nazwę użytkownika',
+    enterPassword: 'Wprowadź hasło',
+    signIn: 'Zaloguj się',
+    signingIn: 'Logowanie...',
+    
     // Navigation - Polish
     dashboard: 'Panel sterowania',
     leads: 'Klienci',
