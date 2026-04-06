@@ -200,7 +200,7 @@ const Dashboard = () => {
 
   const handleVisitSubmit = async () => {
     if (!visitForm.title.trim()) {
-      toast.error('Please enter a title');
+      toast.error(t('pleaseEnterTitle'));
       return;
     }
 
@@ -621,7 +621,7 @@ const Dashboard = () => {
                     className="bg-[#002FA7] hover:bg-[#002FA7]/90"
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    Schedule Visit
+                    {t('scheduleVisit')}
                   </Button>
                 </div>
                 
@@ -873,7 +873,7 @@ const Dashboard = () => {
           <DialogHeader>
             <DialogTitle className="font-['Manrope'] flex items-center gap-2">
               <MapPin className="w-5 h-5 text-indigo-600" />
-              Schedule Visit / Event
+              {t('scheduleVisit')}
             </DialogTitle>
           </DialogHeader>
           
@@ -887,7 +887,7 @@ const Dashboard = () => {
             
             {/* Event Type */}
             <div className="space-y-2">
-              <Label>Event Type</Label>
+              <Label>{t('task')}</Label>
               <Select 
                 value={visitForm.event_type} 
                 onValueChange={(v) => setVisitForm({...visitForm, event_type: v})}
@@ -910,27 +910,27 @@ const Dashboard = () => {
             
             {/* Title */}
             <div className="space-y-2">
-              <Label>Title *</Label>
+              <Label>{t('title')} *</Label>
               <Input
                 value={visitForm.title}
                 onChange={(e) => setVisitForm({...visitForm, title: e.target.value})}
-                placeholder="e.g., Sales meeting, Product demo..."
+                placeholder={t('additionalNotes')}
                 data-testid="visit-title-input"
               />
             </div>
             
             {/* Customer (Optional) */}
             <div className="space-y-2">
-              <Label>Customer (Optional)</Label>
+              <Label>{t('customer')} ({t('optional')})</Label>
               <Select 
                 value={visitForm.lead_id} 
                 onValueChange={(v) => setVisitForm({...visitForm, lead_id: v})}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a customer..." />
+                  <SelectValue placeholder={t('selectCustomer')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No customer</SelectItem>
+                  <SelectItem value="">{t('noCustomer')}</SelectItem>
                   {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.company || lead.company_name} - {lead.city}
@@ -942,7 +942,7 @@ const Dashboard = () => {
             
             {/* Time */}
             <div className="space-y-2">
-              <Label>Time</Label>
+              <Label>{t('time')}</Label>
               <Input
                 type="time"
                 value={visitForm.time}
@@ -952,11 +952,11 @@ const Dashboard = () => {
             
             {/* Notes */}
             <div className="space-y-2">
-              <Label>Notes</Label>
+              <Label>{t('notes')}</Label>
               <Textarea
                 value={visitForm.notes}
                 onChange={(e) => setVisitForm({...visitForm, notes: e.target.value})}
-                placeholder="Additional notes..."
+                placeholder={t('additionalNotes')}
                 rows={3}
               />
             </div>
@@ -964,14 +964,14 @@ const Dashboard = () => {
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsVisitDialogOpen(false)}>
-              Cancel
+              {t('cancel')}
             </Button>
             <Button 
               onClick={handleVisitSubmit}
               disabled={saving}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              {saving ? 'Saving...' : 'Schedule'}
+              {saving ? t('loading') : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -982,7 +982,7 @@ const Dashboard = () => {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Truck className="w-5 h-5 text-indigo-600" />
-            Recent Shipments
+            {t('recentShipments')}
           </CardTitle>
           <Button 
             variant="outline" 
@@ -1024,7 +1024,7 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <p className="font-medium text-sm">{shipment.tracking_number}</p>
-                        <p className="text-xs text-muted-foreground">{shipment.lead_name || 'Customer'}</p>
+                        <p className="text-xs text-muted-foreground">{shipment.lead_name || t('customer')}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">

@@ -198,7 +198,7 @@ const Login = () => {
 
         {/* Footer */}
         <p className="text-center text-slate-400 text-sm mt-6">
-          Premium Spices & Binders for Food Manufacturers
+          The Secret Is In The Taste
         </p>
       </div>
     </div>

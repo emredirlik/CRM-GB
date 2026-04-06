@@ -35,21 +35,20 @@ const Sidebar = ({ onClose }) => {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'dashboard' },
-    { path: '/ai-analytics', icon: Brain, label: 'aiAnalytics', highlight: true },
-    { path: '/customer-segments', icon: Crown, label: 'customerSegments', highlight: true },
-    { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
     { path: '/leads', icon: Users, label: 'leads' },
-    { path: '/orders', icon: ShoppingCart, label: 'orders' },
     { path: '/shipments', icon: Truck, label: 'shipments' },
-    { path: '/products', icon: Package, label: 'products' },
-    { path: '/product-videos', icon: Video, label: 'productVideos' },
+    { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
+    { path: '/customer-segments', icon: Crown, label: 'customerSegments', highlight: true },
+    { path: '/orders', icon: ShoppingCart, label: 'orders' },
     { path: '/specifications', icon: ClipboardList, label: 'specifications' },
+    { path: '/product-videos', icon: Video, label: 'productVideos' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
     { path: '/daily-reports', icon: Calendar, label: 'dailyReports' },
     { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
-    { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/mail', icon: Mail, label: 'mail' },
     { path: '/compose', icon: Sparkles, label: 'aiMailComposer', highlight: true },
+    { path: '/templates', icon: FileText, label: 'templates' },
+    { path: '/ai-analytics', icon: Brain, label: 'aiAnalytics', highlight: true },
     { path: '/history', icon: History, label: 'emailHistory' },
     { path: '/settings', icon: Settings, label: 'settings' },
   ];
@@ -74,7 +73,7 @@ const Sidebar = ({ onClose }) => {
   };
 
   return (
-    <aside className="sidebar w-64 min-h-screen flex flex-col" data-testid="sidebar">
+    <aside className="sidebar w-64 h-screen flex flex-col sticky top-0" data-testid="sidebar">
       {/* Company Header */}
       <div className="p-4 lg:p-5 border-b border-slate-700">
         <div className="flex items-center justify-between">
