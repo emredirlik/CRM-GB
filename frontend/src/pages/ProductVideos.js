@@ -35,7 +35,7 @@ import { toast } from 'sonner';
 import { 
   Video, Upload, Play, Trash2, Share2, Search,
   MessageCircle, Mail, Eye, Pencil, Plus, Loader2,
-  Film, FileVideo, X, Check
+  Film, FileVideo, X, Check, Folder, FolderPlus, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -43,17 +43,22 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ProductVideos = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [videos, setVideos] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [products, setProducts] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentFolder, setCurrentFolder] = useState(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isFolderOpen, setIsFolderOpen] = useState(false);
+  const [isFolderDeleteOpen, setIsFolderDeleteOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedFolder, setSelectedFolder] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
@@ -63,8 +68,11 @@ const ProductVideos = () => {
     title: '',
     description: '',
     product_id: '',
+    folder_id: '',
     file: null
   });
+
+  const [folderForm, setFolderForm] = useState({ name: '', description: '' });
 
   const [shareData, setShareData] = useState({
     method: 'whatsapp',
@@ -72,25 +80,113 @@ const ProductVideos = () => {
     message: ''
   });
 
+  const texts = {
+    tr: {
+      title: 'Ürün Videoları',
+      newFolder: 'Yeni Klasör',
+      folderName: 'Klasör Adı',
+      createFolder: 'Klasör Oluştur',
+      deleteFolder: 'Klasör Sil',
+      deleteFolderConfirm: 'Bu klasörü silmek istediğinize emin misiniz?',
+      allVideos: 'Tüm Videolar',
+      videosInFolder: 'klasöründeki videolar',
+      back: 'Geri',
+      noFolders: 'Henüz klasör yok',
+      noVideos: 'Henüz video yok',
+      uploadVideo: 'Video Yükle',
+      selectFolder: 'Klasör Seç',
+      noFolder: 'Klasör Yok'
+    },
+    en: {
+      title: 'Product Videos',
+      newFolder: 'New Folder',
+      folderName: 'Folder Name',
+      createFolder: 'Create Folder',
+      deleteFolder: 'Delete Folder',
+      deleteFolderConfirm: 'Are you sure you want to delete this folder?',
+      allVideos: 'All Videos',
+      videosInFolder: 'videos in folder',
+      back: 'Back',
+      noFolders: 'No folders yet',
+      noVideos: 'No videos yet',
+      uploadVideo: 'Upload Video',
+      selectFolder: 'Select Folder',
+      noFolder: 'No Folder'
+    },
+    de: {
+      title: 'Produktvideos',
+      newFolder: 'Neuer Ordner',
+      folderName: 'Ordnername',
+      createFolder: 'Ordner erstellen',
+      deleteFolder: 'Ordner löschen',
+      deleteFolderConfirm: 'Möchten Sie diesen Ordner wirklich löschen?',
+      allVideos: 'Alle Videos',
+      videosInFolder: 'Videos im Ordner',
+      back: 'Zurück',
+      noFolders: 'Noch keine Ordner',
+      noVideos: 'Noch keine Videos',
+      uploadVideo: 'Video hochladen',
+      selectFolder: 'Ordner auswählen',
+      noFolder: 'Kein Ordner'
+    }
+  };
+
+  const txt = texts[language] || texts.en;
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const [videosRes, productsRes, leadsRes] = await Promise.all([
+      const [videosRes, foldersRes, productsRes, leadsRes] = await Promise.all([
         axios.get(`${API}/product-videos`),
+        axios.get(`${API}/video-folders`),
         axios.get(`${API}/products`),
         axios.get(`${API}/leads`)
       ]);
       setVideos(videosRes.data);
+      setFolders(foldersRes.data || []);
       setProducts(productsRes.data);
       setLeads(leadsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error(t('error'), { description: 'Veri yüklenemedi' });
+      // Initialize empty folders if endpoint doesn't exist yet
+      setFolders([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    if (!folderForm.name.trim()) {
+      toast.error('Klasör adı gerekli');
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/video-folders`, folderForm);
+      toast.success('Klasör oluşturuldu');
+      setIsFolderOpen(false);
+      setFolderForm({ name: '', description: '' });
+      fetchData();
+    } catch (error) {
+      toast.error('Klasör oluşturulamadı');
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    try {
+      await axios.delete(`${API}/video-folders/${selectedFolder.id}`);
+      toast.success('Klasör silindi');
+      setIsFolderDeleteOpen(false);
+      setSelectedFolder(null);
+      if (currentFolder?.id === selectedFolder.id) {
+        setCurrentFolder(null);
+      }
+      fetchData();
+    } catch (error) {
+      toast.error('Klasör silinemedi');
     }
   };
 
@@ -114,10 +210,10 @@ const ProductVideos = () => {
       if (file.type.startsWith('video/')) {
         setFormData(prev => ({ ...prev, file, title: file.name.replace(/\.[^/.]+$/, '') }));
       } else {
-        toast.error(t('error'), { description: 'Sadece video dosyaları yüklenebilir' });
+        toast.error('Sadece video dosyaları yüklenebilir');
       }
     }
-  }, [t]);
+  }, []);
 
   const handleFileSelect = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -128,7 +224,7 @@ const ProductVideos = () => {
 
   const handleUpload = async () => {
     if (!formData.file || !formData.title) {
-      toast.error(t('error'), { description: 'Başlık ve video dosyası gerekli' });
+      toast.error('Başlık ve video dosyası gerekli');
       return;
     }
 
@@ -142,6 +238,9 @@ const ProductVideos = () => {
     if (formData.product_id) {
       uploadFormData.append('product_id', formData.product_id);
     }
+    if (formData.folder_id) {
+      uploadFormData.append('folder_id', formData.folder_id);
+    }
 
     try {
       await axios.post(`${API}/product-videos`, uploadFormData, {
@@ -152,12 +251,12 @@ const ProductVideos = () => {
         }
       });
       
-      toast.success(t('success'), { description: 'Video yüklendi' });
+      toast.success('Video yüklendi');
       setIsUploadOpen(false);
-      setFormData({ title: '', description: '', product_id: '', file: null });
+      setFormData({ title: '', description: '', product_id: '', folder_id: '', file: null });
       fetchData();
     } catch (error) {
-      toast.error(t('error'), { description: error.response?.data?.detail || 'Video yüklenemedi' });
+      toast.error(error.response?.data?.detail || 'Video yüklenemedi');
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -167,17 +266,17 @@ const ProductVideos = () => {
   const handleDelete = async () => {
     try {
       await axios.delete(`${API}/product-videos/${selectedVideo.id}`);
-      toast.success(t('success'), { description: 'Video silindi' });
+      toast.success('Video silindi');
       setIsDeleteOpen(false);
       fetchData();
     } catch (error) {
-      toast.error(t('error'), { description: 'Video silinemedi' });
+      toast.error('Video silinemedi');
     }
   };
 
   const handleShare = async () => {
     if (!shareData.lead_id) {
-      toast.error(t('error'), { description: 'Lütfen müşteri seçin' });
+      toast.error('Lütfen müşteri seçin');
       return;
     }
 
@@ -187,12 +286,12 @@ const ProductVideos = () => {
     if (shareData.method === 'whatsapp') {
       const phone = lead.phone?.replace(/[^0-9]/g, '');
       if (!phone) {
-        toast.error(t('error'), { description: 'Müşterinin telefon numarası yok' });
+        toast.error('Müşterinin telefon numarası yok');
         return;
       }
       const message = encodeURIComponent(shareData.message || `${selectedVideo.title}: ${selectedVideo.url}`);
       window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-      toast.success(t('success'), { description: 'WhatsApp açılıyor...' });
+      toast.success('WhatsApp açılıyor...');
     } else {
       try {
         await axios.post(`${API}/mail/send`, {
@@ -200,9 +299,9 @@ const ProductVideos = () => {
           subject: `Video: ${selectedVideo.title}`,
           body: `${shareData.message || ''}\n\nVideo: ${selectedVideo.url}`
         });
-        toast.success(t('success'), { description: t('emailSent') });
+        toast.success(t('emailSent'));
       } catch (error) {
-        toast.error(t('error'), { description: 'Mail gönderilemedi' });
+        toast.error('Mail gönderilemedi');
       }
     }
     setIsShareOpen(false);
@@ -218,10 +317,26 @@ const ProductVideos = () => {
     setIsShareOpen(true);
   };
 
-  const filteredVideos = videos.filter(video => 
-    video.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    video.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const openUploadDialog = () => {
+    setFormData({ 
+      title: '', 
+      description: '', 
+      product_id: '', 
+      folder_id: currentFolder?.id || '', 
+      file: null 
+    });
+    setIsUploadOpen(true);
+  };
+
+  // Filter videos by current folder
+  const filteredVideos = videos.filter(video => {
+    const matchesSearch = video.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      video.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFolder = currentFolder 
+      ? video.folder_id === currentFolder.id 
+      : !video.folder_id;
+    return matchesSearch && matchesFolder;
+  });
 
   const formatFileSize = (bytes) => {
     if (!bytes) return '';
@@ -242,14 +357,75 @@ const ProductVideos = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-4xl font-bold tracking-tight font-['Manrope']">{t('productVideos')}</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">{videos.length} video</p>
+          <h1 className="text-2xl md:text-4xl font-bold tracking-tight font-['Manrope']">{txt.title}</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
+            {currentFolder ? `${currentFolder.name} - ${filteredVideos.length} video` : `${videos.length} video`}
+          </p>
         </div>
-        <Button onClick={() => setIsUploadOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
-          <Upload className="w-4 h-4 mr-2" />
-          {t('uploadVideo')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsFolderOpen(true)}>
+            <FolderPlus className="w-4 h-4 mr-2" />
+            {txt.newFolder}
+          </Button>
+          <Button onClick={openUploadDialog} className="bg-indigo-600 hover:bg-indigo-700">
+            <Upload className="w-4 h-4 mr-2" />
+            {txt.uploadVideo}
+          </Button>
+        </div>
       </div>
+
+      {/* Breadcrumb / Back Button */}
+      {currentFolder && (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentFolder(null)}>
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            {txt.back}
+          </Button>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          <Badge variant="secondary" className="text-sm">
+            <Folder className="w-3 h-3 mr-1" />
+            {currentFolder.name}
+          </Badge>
+        </div>
+      )}
+
+      {/* Folders Grid */}
+      {!currentFolder && folders.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">Klasörler</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {folders.map(folder => (
+              <Card 
+                key={folder.id} 
+                className="cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all group"
+                onClick={() => setCurrentFolder(folder)}
+              >
+                <CardContent className="p-4 text-center">
+                  <div className="relative">
+                    <Folder className="w-12 h-12 mx-auto text-amber-500 mb-2" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 bg-red-100 hover:bg-red-200"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setSelectedFolder(folder); 
+                        setIsFolderDeleteOpen(true); 
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3 text-red-600" />
+                    </Button>
+                  </div>
+                  <p className="font-medium text-sm truncate">{folder.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {videos.filter(v => v.folder_id === folder.id).length} video
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative max-w-md">
@@ -262,12 +438,17 @@ const ProductVideos = () => {
         />
       </div>
 
+      {/* Videos Section Header */}
+      {!currentFolder && (
+        <h3 className="text-sm font-medium text-muted-foreground">{txt.allVideos}</h3>
+      )}
+
       {/* Video Grid */}
       {filteredVideos.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Film className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-            <p className="text-muted-foreground">{t('noVideos')}</p>
+            <p className="text-muted-foreground">{txt.noVideos}</p>
           </CardContent>
         </Card>
       ) : (
@@ -332,11 +513,64 @@ const ProductVideos = () => {
         </div>
       )}
 
+      {/* Create Folder Dialog */}
+      <Dialog open={isFolderOpen} onOpenChange={setIsFolderOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{txt.newFolder}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{txt.folderName} *</Label>
+              <Input
+                value={folderForm.name}
+                onChange={(e) => setFolderForm({ ...folderForm, name: e.target.value })}
+                placeholder="Klasör adı"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Açıklama</Label>
+              <Textarea
+                value={folderForm.description}
+                onChange={(e) => setFolderForm({ ...folderForm, description: e.target.value })}
+                placeholder="Klasör açıklaması"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFolderOpen(false)}>{t('cancel')}</Button>
+            <Button onClick={handleCreateFolder} className="bg-indigo-600 hover:bg-indigo-700">
+              <FolderPlus className="w-4 h-4 mr-2" />
+              {txt.createFolder}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Folder Dialog */}
+      <AlertDialog open={isFolderDeleteOpen} onOpenChange={setIsFolderDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{txt.deleteFolder}</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{selectedFolder?.name}" {txt.deleteFolderConfirm}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteFolder} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Upload Dialog */}
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t('uploadVideo')}</DialogTitle>
+            <DialogTitle>{txt.uploadVideo}</DialogTitle>
             <DialogDescription>Video dosyasını sürükleyip bırakın veya seçin</DialogDescription>
           </DialogHeader>
           
@@ -411,30 +645,53 @@ const ProductVideos = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Ürün (Opsiyonel)</Label>
-              <Select 
-                value={formData.product_id} 
-                onValueChange={(val) => setFormData({ ...formData, product_id: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Ürün seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map(product => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{txt.selectFolder}</Label>
+                <Select 
+                  value={formData.folder_id} 
+                  onValueChange={(val) => setFormData({ ...formData, folder_id: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={txt.noFolder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{txt.noFolder}</SelectItem>
+                    {folders.map(folder => (
+                      <SelectItem key={folder.id} value={folder.id}>
+                        <div className="flex items-center gap-2">
+                          <Folder className="w-4 h-4 text-amber-500" />
+                          {folder.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Ürün</Label>
+                <Select 
+                  value={formData.product_id} 
+                  onValueChange={(val) => setFormData({ ...formData, product_id: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ürün seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUploadOpen(false)}>
-              {t('cancel')}
-            </Button>
+            <Button variant="outline" onClick={() => setIsUploadOpen(false)}>{t('cancel')}</Button>
             <Button 
               onClick={handleUpload} 
               disabled={uploading || !formData.file}
@@ -507,9 +764,7 @@ const ProductVideos = () => {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsShareOpen(false)}>
-              {t('cancel')}
-            </Button>
+            <Button variant="outline" onClick={() => setIsShareOpen(false)}>{t('cancel')}</Button>
             <Button 
               onClick={handleShare}
               className={shareData.method === 'whatsapp' ? 'bg-green-600 hover:bg-green-700' : 'bg-indigo-600 hover:bg-indigo-700'}
@@ -546,7 +801,7 @@ const ProductVideos = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Video Confirmation */}
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

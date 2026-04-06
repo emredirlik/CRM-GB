@@ -4552,6 +4552,39 @@ async def get_comparison_report(period: str = "month"):
         }
     }
 
+# ============== VIDEO FOLDERS ENDPOINTS ==============
+
+@api_router.get("/video-folders")
+async def get_video_folders():
+    """Get all video folders"""
+    folders = await db.video_folders.find({}, {"_id": 0}).to_list(100)
+    return folders
+
+@api_router.post("/video-folders")
+async def create_video_folder(folder_data: dict):
+    """Create a new video folder"""
+    folder = {
+        "id": str(uuid.uuid4()),
+        "name": folder_data.get("name"),
+        "description": folder_data.get("description", ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.video_folders.insert_one(folder)
+    return {"id": folder["id"], "message": "Folder created"}
+
+@api_router.delete("/video-folders/{folder_id}")
+async def delete_video_folder(folder_id: str):
+    """Delete a video folder"""
+    # Update videos in this folder to have no folder
+    await db.product_videos.update_many(
+        {"folder_id": folder_id},
+        {"$set": {"folder_id": None}}
+    )
+    result = await db.video_folders.delete_one({"id": folder_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    return {"message": "Folder deleted"}
+
 # Include router after all endpoints are defined
 app.include_router(api_router)
 
