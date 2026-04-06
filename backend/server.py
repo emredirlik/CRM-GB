@@ -3929,13 +3929,14 @@ async def get_mail_inbox():
         mail.login(imap_user, imap_pass)
         mail.select('INBOX')
         
-        # Fetch last 50 emails
+        # Fetch last 20 emails (reduced for speed)
         _, message_numbers = mail.search(None, 'ALL')
-        email_ids = message_numbers[0].split()[-50:]  # Last 50
+        email_ids = message_numbers[0].split()[-20:]  # Last 20 for faster load
         
         emails = []
         for eid in reversed(email_ids):
-            _, msg_data = mail.fetch(eid, '(RFC822 FLAGS)')
+            # Fetch only headers and flags for speed
+            _, msg_data = mail.fetch(eid, '(BODY.PEEK[HEADER] FLAGS)')
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
                     msg = email.message_from_bytes(response_part[1])
@@ -3953,39 +3954,22 @@ async def get_mail_inbox():
                     # Decode from
                     from_header = msg.get('From', '')
                     from_name = ''
-                    from_email = from_header
+                    from_email_addr = from_header
                     if '<' in from_header:
                         from_name = from_header.split('<')[0].strip().strip('"')
-                        from_email = from_header.split('<')[1].strip('>')
+                        from_email_addr = from_header.split('<')[1].strip('>')
                     
-                    # Get body
-                    body = ''
-                    if msg.is_multipart():
-                        for part in msg.walk():
-                            if part.get_content_type() == 'text/plain':
-                                try:
-                                    body = part.get_payload(decode=True).decode('utf-8', errors='replace')
-                                except:
-                                    body = str(part.get_payload())
-                                break
-                    else:
-                        try:
-                            body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
-                        except:
-                            body = str(msg.get_payload())
-                    
-                    # Check if read
-                    _, flags_data = mail.fetch(eid, '(FLAGS)')
-                    is_read = b'\\Seen' in flags_data[0]
+                    # Check flags
+                    is_read = b'\\Seen' in response_part[0]
                     
                     emails.append({
                         "id": eid.decode(),
                         "subject": subject,
                         "from_name": from_name,
-                        "from_email": from_email,
+                        "from_email": from_email_addr,
                         "date": msg.get('Date', ''),
-                        "body": body[:5000],
-                        "snippet": body[:200] if body else '',
+                        "body": '',  # Load on demand
+                        "snippet": subject[:100] if subject else '',
                         "is_read": is_read
                     })
         
@@ -3995,6 +3979,56 @@ async def get_mail_inbox():
     except Exception as e:
         logger.error(f"IMAP error: {e}")
         return {"status": "error", "emails": [], "message": str(e)}
+
+@api_router.get("/mail/body/{email_id}")
+async def get_email_body(email_id: str):
+    """Fetch email body on demand"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('imap_host'):
+        raise HTTPException(status_code=400, detail="IMAP not configured")
+    
+    try:
+        mail = imaplib.IMAP4_SSL(settings['imap_host'], int(settings.get('imap_port', 993)))
+        mail.login(settings['smtp_username'], settings['smtp_password'])
+        mail.select('INBOX')
+        
+        _, msg_data = mail.fetch(email_id.encode(), '(RFC822)')
+        for response_part in msg_data:
+            if isinstance(response_part, tuple):
+                msg = email.message_from_bytes(response_part[1])
+                
+                # Get body
+                body = ''
+                html_body = ''
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        content_type = part.get_content_type()
+                        if content_type == 'text/plain' and not body:
+                            try:
+                                body = part.get_payload(decode=True).decode('utf-8', errors='replace')
+                            except:
+                                body = str(part.get_payload())
+                        elif content_type == 'text/html' and not html_body:
+                            try:
+                                html_body = part.get_payload(decode=True).decode('utf-8', errors='replace')
+                            except:
+                                html_body = str(part.get_payload())
+                else:
+                    try:
+                        body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
+                    except:
+                        body = str(msg.get_payload())
+                
+                mail.logout()
+                return {"body": html_body or body, "plain": body}
+        
+        mail.logout()
+        return {"body": "", "plain": ""}
+    except Exception as e:
+        logger.error(f"Get email body error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @api_router.post("/mail/mark-read/{email_id}")
 async def mark_email_read(email_id: str):

@@ -39,7 +39,7 @@ import {
   Paperclip, Clock, Pencil, Tag, Users, Bell, ShoppingBag,
   Bold, Italic, Underline, List, Link as LinkIcon, AlignLeft, AlignCenter, 
   AlignRight, Type, Palette, ChevronDown, Settings, Image as ImageIcon,
-  MailOpen, Check, Sparkles, Minus, Upload, Maximize2, Minimize2
+  MailOpen, Check, Sparkles, Minus, Upload, Maximize2, Minimize2, FileImage
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -99,10 +99,14 @@ const MailPage = () => {
 
   // Load emails on mount
   useEffect(() => {
+    let isMounted = true;
+    
     const loadEmails = async () => {
       setLoading(true);
       try {
         const response = await axios.get(`${API}/mail/inbox`);
+        if (!isMounted) return;
+        
         if (response.data && response.data.emails) {
           setEmails(response.data.emails.map((e, i) => ({ 
             ...e, 
@@ -115,10 +119,13 @@ const MailPage = () => {
           setConnectionStatus('error');
         }
       } catch (error) {
+        if (!isMounted) return;
         console.error('Mail fetch error:', error);
         setConnectionStatus('error');
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
@@ -126,10 +133,14 @@ const MailPage = () => {
     
     // Load signature
     axios.get(`${API}/settings/signature`).then(res => {
-      if (res.data?.signature) setSignature(res.data.signature);
+      if (isMounted && res.data?.signature) setSignature(res.data.signature);
     }).catch(() => {
-      setSignature(`<br><br>--<br><b>Gewürzberg GmbH</b><br>Premium Gewürze & Binderlösungen`);
+      if (isMounted) setSignature(`<br><br>--<br><b>Gewürzberg GmbH</b><br>Premium Gewürze & Binderlösungen`);
     });
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleRefresh = async () => {
@@ -165,6 +176,21 @@ const MailPage = () => {
 
   const handleViewEmail = async (email) => {
     setSelectedEmail(email);
+    
+    // Lazy load email body if not already loaded
+    if (!email.body || email.body === '') {
+      try {
+        const response = await axios.get(`${API}/mail/body/${email.id}`);
+        if (response.data) {
+          const updatedEmail = { ...email, body: response.data.body || response.data.plain || '' };
+          setSelectedEmail(updatedEmail);
+          setEmails(prev => prev.map(e => e.id === email.id ? updatedEmail : e));
+        }
+      } catch (error) {
+        console.error('Failed to load email body:', error);
+      }
+    }
+    
     if (!email.is_read) {
       try {
         await axios.post(`${API}/mail/mark-read/${email.id}`);
@@ -531,9 +557,9 @@ const MailPage = () => {
                     {/* Attachments */}
                     {email.hasAttachment && (
                       <div className="flex gap-1 mt-1.5">
-                        {[...Array(Math.min(email.attachmentCount, 2))].map((_, i) => (
+                        {[...Array(Math.min(email.attachmentCount || 0, 2))].map((_, i) => (
                           <div key={i} className="flex items-center gap-1 px-2 py-1 bg-[#3c4043] rounded text-[10px] text-[#c4c7c5]">
-                            <Image className="w-3 h-3" />
+                            <FileImage className="w-3 h-3" />
                             <span>IMG_{Math.floor(Math.random() * 9000) + 1000}</span>
                           </div>
                         ))}
