@@ -290,27 +290,27 @@ const Dashboard = () => {
       label: t('totalLeads'),
       value: stats.total_leads,
       icon: Users,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      hoverBg: 'hover:bg-blue-100',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      hoverBg: 'hover:bg-indigo-50/80',
       link: '/leads'
     },
     {
       label: t('totalOrders'),
       value: stats.total_orders,
       icon: ShoppingCart,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      hoverBg: 'hover:bg-purple-100',
+      color: 'text-indigo-600',
+      bgColor: 'bg-indigo-50',
+      hoverBg: 'hover:bg-indigo-50/80',
       link: '/orders'
     },
     {
       label: t('revenue'),
       value: formatCurrency(stats.total_revenue || 0),
       icon: Euro,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      hoverBg: 'hover:bg-green-100',
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+      hoverBg: 'hover:bg-emerald-50/80',
       isText: true,
       link: '/orders'
     },
@@ -320,7 +320,7 @@ const Dashboard = () => {
       icon: Mail,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
-      hoverBg: 'hover:bg-indigo-100',
+      hoverBg: 'hover:bg-indigo-50/80',
       link: '/email-history'
     }
   ];
@@ -430,8 +430,8 @@ const Dashboard = () => {
         
         {/* Finance Summary Card */}
         {financeSummary && (
-          <Card className="lg:col-span-2 overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white pb-4">
+          <Card className="lg:col-span-2 overflow-hidden border-0 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white pb-4">
               <CardTitle className="flex items-center gap-2">
                 <Euro className="w-5 h-5" />
                 {language === 'tr' ? 'Finansal Özet' : 'Financial Summary'}
@@ -443,7 +443,7 @@ const Dashboard = () => {
                   <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Toplam Ciro' : 'Total Revenue'}</p>
                   <p className="text-xl md:text-2xl font-bold text-slate-900">{formatCurrency(financeSummary.total_revenue)}</p>
                 </div>
-                <div className="p-4 border-r border-b border-slate-100 bg-emerald-50/50">
+                <div className="p-4 border-r border-b border-slate-100 bg-emerald-50/30">
                   <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Ödenen' : 'Paid'}</p>
                   <p className="text-xl md:text-2xl font-bold text-emerald-600">{formatCurrency(financeSummary.total_paid)}</p>
                 </div>
@@ -451,7 +451,7 @@ const Dashboard = () => {
                   <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Bekleyen' : 'Pending'}</p>
                   <p className="text-xl md:text-2xl font-bold text-amber-600">{formatCurrency(financeSummary.total_pending)}</p>
                 </div>
-                <div className="p-4 border-b border-slate-100 bg-indigo-50/50">
+                <div className="p-4 border-b border-slate-100 bg-indigo-50/30">
                   <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Ödeme Oranı' : 'Payment Rate'}</p>
                   <p className="text-xl md:text-2xl font-bold text-indigo-600">
                     {financeSummary.total_revenue > 0 
@@ -466,10 +466,10 @@ const Dashboard = () => {
         
         {/* Top Customers Card */}
         {financeSummary?.customer_ranking?.length > 0 && (
-          <Card>
+          <Card className="border-0 shadow-md">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-500" />
+                <Trophy className="w-5 h-5 text-indigo-600" />
                 {language === 'tr' ? 'En Değerli Müşteriler' : 'Top Customers'}
               </CardTitle>
             </CardHeader>
@@ -481,10 +481,10 @@ const Dashboard = () => {
                 >
                   <div className="flex items-center gap-3">
                     <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                      idx === 0 ? 'bg-amber-100 text-amber-700' :
-                      idx === 1 ? 'bg-slate-200 text-slate-700' :
-                      idx === 2 ? 'bg-orange-100 text-orange-700' :
-                      'bg-slate-100 text-slate-600'
+                      idx === 0 ? 'bg-indigo-100 text-indigo-700' :
+                      idx === 1 ? 'bg-indigo-50 text-indigo-600' :
+                      idx === 2 ? 'bg-slate-100 text-slate-600' :
+                      'bg-slate-50 text-slate-500'
                     }`}>
                       {idx + 1}
                     </span>
@@ -531,36 +531,36 @@ const Dashboard = () => {
 
       {/* AI Sales Forecast */}
       {forecast && forecast.forecast && (
-        <Card className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden" data-testid="ai-forecast">
+        <Card className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white overflow-hidden border-0 shadow-lg" data-testid="ai-forecast">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-indigo-300" />
               </div>
               <div>
                 <h3 className="font-semibold">AI Sales Forecast</h3>
-                <p className="text-sm text-slate-400">Confidence: {forecast.forecast.confidence}%</p>
+                <p className="text-sm text-indigo-300">Confidence: {forecast.forecast.confidence}%</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-slate-400 mb-1">{language === 'tr' ? 'Tahmin Edilen Gelir' : 'Predicted Revenue'}</p>
+              <div className="bg-white/5 rounded-xl p-4 backdrop-blur">
+                <p className="text-xs text-indigo-300 mb-1">{language === 'tr' ? 'Tahmin Edilen Gelir' : 'Predicted Revenue'}</p>
                 <p className="text-2xl font-bold text-emerald-400">
                   {formatCurrency(forecast.forecast.predicted_monthly_revenue)}
                 </p>
               </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-slate-400 mb-1">Trend</p>
+              <div className="bg-white/5 rounded-xl p-4 backdrop-blur">
+                <p className="text-xs text-indigo-300 mb-1">Trend</p>
                 <p className={`text-2xl font-bold ${
                   forecast.forecast.trend === 'up' ? 'text-emerald-400' : 
-                  forecast.forecast.trend === 'down' ? 'text-red-400' : 'text-slate-400'
+                  forecast.forecast.trend === 'down' ? 'text-red-400' : 'text-indigo-300'
                 }`}>
                   {forecast.forecast.trend === 'up' ? '↑ Yükseliş' : 
                    forecast.forecast.trend === 'down' ? '↓ Düşüş' : '→ Stabil'}
                 </p>
               </div>
-              <div className="bg-white/5 rounded-xl p-4">
-                <p className="text-xs text-slate-400 mb-1">{language === 'tr' ? 'Ana Faktör' : 'Top Factor'}</p>
+              <div className="bg-white/5 rounded-xl p-4 backdrop-blur">
+                <p className="text-xs text-indigo-300 mb-1">{language === 'tr' ? 'Ana Faktör' : 'Top Factor'}</p>
                 <p className="text-lg text-white">
                   {forecast.forecast.factors?.[0] || 'Seasonal patterns'}
                 </p>
@@ -568,7 +568,7 @@ const Dashboard = () => {
             </div>
             {forecast.forecast.recommendation && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-sm text-slate-400">{language === 'tr' ? 'Öneri' : 'Recommendation'}</p>
+                <p className="text-sm text-indigo-300">{language === 'tr' ? 'Öneri' : 'Recommendation'}</p>
                 <p className="text-white/90 mt-1">{forecast.forecast.recommendation}</p>
               </div>
             )}
