@@ -24,6 +24,7 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Annual revenue target progress
 - AI Sales Forecast
 - Calendar with visit planning
+- ✅ **Schedule Visit dialog fixed** (SelectItem empty value bug)
 
 ### Customer Management
 - Activity History tracking (visit/call/email outcomes)
@@ -41,6 +42,12 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Folder system (create/delete folders)
 - Video upload with progress
 - WhatsApp/Email sharing
+- ✅ **Upload/Move dialog fixed** (SelectItem empty value bug)
+
+### Mail Module
+- IMAP/SMTP integration
+- Gmail-style dark UI
+- ✅ **Fullscreen/Maximize toggle added** to compose dialog
 
 ### Other Modules
 - DHL Shipment Tracking (indigo theme)
@@ -49,12 +56,19 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Recipes, Specifications
 - Route Planner
 - AI Analytics
-- Mail with IMAP/SMTP
 
 ### PWA Support
 - manifest.json
 - Service Worker
 - Install banner for iOS/Android
+
+## Known Issues
+
+### 1&1 IONOS Mail Connection
+- **Status**: BLOCKED (Waiting for user)
+- **Problem**: Authentication credentials rejected by IONOS servers
+- **Diagnosis**: Code is correct, SMTP/IMAP servers reachable, but password rejected
+- **Action Required**: User needs to verify password or create App-Password in IONOS control panel
 
 ## Test Credentials
 - **Admin**: emre@gewuerzberg.de / 190371
@@ -64,3 +78,13 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - SERPAPI_KEY
 - DHL_API_KEY  
 - EMERGENT_LLM_KEY
+
+## Upcoming Tasks
+- WhatsApp Business API Integration (P1)
+- Automated Weekly Email via CRON (P1)
+
+## Future/Backlog
+- Inventory Tracking (Stok Takibi) (P2)
+- Invoice Generation System (P2)
+- Campaign Management (P2)
+- Multi-user Roles (Admin, Sales, etc.) (P2)

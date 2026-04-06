@@ -703,15 +703,15 @@ const ProductVideos = () => {
               <div className="space-y-2">
                 <Label>{txt.selectFolder}</Label>
                 <Select 
-                  value={formData.folder_id} 
-                  onValueChange={(val) => setFormData({ ...formData, folder_id: val })}
+                  value={formData.folder_id || "root"} 
+                  onValueChange={(val) => setFormData({ ...formData, folder_id: val === "root" ? "" : val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={txt.noFolder} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{txt.noFolder}</SelectItem>
-                    {folders.map(folder => (
+                    <SelectItem value="root">{txt.noFolder}</SelectItem>
+                    {folders && folders.map(folder => (
                       <SelectItem key={folder.id} value={folder.id}>
                         <div className="flex items-center gap-2">
                           <Folder className="w-4 h-4 text-amber-500" />
@@ -885,13 +885,13 @@ const ProductVideos = () => {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Hedef Klasör</Label>
-              <Select value={targetFolderId} onValueChange={setTargetFolderId}>
+              <Select value={targetFolderId || "root"} onValueChange={(val) => setTargetFolderId(val === "root" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Klasör seçin (veya Ana Klasör)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">🏠 Ana Klasör (Kök)</SelectItem>
-                  {folders.map(folder => (
+                  <SelectItem value="root">🏠 Ana Klasör (Kök)</SelectItem>
+                  {folders && folders.map(folder => (
                     <SelectItem key={folder.id} value={folder.id}>
                       📁 {folder.name}
                     </SelectItem>

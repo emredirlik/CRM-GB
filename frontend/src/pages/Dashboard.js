@@ -923,17 +923,17 @@ const Dashboard = () => {
             <div className="space-y-2">
               <Label>{t('customer')} ({t('optional')})</Label>
               <Select 
-                value={visitForm.lead_id} 
-                onValueChange={(v) => setVisitForm({...visitForm, lead_id: v})}
+                value={visitForm.lead_id || "none"} 
+                onValueChange={(v) => setVisitForm({...visitForm, lead_id: v === "none" ? "" : v})}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={t('selectCustomer')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('noCustomer')}</SelectItem>
-                  {leads.map((lead) => (
+                  <SelectItem value="none">{t('noCustomer')}</SelectItem>
+                  {leads && leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
-                      {lead.company || lead.company_name} - {lead.city}
+                      {lead.company_name || lead.company || 'Unknown'} - {lead.city || ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

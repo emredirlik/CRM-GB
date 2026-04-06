@@ -39,7 +39,7 @@ import {
   Paperclip, Clock, Pencil, Tag, Users, Bell, ShoppingBag,
   Bold, Italic, Underline, List, Link as LinkIcon, AlignLeft, AlignCenter, 
   AlignRight, Type, Palette, ChevronDown, Settings, Image as ImageIcon,
-  MailOpen, Check, Sparkles, Minus, Upload
+  MailOpen, Check, Sparkles, Minus, Upload, Maximize2, Minimize2
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -74,6 +74,7 @@ const MailPage = () => {
   const [selectedEmail, setSelectedEmail] = useState(null);
   const [selectedEmails, setSelectedEmails] = useState(new Set());
   const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [isComposeFullscreen, setIsComposeFullscreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [composeData, setComposeData] = useState({ to: '', cc: '', bcc: '', subject: '', body: '' });
   const [sending, setSending] = useState(false);
@@ -628,14 +629,27 @@ const MailPage = () => {
       )}
 
       {/* Compose Dialog - Gmail Style */}
-      <Dialog open={isComposeOpen} onOpenChange={setIsComposeOpen}>
-        <DialogContent className="max-w-2xl p-0 gap-0 bg-[#2d2d2d] border-[#3c4043] max-h-[85vh] flex flex-col">
+      <Dialog open={isComposeOpen} onOpenChange={(open) => { setIsComposeOpen(open); if (!open) setIsComposeFullscreen(false); }}>
+        <DialogContent className={`p-0 gap-0 bg-[#2d2d2d] border-[#3c4043] flex flex-col transition-all duration-200 ${
+          isComposeFullscreen 
+            ? 'max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none' 
+            : 'max-w-2xl max-h-[85vh]'
+        }`}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-[#404040] rounded-t-lg">
             <span className="text-sm font-medium text-[#e8eaed]">
               {replyMode === 'reply' ? 'Yanıtla' : replyMode === 'forward' ? 'İlet' : 'Yeni Mesaj'}
             </span>
             <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsComposeFullscreen(!isComposeFullscreen)}
+                className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                title={isComposeFullscreen ? 'Küçült' : 'Tam Ekran'}
+              >
+                {isComposeFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]">
                 <Minus className="w-4 h-4" />
               </Button>
