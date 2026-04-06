@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -44,6 +44,20 @@ const statusColors = {
   shipped: 'bg-purple-100 text-purple-700',
   delivered: 'bg-green-100 text-green-700',
   cancelled: 'bg-red-100 text-red-700'
+};
+
+const paymentStatusColors = {
+  pending: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+  partial: 'bg-orange-100 text-orange-700 border-orange-300',
+  paid: 'bg-green-100 text-green-700 border-green-300',
+  overdue: 'bg-red-100 text-red-700 border-red-300'
+};
+
+const paymentStatusLabels = {
+  tr: { pending: 'Bekliyor', partial: 'Kısmi', paid: 'Ödendi', overdue: 'Vadesi Geçti' },
+  en: { pending: 'Pending', partial: 'Partial', paid: 'Paid', overdue: 'Overdue' },
+  de: { pending: 'Ausstehend', partial: 'Teilweise', paid: 'Bezahlt', overdue: 'Überfällig' },
+  pl: { pending: 'Oczekuje', partial: 'Częściowo', paid: 'Zapłacono', overdue: 'Zaległe' }
 };
 
 const statusLabels = {
@@ -264,6 +278,16 @@ const Orders = () => {
     }
   };
 
+  const handlePaymentStatusChange = async (orderId, newPaymentStatus) => {
+    try {
+      await axios.put(`${API}/orders/${orderId}/payment`, { payment_status: newPaymentStatus });
+      toast.success('Başarılı', { description: 'Ödeme durumu güncellendi' });
+      fetchData();
+    } catch (error) {
+      toast.error('Hata', { description: 'Ödeme durumu güncellenemedi' });
+    }
+  };
+
   const downloadPdf = async (orderId) => {
     try {
       const response = await axios.get(`${API}/orders/${orderId}/pdf?lang=${language}`, {
@@ -422,7 +446,7 @@ const Orders = () => {
                   </div>
 
                   {/* Customer & Quantity Info */}
-                  <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3 text-sm">
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Müşteri</p>
                       <p className="font-medium truncate">{order.company_name}</p>
@@ -431,6 +455,29 @@ const Orders = () => {
                     <div>
                       <p className="text-xs text-muted-foreground mb-0.5">Miktar</p>
                       <p className="font-semibold text-indigo-600">{formatOrderQuantity(order)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Ödeme</p>
+                      <Select 
+                        value={order.payment_status || 'pending'} 
+                        onValueChange={(value) => handlePaymentStatusChange(order.id, value)}
+                      >
+                        <SelectTrigger className="h-6 w-auto px-1 border-0 bg-transparent">
+                          <Badge className={`${paymentStatusColors[order.payment_status || 'pending']} border text-xs`}>
+                            <CreditCard className="w-3 h-3 mr-1" />
+                            {paymentStatusLabels[language]?.[order.payment_status || 'pending'] || 'Bekliyor'}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(paymentStatusColors).map(status => (
+                            <SelectItem key={status} value={status}>
+                              <Badge className={`${paymentStatusColors[status]} border`}>
+                                {paymentStatusLabels[language]?.[status]}
+                              </Badge>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 

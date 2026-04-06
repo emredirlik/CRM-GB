@@ -82,6 +82,10 @@ const Dashboard = () => {
   // Sales Forecast
   const [forecast, setForecast] = useState(null);
   const [loadingForecast, setLoadingForecast] = useState(false);
+  
+  // Dashboard Alerts
+  const [alerts, setAlerts] = useState([]);
+  const [financeSummary, setFinanceSummary] = useState(null);
 
   const periods = [
     { value: 'all', label: t('allTime') },
@@ -109,6 +113,8 @@ const Dashboard = () => {
     fetchLeads();
     fetchForecast();
     fetchShipments();
+    fetchAlerts();
+    fetchFinanceSummary();
   }, [period]);
 
   const fetchStats = async (selectedPeriod) => {
@@ -130,6 +136,24 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Failed to fetch shipments:', error);
       setShipments([]);
+    }
+  };
+  
+  const fetchAlerts = async () => {
+    try {
+      const response = await axios.get(`${API}/dashboard/alerts`);
+      setAlerts(response.data?.alerts || []);
+    } catch (error) {
+      console.error('Failed to fetch alerts:', error);
+    }
+  };
+  
+  const fetchFinanceSummary = async () => {
+    try {
+      const response = await axios.get(`${API}/finance/summary`);
+      setFinanceSummary(response.data);
+    } catch (error) {
+      console.error('Failed to fetch finance summary:', error);
     }
   };
   
@@ -356,6 +380,104 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* Critical Alerts Section */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          {alerts.map((alert, idx) => (
+            <Card 
+              key={idx} 
+              className={`border-l-4 ${
+                alert.severity === 'high' ? 'border-l-red-500 bg-red-50' :
+                alert.severity === 'medium' ? 'border-l-orange-500 bg-orange-50' :
+                'border-l-blue-500 bg-blue-50'
+              }`}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className={`w-5 h-5 ${
+                      alert.severity === 'high' ? 'text-red-600' :
+                      alert.severity === 'medium' ? 'text-orange-600' :
+                      'text-blue-600'
+                    }`} />
+                    <div>
+                      <h4 className="font-semibold">{alert.title}</h4>
+                      <p className="text-sm text-muted-foreground">{alert.message}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => navigate(alert.action_url || '/')}
+                  >
+                    {t('viewDetails') || 'Detaylar'}
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Finance Summary Widget */}
+      {financeSummary && (
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Euro className="w-5 h-5 text-green-600" />
+              {language === 'tr' ? 'Finansal Özet' : 'Financial Summary'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-white rounded-lg border">
+                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Toplam Ciro' : 'Total Revenue'}</p>
+                <p className="text-xl font-bold text-green-700">{formatCurrency(financeSummary.total_revenue)}</p>
+              </div>
+              <div className="p-3 bg-white rounded-lg border">
+                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Ödenen' : 'Paid'}</p>
+                <p className="text-xl font-bold text-emerald-700">{formatCurrency(financeSummary.total_paid)}</p>
+              </div>
+              <div className="p-3 bg-white rounded-lg border">
+                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Bekleyen' : 'Pending'}</p>
+                <p className="text-xl font-bold text-orange-600">{formatCurrency(financeSummary.total_pending)}</p>
+              </div>
+              <div className="p-3 bg-white rounded-lg border">
+                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Ödeme Oranı' : 'Payment Rate'}</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {financeSummary.total_revenue > 0 
+                    ? Math.round((financeSummary.total_paid / financeSummary.total_revenue) * 100) 
+                    : 0}%
+                </p>
+              </div>
+            </div>
+            
+            {/* Top Customers */}
+            {financeSummary.customer_ranking?.length > 0 && (
+              <div className="mt-4">
+                <p className="text-sm font-medium mb-2">{language === 'tr' ? 'En Değerli Müşteriler' : 'Top Customers'}</p>
+                <div className="space-y-2">
+                  {financeSummary.customer_ranking.slice(0, 3).map((customer, idx) => (
+                    <div key={customer.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          idx === 0 ? 'bg-yellow-400 text-yellow-900' :
+                          idx === 1 ? 'bg-gray-300 text-gray-700' :
+                          'bg-orange-300 text-orange-800'
+                        }`}>{idx + 1}</span>
+                        <span className="font-medium text-sm">{customer.company_name}</span>
+                      </div>
+                      <span className="font-bold text-green-700">{formatCurrency(customer.total_revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Revenue Target Progress */}
       {stats.yearly_target > 0 && (

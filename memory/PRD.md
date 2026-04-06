@@ -86,17 +86,13 @@ Features:
 ## Recent Updates (April 2026)
 
 ### Completed (April 6, 2026 - Latest)
+- [x] **Financial Summary Widget** - Dashboard'da toplam ciro, ödenen, bekleyen tutarlar ve en değerli müşteriler
+- [x] **Payment Tracking** - Siparişlerde ödeme durumu takibi (Bekliyor/Kısmi/Ödendi/Vadesi Geçti)
+- [x] **Excel Export** - Müşterileri Excel/CSV olarak dışa aktarma
+- [x] **Dashboard Alerts** - Kritik uyarılar (vadesi geçmiş ödemeler, risk altındaki müşteriler)
+- [x] **Finance API** - Müşteri ciro analizi, ürün karlılık raporu, karşılaştırmalı raporlar
 - [x] **AI Customer Analytics Dashboard** - Complete AI-powered insights
-  - Customer Health Score (0-100)
-  - Order Prediction (based on past orders)
-  - Churn Risk Analysis (High/Medium/Low)
-  - Best Contact Time suggestions
-  - Monthly & Quarterly Sales Forecast
-  - Seasonal Trends visualization
 - [x] **Admin Account Updated** - Username: emre@gewuerzberg.de, Password: 190371
-- [x] **Download All Customers PDF** - New "PDF İndir" button on Leads page
-- [x] **Shipments Mobile Layout Fixed** - Card-based responsive design
-- [x] **Full Localization** - TR/DE/EN/PL translations for all pages
 
 ### Previously Completed
 - [x] **SerpAPI Integration** - Real Google Maps data for Lead Finder
@@ -109,9 +105,10 @@ Features:
 - [x] **Mobile Header Branding** - "Gewürzberg GmbH" and username visible
 
 ### Pending
-- [ ] Email Signature Configuration (backend wiring)
-- [ ] Product Videos Drag & Drop + WhatsApp sharing validation
 - [ ] Personalized Email Content (AI-generated based on customer history)
+- [ ] WhatsApp Business direct API integration
+- [ ] Bulk Email sending with template support
+- [ ] Product Videos Drag & Drop validation
 
 ## API Endpoints
 

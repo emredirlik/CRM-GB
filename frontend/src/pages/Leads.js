@@ -187,6 +187,26 @@ const Leads = () => {
     }
   };
 
+  const downloadExcel = async () => {
+    try {
+      toast.info('Excel hazırlanıyor...');
+      const response = await axios.get(`${API}/export/leads/excel`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `musteriler_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`${leads.length} müşteri Excel olarak indirildi`);
+    } catch (error) {
+      toast.error(t('error'), { description: 'Excel could not be downloaded' });
+    }
+  };
+
   const openLeadDetails = async (lead) => {
     setIsDetailDialogOpen(true);
     setLoadingDetails(true);
@@ -307,7 +327,11 @@ const Leads = () => {
           )}
           <Button variant="outline" onClick={downloadAllLeadsPdf} data-testid="download-all-pdf">
             <FileDown className="w-4 h-4 mr-2" />
-            {t('downloadPdf')}
+            PDF
+          </Button>
+          <Button variant="outline" onClick={downloadExcel} data-testid="download-excel">
+            <FileDown className="w-4 h-4 mr-2" />
+            Excel
           </Button>
           <Button variant="outline" onClick={selectAllLeads}>
             {selectedLeads.size === filteredLeads.length ? t('deselectAll') : t('selectAll')}

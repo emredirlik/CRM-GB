@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 import io
+import csv
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
@@ -282,6 +283,9 @@ class Order(BaseModel):
     unit_price: Optional[float] = None
     total_price: float
     status: str = "pending"  # pending, confirmed, shipped, delivered, cancelled
+    payment_status: str = "pending"  # pending, partial, paid, overdue
+    payment_due_date: Optional[str] = None  # YYYY-MM-DD
+    payment_amount: float = 0.0  # Amount paid so far
     notes: Optional[str] = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -4233,6 +4237,320 @@ def calculate_health_score(lead, orders):
         score += 5
     
     return max(0, min(100, score))
+
+# ============== DASHBOARD ALERTS ENDPOINT ==============
+
+@api_router.get("/dashboard/alerts")
+async def get_dashboard_alerts():
+    """Get critical alerts for dashboard"""
+    alerts = []
+    
+    # Get orders with overdue payments
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    overdue_payments = []
+    pending_payments = []
+    for order in orders:
+        payment_status = order.get('payment_status', 'pending')
+        due_date = order.get('payment_due_date')
+        
+        if payment_status in ['pending', 'partial']:
+            if due_date and due_date < today:
+                overdue_payments.append(order)
+            else:
+                pending_payments.append(order)
+    
+    if overdue_payments:
+        alerts.append({
+            "type": "payment_overdue",
+            "severity": "high",
+            "title": "Vadesi Geçmiş Ödemeler",
+            "message": f"{len(overdue_payments)} siparişin ödeme vadesi geçti",
+            "count": len(overdue_payments),
+            "action_url": "/orders?filter=overdue"
+        })
+    
+    # Get at-risk customers (health score < 40)
+    leads = await db.leads.find({}, {"_id": 0}).to_list(1000)
+    at_risk = []
+    for lead in leads:
+        lead_orders = [o for o in orders if o.get('lead_id') == lead.get('id')]
+        health_score = calculate_health_score(lead, lead_orders)
+        if health_score < 40:
+            at_risk.append({**lead, "health_score": health_score})
+    
+    if at_risk:
+        alerts.append({
+            "type": "customer_risk",
+            "severity": "medium",
+            "title": "Risk Altındaki Müşteriler",
+            "message": f"{len(at_risk)} müşteri kayıp riski altında",
+            "count": len(at_risk),
+            "action_url": "/ai-analytics"
+        })
+    
+    # Check for pending orders that need attention
+    pending_orders = [o for o in orders if o.get('status') == 'pending']
+    if len(pending_orders) > 3:
+        alerts.append({
+            "type": "pending_orders",
+            "severity": "low",
+            "title": "Bekleyen Siparişler",
+            "message": f"{len(pending_orders)} sipariş onay bekliyor",
+            "count": len(pending_orders),
+            "action_url": "/orders?filter=pending"
+        })
+    
+    return {
+        "alerts": alerts,
+        "summary": {
+            "overdue_payments": len(overdue_payments),
+            "pending_payments": len(pending_payments),
+            "at_risk_customers": len(at_risk)
+        }
+    }
+
+# ============== PAYMENT TRACKING ENDPOINTS ==============
+
+@api_router.put("/orders/{order_id}/payment")
+async def update_order_payment(order_id: str, payment_data: dict):
+    """Update order payment status"""
+    update_fields = {}
+    
+    if 'payment_status' in payment_data:
+        update_fields['payment_status'] = payment_data['payment_status']
+    if 'payment_amount' in payment_data:
+        update_fields['payment_amount'] = payment_data['payment_amount']
+    if 'payment_due_date' in payment_data:
+        update_fields['payment_due_date'] = payment_data['payment_due_date']
+    
+    update_fields['updated_at'] = datetime.now(timezone.utc).isoformat()
+    
+    result = await db.orders.update_one(
+        {"id": order_id},
+        {"$set": update_fields}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    return {"message": "Payment updated", "order_id": order_id}
+
+@api_router.get("/finance/summary")
+async def get_finance_summary():
+    """Get financial summary - revenue by customer, payment status"""
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    leads = await db.leads.find({}, {"_id": 0}).to_list(1000)
+    
+    # Customer revenue analysis
+    customer_revenue = {}
+    for order in orders:
+        lead_id = order.get('lead_id')
+        total = order.get('total_price', 0)
+        if lead_id:
+            if lead_id not in customer_revenue:
+                customer_revenue[lead_id] = {
+                    'total_revenue': 0,
+                    'order_count': 0,
+                    'paid_amount': 0,
+                    'pending_amount': 0
+                }
+            customer_revenue[lead_id]['total_revenue'] += total
+            customer_revenue[lead_id]['order_count'] += 1
+            
+            if order.get('payment_status') == 'paid':
+                customer_revenue[lead_id]['paid_amount'] += total
+            else:
+                customer_revenue[lead_id]['pending_amount'] += total
+    
+    # Enrich with lead data
+    customer_list = []
+    for lead in leads:
+        lead_id = lead.get('id')
+        if lead_id in customer_revenue:
+            rev_data = customer_revenue[lead_id]
+            customer_list.append({
+                'id': lead_id,
+                'company_name': lead.get('company_name'),
+                'city': lead.get('city'),
+                'country': lead.get('country'),
+                **rev_data
+            })
+    
+    # Sort by total revenue
+    customer_list.sort(key=lambda x: x['total_revenue'], reverse=True)
+    
+    # Overall summary
+    total_revenue = sum(o.get('total_price', 0) for o in orders)
+    total_paid = sum(o.get('total_price', 0) for o in orders if o.get('payment_status') == 'paid')
+    total_pending = total_revenue - total_paid
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_paid": total_paid,
+        "total_pending": total_pending,
+        "customer_ranking": customer_list[:20],  # Top 20 customers
+        "payment_breakdown": {
+            "paid": len([o for o in orders if o.get('payment_status') == 'paid']),
+            "pending": len([o for o in orders if o.get('payment_status', 'pending') == 'pending']),
+            "partial": len([o for o in orders if o.get('payment_status') == 'partial']),
+            "overdue": len([o for o in orders if o.get('payment_status') == 'overdue'])
+        }
+    }
+
+@api_router.get("/finance/product-profitability")
+async def get_product_profitability():
+    """Get product profitability analysis"""
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    
+    product_stats = {}
+    for order in orders:
+        for product in order.get('products', []):
+            product_code = product.get('product_code', 'Unknown')
+            product_name = product.get('product_name', 'Unknown')
+            
+            if product_code not in product_stats:
+                product_stats[product_code] = {
+                    'product_code': product_code,
+                    'product_name': product_name,
+                    'total_quantity': 0,
+                    'total_revenue': 0,
+                    'order_count': 0,
+                    'avg_price': 0
+                }
+            
+            amount = product.get('amount', 0)
+            pieces = product.get('pieces', 1)
+            unit_price = product.get('unit_price', 0)
+            subtotal = pieces * amount * unit_price
+            
+            product_stats[product_code]['total_quantity'] += amount * pieces
+            product_stats[product_code]['total_revenue'] += subtotal
+            product_stats[product_code]['order_count'] += 1
+    
+    # Calculate avg price
+    for code in product_stats:
+        if product_stats[code]['total_quantity'] > 0:
+            product_stats[code]['avg_price'] = product_stats[code]['total_revenue'] / product_stats[code]['total_quantity']
+    
+    # Sort by revenue
+    product_list = list(product_stats.values())
+    product_list.sort(key=lambda x: x['total_revenue'], reverse=True)
+    
+    return {
+        "products": product_list,
+        "total_products": len(product_list)
+    }
+
+# ============== EXPORT ENDPOINTS ==============
+
+@api_router.get("/export/leads/excel")
+async def export_leads_excel():
+    """Export all leads to Excel format (CSV)"""
+    leads = await db.leads.find({}, {"_id": 0}).to_list(1000)
+    
+    # Create CSV
+    output = io.StringIO()
+    if leads:
+        fieldnames = ['company_name', 'first_name', 'last_name', 'email', 'phone', 'city', 'country', 'address', 'tax_number']
+        writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
+        writer.writeheader()
+        for lead in leads:
+            writer.writerow(lead)
+    
+    csv_content = output.getvalue().encode('utf-8-sig')  # UTF-8 with BOM for Excel
+    
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=customers_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
+@api_router.get("/export/orders/excel")
+async def export_orders_excel():
+    """Export all orders to Excel format (CSV)"""
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    
+    # Flatten orders for CSV
+    output = io.StringIO()
+    fieldnames = ['id', 'company_name', 'lead_name', 'total_price', 'status', 'payment_status', 'created_at']
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction='ignore')
+    writer.writeheader()
+    for order in orders:
+        writer.writerow(order)
+    
+    csv_content = output.getvalue().encode('utf-8-sig')
+    
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=orders_{datetime.now().strftime('%Y%m%d')}.csv"}
+    )
+
+@api_router.get("/reports/comparison")
+async def get_comparison_report(period: str = "month"):
+    """Get comparison report - this period vs previous period"""
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    
+    now = datetime.now(timezone.utc)
+    
+    if period == "month":
+        current_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        prev_start = (current_start - timedelta(days=1)).replace(day=1)
+        prev_end = current_start - timedelta(seconds=1)
+    elif period == "quarter":
+        quarter = (now.month - 1) // 3
+        current_start = now.replace(month=quarter*3+1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        prev_start = (current_start - timedelta(days=1)).replace(day=1)
+        prev_start = prev_start.replace(month=((prev_start.month-1)//3)*3+1, day=1)
+        prev_end = current_start - timedelta(seconds=1)
+    else:  # year
+        current_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        prev_start = current_start.replace(year=current_start.year-1)
+        prev_end = current_start - timedelta(seconds=1)
+    
+    current_orders = []
+    prev_orders = []
+    
+    for order in orders:
+        try:
+            order_date = datetime.fromisoformat(order.get('created_at', '').replace('Z', '+00:00'))
+            if order_date >= current_start:
+                current_orders.append(order)
+            elif order_date >= prev_start and order_date <= prev_end:
+                prev_orders.append(order)
+        except:
+            pass
+    
+    current_revenue = sum(o.get('total_price', 0) for o in current_orders)
+    prev_revenue = sum(o.get('total_price', 0) for o in prev_orders)
+    
+    revenue_change = 0
+    if prev_revenue > 0:
+        revenue_change = ((current_revenue - prev_revenue) / prev_revenue) * 100
+    
+    order_change = 0
+    if len(prev_orders) > 0:
+        order_change = ((len(current_orders) - len(prev_orders)) / len(prev_orders)) * 100
+    
+    return {
+        "period": period,
+        "current": {
+            "revenue": current_revenue,
+            "order_count": len(current_orders),
+            "avg_order_value": current_revenue / len(current_orders) if current_orders else 0
+        },
+        "previous": {
+            "revenue": prev_revenue,
+            "order_count": len(prev_orders),
+            "avg_order_value": prev_revenue / len(prev_orders) if prev_orders else 0
+        },
+        "changes": {
+            "revenue_percent": round(revenue_change, 1),
+            "order_percent": round(order_change, 1)
+        }
+    }
 
 # Include router after all endpoints are defined
 app.include_router(api_router)
