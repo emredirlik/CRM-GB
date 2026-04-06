@@ -32,17 +32,21 @@ import { toast } from 'sonner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const EVENT_TYPES = [
-  { value: 'visit', label: 'Customer Visit', icon: MapPin, color: 'bg-blue-500' },
-  { value: 'meeting', label: 'Meeting', icon: Briefcase, color: 'bg-purple-500' },
-  { value: 'call', label: 'Phone Call', icon: Phone, color: 'bg-green-500' },
-  { value: 'delivery', label: 'Delivery', icon: Truck, color: 'bg-indigo-500' },
-  { value: 'task', label: 'Task', icon: CheckCircle, color: 'bg-gray-500' },
+const EVENT_TYPES_BASE = [
+  { value: 'visit', labelKey: 'customerVisit', icon: MapPin, color: 'bg-blue-500' },
+  { value: 'meeting', labelKey: 'meeting', icon: Briefcase, color: 'bg-purple-500' },
+  { value: 'call', labelKey: 'phoneCall', icon: Phone, color: 'bg-green-500' },
+  { value: 'delivery', labelKey: 'delivery', icon: Truck, color: 'bg-indigo-500' },
+  { value: 'task', labelKey: 'task', icon: CheckCircle, color: 'bg-gray-500' },
 ];
 
 const Dashboard = () => {
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  
+  // Translate event types dynamically
+  const EVENT_TYPES = EVENT_TYPES_BASE.map(et => ({ ...et, label: t(et.labelKey) }));
+  
   const [stats, setStats] = useState({
     total_leads: 0,
     emails_sent: 0,
@@ -80,11 +84,11 @@ const Dashboard = () => {
   const [loadingForecast, setLoadingForecast] = useState(false);
 
   const periods = [
-    { value: 'all', label: 'All' },
-    { value: 'month', label: '1 Month' },
-    { value: 'quarter', label: '3 Months' },
-    { value: 'half_year', label: '6 Months' },
-    { value: 'year', label: '1 Year' }
+    { value: 'all', label: t('allTime') },
+    { value: 'month', label: t('oneMonth') },
+    { value: 'quarter', label: t('threeMonths') },
+    { value: 'half_year', label: t('sixMonths') },
+    { value: 'year', label: t('oneYear') }
   ];
 
   const getLocale = () => {
@@ -268,7 +272,7 @@ const Dashboard = () => {
       link: '/leads'
     },
     {
-      label: 'Orders',
+      label: t('totalOrders'),
       value: stats.total_orders,
       icon: ShoppingCart,
       color: 'text-purple-600',
@@ -277,7 +281,7 @@ const Dashboard = () => {
       link: '/orders'
     },
     {
-      label: 'Revenue',
+      label: t('revenue'),
       value: formatCurrency(stats.total_revenue || 0),
       icon: Euro,
       color: 'text-green-600',
@@ -311,7 +315,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('dashboard')}</h1>
-          <p className="text-muted-foreground mt-1">Welcome to Gewürzberg CRM</p>
+          <p className="text-muted-foreground mt-1">{t('welcomeTo')} Gewürzberg CRM</p>
         </div>
         <div className="flex gap-2">
           {periods.map((p) => (
@@ -513,8 +517,8 @@ const Dashboard = () => {
                 {selectedDateEvents.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg">
                     <Clock className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No events scheduled</p>
-                    <p className="text-xs mt-1">Click "Schedule Visit" to plan a customer visit</p>
+                    <p className="text-sm">{t('noEventsToday')}</p>
+                    <p className="text-xs mt-1">{t('addEvent')}</p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">

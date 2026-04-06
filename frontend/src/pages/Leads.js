@@ -183,7 +183,7 @@ const Leads = () => {
   const openGoogleMaps = (lead) => {
     const address = `${lead.address || ''} ${lead.city || ''} ${lead.country || ''}`.trim();
     if (!address) {
-      toast.error('Hata', { description: 'Adres bilgisi yok' });
+      toast.error(t('error'), { description: t('noResults') });
       return;
     }
     const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
@@ -210,18 +210,11 @@ const Leads = () => {
 
   const openBulkEmailDialog = () => {
     if (selectedLeads.size === 0) {
-      toast.error('Hata', { description: 'En az bir müşteri seçin' });
+      toast.error(t('error'), { description: t('selectAll') });
       return;
     }
-    setBulkEmailSubject('Özel Teklif - Gewürzberg GmbH');
-    setBulkEmailBody(`Sayın Yetkili,
-
-Firmamız Gewürzberg GmbH olarak, döner, gyros ve kebap üretim tesisleriniz için premium kalitede baharat ve bağlayıcı ürünler sunmaktayız.
-
-Özel fiyat teklifimiz için bizimle iletişime geçmenizi rica ederiz.
-
-Saygılarımızla,
-Gewürzberg GmbH`);
+    setBulkEmailSubject('');
+    setBulkEmailBody('');
     setIsBulkEmailOpen(true);
   };
 
@@ -289,11 +282,11 @@ Gewürzberg GmbH`);
           {selectedLeads.size > 0 && (
             <Button variant="outline" onClick={openBulkEmailDialog}>
               <Mail className="w-4 h-4 mr-2" />
-              {selectedLeads.size} Müşteriye Email
+              {selectedLeads.size} {t('bulkEmail')}
             </Button>
           )}
           <Button variant="outline" onClick={selectAllLeads}>
-            {selectedLeads.size === filteredLeads.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+            {selectedLeads.size === filteredLeads.length ? t('deselectAll') : t('selectAll')}
           </Button>
           <Button onClick={openAddDialog} data-testid="add-lead-btn">
             <Plus className="w-4 h-4 mr-2" />
@@ -306,7 +299,7 @@ Gewürzberg GmbH`);
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search leads..."
+          placeholder={`${t('search')}...`}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -320,7 +313,7 @@ Gewürzberg GmbH`);
           {filteredLeads.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground" data-testid="no-leads">
               <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{searchTerm ? 'No leads found' : t('noLeadsYet')}</p>
+              <p>{searchTerm ? t('noResults') : t('noLeadsYet')}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

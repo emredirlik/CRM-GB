@@ -29,6 +29,33 @@ const translations = {
     recentLeads: 'Son Eklenen Müşteriler',
     noLeadsYet: 'Henüz müşteri yok',
     recentShipments: 'Son Kargolar',
+    welcomeTo: 'Hoş geldiniz',
+    revenue: 'Gelir',
+    yearlyTarget: 'Yıllık Hedef',
+    targetProgress: 'Hedef İlerlemesi',
+    noTarget: 'Hedef belirlenmedi',
+    calendar: 'Takvim',
+    todaysAgenda: 'Bugünün Gündemi',
+    noEventsToday: 'Bugün etkinlik yok',
+    addEvent: 'Etkinlik Ekle',
+    salesForecast: 'Satış Tahmini',
+    generateForecast: 'Tahmin Oluştur',
+    churnAnalysis: 'Kayıp Analizi',
+    atRiskCustomers: 'Risk Altındaki Müşteriler',
+    noAtRisk: 'Risk altında müşteri yok',
+    analyzeChurn: 'Kayıp Analizi Yap',
+    allTime: 'Tüm Zamanlar',
+    oneMonth: '1 Ay',
+    threeMonths: '3 Ay',
+    sixMonths: '6 Ay',
+    oneYear: '1 Yıl',
+    
+    // Event Types
+    customerVisit: 'Müşteri Ziyareti',
+    meeting: 'Toplantı',
+    phoneCall: 'Telefon Görüşmesi',
+    delivery: 'Teslimat',
+    task: 'Görev',
     
     // Leads
     addLead: 'Müşteri Ekle',
@@ -51,8 +78,21 @@ const translations = {
     edit: 'Düzenle',
     sendEmail: 'Mail Gönder',
     confirmDelete: 'Bu öğeyi silmek istediğinize emin misiniz?',
+    viewDetails: 'Detayları Gör',
+    downloadPdf: 'PDF İndir',
+    bulkEmail: 'Toplu Mail',
+    selectedItems: 'Seçili Öğe',
+    selectAll: 'Tümünü Seç',
+    deselectAll: 'Seçimi Kaldır',
     
     // Products & Videos
+    addProduct: 'Ürün Ekle',
+    editProduct: 'Ürün Düzenle',
+    productName: 'Ürün Adı',
+    productCode: 'Ürün Kodu',
+    unit: 'Birim',
+    price: 'Fiyat',
+    description: 'Açıklama',
     uploadVideo: 'Video Yükle',
     dragDropVideo: 'Videoyu buraya sürükleyin veya tıklayın',
     sendViaWhatsApp: 'WhatsApp ile Gönder',
@@ -61,11 +101,16 @@ const translations = {
     videoTitle: 'Video Başlığı',
     videoDescription: 'Açıklama',
     noVideos: 'Henüz video yok',
+    noProducts: 'Henüz ürün yok',
     
     // Mail Inbox
     inbox: 'Gelen Kutusu',
     sent: 'Gönderilenler',
     drafts: 'Taslaklar',
+    starred: 'Yıldızlı',
+    trash: 'Çöp Kutusu',
+    spam: 'Spam',
+    allMail: 'Tüm Mailler',
     compose: 'Yeni Mail',
     from: 'Kimden',
     to: 'Kime',
@@ -73,10 +118,23 @@ const translations = {
     date: 'Tarih',
     noEmails: 'Henüz mail yok',
     reply: 'Yanıtla',
+    replyAll: 'Tümünü Yanıtla',
     forward: 'İlet',
     markAsRead: 'Okundu İşaretle',
     markAsUnread: 'Okunmadı İşaretle',
+    moveTo: 'Taşı',
+    archive: 'Arşivle',
     refresh: 'Yenile',
+    attachment: 'Ek',
+    attachments: 'Ekler',
+    addAttachment: 'Ek Ekle',
+    sendNow: 'Şimdi Gönder',
+    saveDraft: 'Taslak Kaydet',
+    discard: 'Vazgeç',
+    cc: 'CC',
+    bcc: 'BCC',
+    unread: 'Okunmamış',
+    important: 'Önemli',
     
     // Templates
     addTemplate: 'Şablon Ekle',
@@ -86,6 +144,7 @@ const translations = {
     
     // Email Composer
     selectLead: 'Müşteri Seç',
+    selectTemplate: 'Şablon Seç',
     generateWithAI: 'AI ile Oluştur',
     generating: 'Oluşturuluyor...',
     send: 'Gönder',
@@ -106,6 +165,7 @@ const translations = {
     noEmailHistory: 'Henüz mail geçmişi yok',
     
     // Settings
+    companySettings: 'Şirket Ayarları',
     smtpSettings: 'SMTP Ayarları',
     imapSettings: 'IMAP Ayarları',
     smtpHost: 'SMTP Sunucusu',
@@ -131,11 +191,50 @@ const translations = {
     shipped: 'Gönderildi',
     delivered: 'Teslim Edildi',
     cancelled: 'İptal',
+    addOrder: 'Sipariş Ekle',
+    editOrder: 'Sipariş Düzenle',
+    noOrders: 'Henüz sipariş yok',
     
     // Shipments
     trackingNumber: 'Takip Numarası',
     carrier: 'Kargo Firması',
     shipmentStatus: 'Kargo Durumu',
+    addShipment: 'Kargo Ekle',
+    noShipments: 'Henüz kargo yok',
+    trackShipment: 'Kargo Takip Et',
+    
+    // Recipes
+    addRecipe: 'Reçete Ekle',
+    recipeName: 'Reçete Adı',
+    ingredients: 'Malzemeler',
+    instructions: 'Talimatlar',
+    noRecipes: 'Henüz reçete yok',
+    
+    // Specifications
+    addSpecification: 'Spesifikasyon Ekle',
+    noSpecifications: 'Henüz spesifikasyon yok',
+    
+    // Daily Reports
+    addReport: 'Rapor Ekle',
+    reportDate: 'Rapor Tarihi',
+    reportContent: 'Rapor İçeriği',
+    noReports: 'Henüz rapor yok',
+    
+    // Route Planner
+    planRoute: 'Rota Planla',
+    optimizeRoute: 'Rotayı Optimize Et',
+    startPoint: 'Başlangıç Noktası',
+    endPoint: 'Bitiş Noktası',
+    waypoints: 'Ara Noktalar',
+    
+    // Lead Finder
+    searchLeads: 'Müşteri Ara',
+    searchCountry: 'Ülke',
+    searchCity: 'Şehir',
+    businessType: 'İş Türü',
+    searchResults: 'Arama Sonuçları',
+    noResultsFound: 'Sonuç bulunamadı',
+    addToLeads: 'Müşterilere Ekle',
     
     // Messages
     leadAdded: 'Müşteri eklendi',
@@ -168,8 +267,28 @@ const translations = {
     back: 'Geri',
     next: 'İleri',
     previous: 'Önceki',
-    selectAll: 'Tümünü Seç',
-    deselectAll: 'Seçimi Kaldır',
+    confirm: 'Onayla',
+    yes: 'Evet',
+    no: 'Hayır',
+    or: 'veya',
+    and: 've',
+    of: '/',
+    items: 'öğe',
+    page: 'Sayfa',
+    showing: 'Gösterilen',
+    results: 'sonuç',
+    total: 'Toplam',
+    details: 'Detaylar',
+    information: 'Bilgi',
+    warning: 'Uyarı',
+    required: 'Zorunlu',
+    optional: 'İsteğe Bağlı',
+    notConfigured: 'Yapılandırılmadı',
+    configureNow: 'Şimdi Yapılandır',
+    pleaseWait: 'Lütfen bekleyin...',
+    somethingWentWrong: 'Bir şeyler yanlış gitti',
+    tryAgain: 'Tekrar Dene',
+    goBack: 'Geri Dön',
   },
   de: {
     // Navigation
@@ -199,6 +318,33 @@ const translations = {
     recentLeads: 'Neueste Kunden',
     noLeadsYet: 'Noch keine Kunden',
     recentShipments: 'Letzte Sendungen',
+    welcomeTo: 'Willkommen bei',
+    revenue: 'Umsatz',
+    yearlyTarget: 'Jahresziel',
+    targetProgress: 'Zielfortschritt',
+    noTarget: 'Kein Ziel festgelegt',
+    calendar: 'Kalender',
+    todaysAgenda: 'Heutige Agenda',
+    noEventsToday: 'Heute keine Termine',
+    addEvent: 'Termin hinzufügen',
+    salesForecast: 'Verkaufsprognose',
+    generateForecast: 'Prognose erstellen',
+    churnAnalysis: 'Abwanderungsanalyse',
+    atRiskCustomers: 'Gefährdete Kunden',
+    noAtRisk: 'Keine gefährdeten Kunden',
+    analyzeChurn: 'Abwanderung analysieren',
+    allTime: 'Alle Zeit',
+    oneMonth: '1 Monat',
+    threeMonths: '3 Monate',
+    sixMonths: '6 Monate',
+    oneYear: '1 Jahr',
+    
+    // Event Types
+    customerVisit: 'Kundenbesuch',
+    meeting: 'Besprechung',
+    phoneCall: 'Telefonat',
+    delivery: 'Lieferung',
+    task: 'Aufgabe',
     
     // Leads
     addLead: 'Kunde hinzufügen',
@@ -221,8 +367,21 @@ const translations = {
     edit: 'Bearbeiten',
     sendEmail: 'E-Mail senden',
     confirmDelete: 'Möchten Sie dieses Element wirklich löschen?',
+    viewDetails: 'Details anzeigen',
+    downloadPdf: 'PDF herunterladen',
+    bulkEmail: 'Massen-E-Mail',
+    selectedItems: 'Ausgewählte Elemente',
+    selectAll: 'Alle auswählen',
+    deselectAll: 'Auswahl aufheben',
     
     // Products & Videos
+    addProduct: 'Produkt hinzufügen',
+    editProduct: 'Produkt bearbeiten',
+    productName: 'Produktname',
+    productCode: 'Produktcode',
+    unit: 'Einheit',
+    price: 'Preis',
+    description: 'Beschreibung',
     uploadVideo: 'Video hochladen',
     dragDropVideo: 'Video hierher ziehen oder klicken',
     sendViaWhatsApp: 'Per WhatsApp senden',
@@ -231,11 +390,16 @@ const translations = {
     videoTitle: 'Videotitel',
     videoDescription: 'Beschreibung',
     noVideos: 'Noch keine Videos',
+    noProducts: 'Noch keine Produkte',
     
     // Mail Inbox
     inbox: 'Posteingang',
     sent: 'Gesendet',
     drafts: 'Entwürfe',
+    starred: 'Markiert',
+    trash: 'Papierkorb',
+    spam: 'Spam',
+    allMail: 'Alle E-Mails',
     compose: 'Neue E-Mail',
     from: 'Von',
     to: 'An',
@@ -243,10 +407,23 @@ const translations = {
     date: 'Datum',
     noEmails: 'Noch keine E-Mails',
     reply: 'Antworten',
+    replyAll: 'Allen antworten',
     forward: 'Weiterleiten',
     markAsRead: 'Als gelesen markieren',
     markAsUnread: 'Als ungelesen markieren',
+    moveTo: 'Verschieben nach',
+    archive: 'Archivieren',
     refresh: 'Aktualisieren',
+    attachment: 'Anhang',
+    attachments: 'Anhänge',
+    addAttachment: 'Anhang hinzufügen',
+    sendNow: 'Jetzt senden',
+    saveDraft: 'Entwurf speichern',
+    discard: 'Verwerfen',
+    cc: 'CC',
+    bcc: 'BCC',
+    unread: 'Ungelesen',
+    important: 'Wichtig',
     
     // Templates
     addTemplate: 'Vorlage hinzufügen',
@@ -256,6 +433,7 @@ const translations = {
     
     // Email Composer
     selectLead: 'Kunde auswählen',
+    selectTemplate: 'Vorlage auswählen',
     generateWithAI: 'Mit KI erstellen',
     generating: 'Wird erstellt...',
     send: 'Senden',
@@ -276,6 +454,7 @@ const translations = {
     noEmailHistory: 'Noch kein E-Mail-Verlauf',
     
     // Settings
+    companySettings: 'Firmeneinstellungen',
     smtpSettings: 'SMTP-Einstellungen',
     imapSettings: 'IMAP-Einstellungen',
     smtpHost: 'SMTP-Server',
@@ -301,11 +480,50 @@ const translations = {
     shipped: 'Versendet',
     delivered: 'Geliefert',
     cancelled: 'Storniert',
+    addOrder: 'Bestellung hinzufügen',
+    editOrder: 'Bestellung bearbeiten',
+    noOrders: 'Noch keine Bestellungen',
     
     // Shipments
     trackingNumber: 'Sendungsnummer',
     carrier: 'Spediteur',
     shipmentStatus: 'Sendungsstatus',
+    addShipment: 'Sendung hinzufügen',
+    noShipments: 'Noch keine Sendungen',
+    trackShipment: 'Sendung verfolgen',
+    
+    // Recipes
+    addRecipe: 'Rezept hinzufügen',
+    recipeName: 'Rezeptname',
+    ingredients: 'Zutaten',
+    instructions: 'Anleitung',
+    noRecipes: 'Noch keine Rezepte',
+    
+    // Specifications
+    addSpecification: 'Spezifikation hinzufügen',
+    noSpecifications: 'Noch keine Spezifikationen',
+    
+    // Daily Reports
+    addReport: 'Bericht hinzufügen',
+    reportDate: 'Berichtsdatum',
+    reportContent: 'Berichtsinhalt',
+    noReports: 'Noch keine Berichte',
+    
+    // Route Planner
+    planRoute: 'Route planen',
+    optimizeRoute: 'Route optimieren',
+    startPoint: 'Startpunkt',
+    endPoint: 'Endpunkt',
+    waypoints: 'Zwischenstopps',
+    
+    // Lead Finder
+    searchLeads: 'Kunden suchen',
+    searchCountry: 'Land',
+    searchCity: 'Stadt',
+    businessType: 'Geschäftstyp',
+    searchResults: 'Suchergebnisse',
+    noResultsFound: 'Keine Ergebnisse gefunden',
+    addToLeads: 'Zu Kunden hinzufügen',
     
     // Messages
     leadAdded: 'Kunde hinzugefügt',
@@ -338,8 +556,28 @@ const translations = {
     back: 'Zurück',
     next: 'Weiter',
     previous: 'Vorherige',
-    selectAll: 'Alle auswählen',
-    deselectAll: 'Auswahl aufheben',
+    confirm: 'Bestätigen',
+    yes: 'Ja',
+    no: 'Nein',
+    or: 'oder',
+    and: 'und',
+    of: 'von',
+    items: 'Elemente',
+    page: 'Seite',
+    showing: 'Zeige',
+    results: 'Ergebnisse',
+    total: 'Gesamt',
+    details: 'Details',
+    information: 'Information',
+    warning: 'Warnung',
+    required: 'Erforderlich',
+    optional: 'Optional',
+    notConfigured: 'Nicht konfiguriert',
+    configureNow: 'Jetzt konfigurieren',
+    pleaseWait: 'Bitte warten...',
+    somethingWentWrong: 'Etwas ist schiefgelaufen',
+    tryAgain: 'Erneut versuchen',
+    goBack: 'Zurück gehen',
   },
   en: {
     // Navigation
@@ -369,6 +607,33 @@ const translations = {
     recentLeads: 'Recent Leads',
     noLeadsYet: 'No leads yet',
     recentShipments: 'Recent Shipments',
+    welcomeTo: 'Welcome to',
+    revenue: 'Revenue',
+    yearlyTarget: 'Yearly Target',
+    targetProgress: 'Target Progress',
+    noTarget: 'No target set',
+    calendar: 'Calendar',
+    todaysAgenda: "Today's Agenda",
+    noEventsToday: 'No events today',
+    addEvent: 'Add Event',
+    salesForecast: 'Sales Forecast',
+    generateForecast: 'Generate Forecast',
+    churnAnalysis: 'Churn Analysis',
+    atRiskCustomers: 'At-Risk Customers',
+    noAtRisk: 'No at-risk customers',
+    analyzeChurn: 'Analyze Churn',
+    allTime: 'All Time',
+    oneMonth: '1 Month',
+    threeMonths: '3 Months',
+    sixMonths: '6 Months',
+    oneYear: '1 Year',
+    
+    // Event Types
+    customerVisit: 'Customer Visit',
+    meeting: 'Meeting',
+    phoneCall: 'Phone Call',
+    delivery: 'Delivery',
+    task: 'Task',
     
     // Leads
     addLead: 'Add Lead',
@@ -391,8 +656,21 @@ const translations = {
     edit: 'Edit',
     sendEmail: 'Send Email',
     confirmDelete: 'Are you sure you want to delete this item?',
+    viewDetails: 'View Details',
+    downloadPdf: 'Download PDF',
+    bulkEmail: 'Bulk Email',
+    selectedItems: 'Selected Items',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All',
     
     // Products & Videos
+    addProduct: 'Add Product',
+    editProduct: 'Edit Product',
+    productName: 'Product Name',
+    productCode: 'Product Code',
+    unit: 'Unit',
+    price: 'Price',
+    description: 'Description',
     uploadVideo: 'Upload Video',
     dragDropVideo: 'Drag and drop video here or click',
     sendViaWhatsApp: 'Send via WhatsApp',
@@ -401,11 +679,16 @@ const translations = {
     videoTitle: 'Video Title',
     videoDescription: 'Description',
     noVideos: 'No videos yet',
+    noProducts: 'No products yet',
     
     // Mail Inbox
     inbox: 'Inbox',
     sent: 'Sent',
     drafts: 'Drafts',
+    starred: 'Starred',
+    trash: 'Trash',
+    spam: 'Spam',
+    allMail: 'All Mail',
     compose: 'Compose',
     from: 'From',
     to: 'To',
@@ -413,10 +696,23 @@ const translations = {
     date: 'Date',
     noEmails: 'No emails yet',
     reply: 'Reply',
+    replyAll: 'Reply All',
     forward: 'Forward',
     markAsRead: 'Mark as Read',
     markAsUnread: 'Mark as Unread',
+    moveTo: 'Move to',
+    archive: 'Archive',
     refresh: 'Refresh',
+    attachment: 'Attachment',
+    attachments: 'Attachments',
+    addAttachment: 'Add Attachment',
+    sendNow: 'Send Now',
+    saveDraft: 'Save Draft',
+    discard: 'Discard',
+    cc: 'CC',
+    bcc: 'BCC',
+    unread: 'Unread',
+    important: 'Important',
     
     // Templates
     addTemplate: 'Add Template',
@@ -426,6 +722,7 @@ const translations = {
     
     // Email Composer
     selectLead: 'Select Lead',
+    selectTemplate: 'Select Template',
     generateWithAI: 'Generate with AI',
     generating: 'Generating...',
     send: 'Send',
@@ -446,6 +743,7 @@ const translations = {
     noEmailHistory: 'No email history yet',
     
     // Settings
+    companySettings: 'Company Settings',
     smtpSettings: 'SMTP Settings',
     imapSettings: 'IMAP Settings',
     smtpHost: 'SMTP Host',
@@ -471,11 +769,50 @@ const translations = {
     shipped: 'Shipped',
     delivered: 'Delivered',
     cancelled: 'Cancelled',
+    addOrder: 'Add Order',
+    editOrder: 'Edit Order',
+    noOrders: 'No orders yet',
     
     // Shipments
     trackingNumber: 'Tracking Number',
     carrier: 'Carrier',
     shipmentStatus: 'Shipment Status',
+    addShipment: 'Add Shipment',
+    noShipments: 'No shipments yet',
+    trackShipment: 'Track Shipment',
+    
+    // Recipes
+    addRecipe: 'Add Recipe',
+    recipeName: 'Recipe Name',
+    ingredients: 'Ingredients',
+    instructions: 'Instructions',
+    noRecipes: 'No recipes yet',
+    
+    // Specifications
+    addSpecification: 'Add Specification',
+    noSpecifications: 'No specifications yet',
+    
+    // Daily Reports
+    addReport: 'Add Report',
+    reportDate: 'Report Date',
+    reportContent: 'Report Content',
+    noReports: 'No reports yet',
+    
+    // Route Planner
+    planRoute: 'Plan Route',
+    optimizeRoute: 'Optimize Route',
+    startPoint: 'Start Point',
+    endPoint: 'End Point',
+    waypoints: 'Waypoints',
+    
+    // Lead Finder
+    searchLeads: 'Search Leads',
+    searchCountry: 'Country',
+    searchCity: 'City',
+    businessType: 'Business Type',
+    searchResults: 'Search Results',
+    noResultsFound: 'No results found',
+    addToLeads: 'Add to Leads',
     
     // Messages
     leadAdded: 'Lead added',
@@ -508,8 +845,28 @@ const translations = {
     back: 'Back',
     next: 'Next',
     previous: 'Previous',
-    selectAll: 'Select All',
-    deselectAll: 'Deselect All',
+    confirm: 'Confirm',
+    yes: 'Yes',
+    no: 'No',
+    or: 'or',
+    and: 'and',
+    of: 'of',
+    items: 'items',
+    page: 'Page',
+    showing: 'Showing',
+    results: 'results',
+    total: 'Total',
+    details: 'Details',
+    information: 'Information',
+    warning: 'Warning',
+    required: 'Required',
+    optional: 'Optional',
+    notConfigured: 'Not configured',
+    configureNow: 'Configure now',
+    pleaseWait: 'Please wait...',
+    somethingWentWrong: 'Something went wrong',
+    tryAgain: 'Try again',
+    goBack: 'Go back',
   },
   pl: {
     // Navigation - Polish
@@ -539,6 +896,33 @@ const translations = {
     recentLeads: 'Ostatnio dodani klienci',
     noLeadsYet: 'Brak klientów',
     recentShipments: 'Ostatnie przesyłki',
+    welcomeTo: 'Witamy w',
+    revenue: 'Przychody',
+    yearlyTarget: 'Cel roczny',
+    targetProgress: 'Postęp celu',
+    noTarget: 'Brak wyznaczonego celu',
+    calendar: 'Kalendarz',
+    todaysAgenda: 'Dzisiejsza agenda',
+    noEventsToday: 'Brak wydarzeń na dziś',
+    addEvent: 'Dodaj wydarzenie',
+    salesForecast: 'Prognoza sprzedaży',
+    generateForecast: 'Generuj prognozę',
+    churnAnalysis: 'Analiza rezygnacji',
+    atRiskCustomers: 'Zagrożeni klienci',
+    noAtRisk: 'Brak zagrożonych klientów',
+    analyzeChurn: 'Analizuj rezygnacje',
+    allTime: 'Cały czas',
+    oneMonth: '1 miesiąc',
+    threeMonths: '3 miesiące',
+    sixMonths: '6 miesięcy',
+    oneYear: '1 rok',
+    
+    // Event Types
+    customerVisit: 'Wizyta u klienta',
+    meeting: 'Spotkanie',
+    phoneCall: 'Rozmowa telefoniczna',
+    delivery: 'Dostawa',
+    task: 'Zadanie',
     
     // Leads
     addLead: 'Dodaj klienta',
@@ -561,8 +945,21 @@ const translations = {
     edit: 'Edytuj',
     sendEmail: 'Wyślij e-mail',
     confirmDelete: 'Czy na pewno chcesz usunąć ten element?',
+    viewDetails: 'Zobacz szczegóły',
+    downloadPdf: 'Pobierz PDF',
+    bulkEmail: 'E-mail masowy',
+    selectedItems: 'Wybrane elementy',
+    selectAll: 'Zaznacz wszystko',
+    deselectAll: 'Odznacz wszystko',
     
     // Products & Videos
+    addProduct: 'Dodaj produkt',
+    editProduct: 'Edytuj produkt',
+    productName: 'Nazwa produktu',
+    productCode: 'Kod produktu',
+    unit: 'Jednostka',
+    price: 'Cena',
+    description: 'Opis',
     uploadVideo: 'Prześlij wideo',
     dragDropVideo: 'Przeciągnij i upuść wideo tutaj lub kliknij',
     sendViaWhatsApp: 'Wyślij przez WhatsApp',
@@ -571,11 +968,16 @@ const translations = {
     videoTitle: 'Tytuł wideo',
     videoDescription: 'Opis',
     noVideos: 'Brak filmów',
+    noProducts: 'Brak produktów',
     
     // Mail Inbox
     inbox: 'Skrzynka odbiorcza',
     sent: 'Wysłane',
     drafts: 'Szkice',
+    starred: 'Oznaczone',
+    trash: 'Kosz',
+    spam: 'Spam',
+    allMail: 'Wszystkie e-maile',
     compose: 'Nowy e-mail',
     from: 'Od',
     to: 'Do',
@@ -583,10 +985,23 @@ const translations = {
     date: 'Data',
     noEmails: 'Brak e-maili',
     reply: 'Odpowiedz',
+    replyAll: 'Odpowiedz wszystkim',
     forward: 'Przekaż',
     markAsRead: 'Oznacz jako przeczytane',
     markAsUnread: 'Oznacz jako nieprzeczytane',
+    moveTo: 'Przenieś do',
+    archive: 'Archiwizuj',
     refresh: 'Odśwież',
+    attachment: 'Załącznik',
+    attachments: 'Załączniki',
+    addAttachment: 'Dodaj załącznik',
+    sendNow: 'Wyślij teraz',
+    saveDraft: 'Zapisz szkic',
+    discard: 'Odrzuć',
+    cc: 'DW',
+    bcc: 'UDW',
+    unread: 'Nieprzeczytane',
+    important: 'Ważne',
     
     // Templates
     addTemplate: 'Dodaj szablon',
@@ -596,6 +1011,7 @@ const translations = {
     
     // Email Composer
     selectLead: 'Wybierz klienta',
+    selectTemplate: 'Wybierz szablon',
     generateWithAI: 'Generuj z AI',
     generating: 'Generowanie...',
     send: 'Wyślij',
@@ -616,6 +1032,7 @@ const translations = {
     noEmailHistory: 'Brak historii e-mail',
     
     // Settings
+    companySettings: 'Ustawienia firmy',
     smtpSettings: 'Ustawienia SMTP',
     imapSettings: 'Ustawienia IMAP',
     smtpHost: 'Serwer SMTP',
@@ -641,11 +1058,50 @@ const translations = {
     shipped: 'Wysłane',
     delivered: 'Dostarczone',
     cancelled: 'Anulowane',
+    addOrder: 'Dodaj zamówienie',
+    editOrder: 'Edytuj zamówienie',
+    noOrders: 'Brak zamówień',
     
     // Shipments
     trackingNumber: 'Numer śledzenia',
     carrier: 'Przewoźnik',
     shipmentStatus: 'Status przesyłki',
+    addShipment: 'Dodaj przesyłkę',
+    noShipments: 'Brak przesyłek',
+    trackShipment: 'Śledź przesyłkę',
+    
+    // Recipes
+    addRecipe: 'Dodaj recepturę',
+    recipeName: 'Nazwa receptury',
+    ingredients: 'Składniki',
+    instructions: 'Instrukcje',
+    noRecipes: 'Brak receptur',
+    
+    // Specifications
+    addSpecification: 'Dodaj specyfikację',
+    noSpecifications: 'Brak specyfikacji',
+    
+    // Daily Reports
+    addReport: 'Dodaj raport',
+    reportDate: 'Data raportu',
+    reportContent: 'Treść raportu',
+    noReports: 'Brak raportów',
+    
+    // Route Planner
+    planRoute: 'Zaplanuj trasę',
+    optimizeRoute: 'Optymalizuj trasę',
+    startPoint: 'Punkt startowy',
+    endPoint: 'Punkt docelowy',
+    waypoints: 'Punkty pośrednie',
+    
+    // Lead Finder
+    searchLeads: 'Szukaj klientów',
+    searchCountry: 'Kraj',
+    searchCity: 'Miasto',
+    businessType: 'Typ działalności',
+    searchResults: 'Wyniki wyszukiwania',
+    noResultsFound: 'Nie znaleziono wyników',
+    addToLeads: 'Dodaj do klientów',
     
     // Messages
     leadAdded: 'Klient dodany',
@@ -678,8 +1134,28 @@ const translations = {
     back: 'Wstecz',
     next: 'Dalej',
     previous: 'Poprzedni',
-    selectAll: 'Zaznacz wszystko',
-    deselectAll: 'Odznacz wszystko',
+    confirm: 'Potwierdź',
+    yes: 'Tak',
+    no: 'Nie',
+    or: 'lub',
+    and: 'i',
+    of: 'z',
+    items: 'elementów',
+    page: 'Strona',
+    showing: 'Pokazuje',
+    results: 'wyników',
+    total: 'Razem',
+    details: 'Szczegóły',
+    information: 'Informacja',
+    warning: 'Ostrzeżenie',
+    required: 'Wymagane',
+    optional: 'Opcjonalne',
+    notConfigured: 'Nie skonfigurowano',
+    configureNow: 'Skonfiguruj teraz',
+    pleaseWait: 'Proszę czekać...',
+    somethingWentWrong: 'Coś poszło nie tak',
+    tryAgain: 'Spróbuj ponownie',
+    goBack: 'Wróć',
   }
 };
 
@@ -693,7 +1169,7 @@ export const LanguageProvider = ({ children }) => {
   }, [language]);
   
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, translations }}>
       {children}
     </LanguageContext.Provider>
   );
