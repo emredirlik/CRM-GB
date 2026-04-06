@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle, Brain, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -88,6 +88,8 @@ const Leads = () => {
     next_action_note: ''
   });
   const [savingActivity, setSavingActivity] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [loadingAiSuggestion, setLoadingAiSuggestion] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -317,6 +319,7 @@ const Leads = () => {
     setActivityLead(lead);
     setIsActivityOpen(true);
     setLoadingActivities(true);
+    setAiSuggestion(null);
     setActivityForm({
       activity_type: 'visit',
       outcome: 'positive',
@@ -328,6 +331,11 @@ const Leads = () => {
     try {
       const response = await axios.get(`${API}/leads/${lead.id}/activities`);
       setActivities(response.data);
+      
+      // If there are activities, get AI suggestion
+      if (response.data.length > 0) {
+        fetchAiSuggestion(lead.id);
+      }
     } catch (error) {
       console.error('Failed to load activities:', error);
       setActivities([]);
@@ -357,12 +365,27 @@ const Leads = () => {
         next_action_note: ''
       });
       
+      // Get AI suggestion after first activity or any new activity
+      fetchAiSuggestion(activityLead.id);
+      
       // Refresh leads to update last_activity
       fetchLeads();
     } catch (error) {
       toast.error('Aktivite kaydedilemedi');
     } finally {
       setSavingActivity(false);
+    }
+  };
+
+  const fetchAiSuggestion = async (leadId) => {
+    setLoadingAiSuggestion(true);
+    try {
+      const response = await axios.post(`${API}/leads/${leadId}/ai-suggestion`);
+      setAiSuggestion(response.data);
+    } catch (error) {
+      console.error('AI suggestion error:', error);
+    } finally {
+      setLoadingAiSuggestion(false);
     }
   };
 
@@ -1030,6 +1053,39 @@ const Leads = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* AI Suggestion Card */}
+            {(aiSuggestion || loadingAiSuggestion) && (
+              <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-indigo-100 rounded-lg">
+                      <Brain className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <h4 className="font-semibold text-sm text-indigo-900">AI Öneri</h4>
+                    {loadingAiSuggestion && <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />}
+                  </div>
+                  
+                  {loadingAiSuggestion ? (
+                    <div className="flex items-center gap-2 text-sm text-indigo-600">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Analiz ediliyor...</span>
+                    </div>
+                  ) : aiSuggestion && (
+                    <>
+                      <p className="text-sm text-indigo-900 whitespace-pre-line leading-relaxed">
+                        {aiSuggestion.suggestion}
+                      </p>
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-indigo-200 text-xs text-indigo-700">
+                        <span>Toplam Aktivite: {aiSuggestion.total_activities}</span>
+                        <span>Siparişler: {aiSuggestion.total_orders}</span>
+                        <span>Ciro: €{aiSuggestion.total_revenue?.toLocaleString()}</span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Activity List */}
             <div className="space-y-2">

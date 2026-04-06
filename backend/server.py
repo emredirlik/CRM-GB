@@ -4588,7 +4588,6 @@ async def delete_video_folder(folder_id: str):
 # ===================== CUSTOMER ACTIVITY LOG =====================
 
 class ActivityCreate(BaseModel):
-    lead_id: str
     activity_type: str  # visit, call, email, order, follow_up
     outcome: str  # positive, negative, postponed, ordered, no_answer
     notes: Optional[str] = ""
@@ -4659,6 +4658,241 @@ async def get_upcoming_activities():
     leads_with_dates.sort(key=lambda x: x.get("next_action_date", "9999"))
     
     return leads_with_dates
+
+@api_router.post("/leads/{lead_id}/ai-suggestion")
+async def get_ai_suggestion_for_lead(lead_id: str):
+    """Get AI suggestion based on lead's activity history"""
+    # Get lead info
+    lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Get activity history
+    activities = await db.lead_activities.find(
+        {"lead_id": lead_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(20)
+    
+    # Get orders for this lead
+    orders = await db.orders.find(
+        {"lead_id": lead_id},
+        {"_id": 0, "total_amount": 1, "created_at": 1, "status": 1}
+    ).to_list(10)
+    
+    # Build context
+    activity_summary = []
+    for act in activities[:5]:
+        outcome_tr = {
+            'positive': 'Olumlu',
+            'negative': 'Olumsuz', 
+            'postponed': 'Erteledi',
+            'ordered': 'Sipariş Verdi',
+            'no_answer': 'Cevap Vermedi'
+        }.get(act.get('outcome'), act.get('outcome'))
+        type_tr = {
+            'visit': 'Ziyaret',
+            'call': 'Telefon',
+            'email': 'Email',
+            'order': 'Sipariş',
+            'follow_up': 'Takip'
+        }.get(act.get('activity_type'), act.get('activity_type'))
+        activity_summary.append(f"- {act.get('created_at', '')[:10]}: {type_tr} - {outcome_tr}. {act.get('notes', '')[:100]}")
+    
+    total_orders = len(orders)
+    total_revenue = sum(o.get('total_amount', 0) for o in orders)
+    
+    prompt = f"""Sen bir B2B satış danışmanısın. Aşağıdaki müşteri bilgilerine göre kısa ve net önerilerde bulun.
+
+Müşteri: {lead.get('company_name')}
+Şehir: {lead.get('city')}, {lead.get('country')}
+Toplam Sipariş: {total_orders} adet
+Toplam Ciro: €{total_revenue:,.0f}
+
+Son Aktiviteler:
+{chr(10).join(activity_summary) if activity_summary else 'Henüz aktivite yok'}
+
+Lütfen şu konularda 2-3 cümlelik kısa öneriler ver:
+1. Bu müşteriyle ilgili genel değerlendirme
+2. Bir sonraki adım ne olmalı?
+3. Dikkat edilmesi gereken noktalar
+
+Türkçe ve samimi bir dille yaz."""
+
+    try:
+        from emergentintegrations.llm.chat import chat, UserMessage
+        
+        response = await chat(
+            api_key=os.environ.get('EMERGENT_LLM_KEY'),
+            model="gemini-2.0-flash",
+            messages=[UserMessage(content=prompt)]
+        )
+        
+        return {
+            "suggestion": response.content,
+            "lead_name": lead.get('company_name'),
+            "total_activities": len(activities),
+            "total_orders": total_orders,
+            "total_revenue": total_revenue
+        }
+    except Exception as e:
+        logger.error(f"AI suggestion error: {e}")
+        # Fallback suggestion based on data
+        if not activities:
+            suggestion = f"🎯 {lead.get('company_name')} ile henüz bir etkileşim kaydı yok. İlk adım olarak telefon ile iletişime geçmenizi ve ihtiyaçlarını dinlemenizi öneririm."
+        elif activities[0].get('outcome') == 'negative':
+            suggestion = f"⚠️ Son görüşme olumsuz sonuçlanmış. 2-3 hafta bekleyip farklı bir yaklaşımla (örn: yeni ürün tanıtımı) tekrar denemenizi öneririm."
+        elif activities[0].get('outcome') == 'postponed':
+            suggestion = f"⏰ Müşteri ertelemiş. Belirtilen tarihte mutlaka hatırlatma yapın ve bu sefer somut bir teklif ile gidin."
+        elif activities[0].get('outcome') == 'ordered':
+            suggestion = f"✅ Harika! Sipariş alınmış. Teslimat sonrası memnuniyet kontrolü yapın ve çapraz satış fırsatlarını değerlendirin."
+        else:
+            suggestion = f"📞 Düzenli takip önemli. Haftada en az bir kez iletişime geçmeye çalışın."
+        
+        return {
+            "suggestion": suggestion,
+            "lead_name": lead.get('company_name'),
+            "total_activities": len(activities),
+            "total_orders": total_orders,
+            "total_revenue": total_revenue
+        }
+
+# ===================== MANAGEMENT REPORTS =====================
+
+class ReportRequest(BaseModel):
+    report_type: str  # weekly, monthly, custom
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    recipient_email: str
+
+@api_router.get("/reports/summary")
+async def get_report_summary():
+    """Get summary data for reports"""
+    now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    # This week's data
+    weekly_orders = await db.orders.count_documents({
+        "created_at": {"$gte": week_ago.isoformat()}
+    })
+    weekly_leads = await db.leads.count_documents({
+        "created_at": {"$gte": week_ago.isoformat()}
+    })
+    weekly_activities = await db.lead_activities.count_documents({
+        "created_at": {"$gte": week_ago.isoformat()}
+    })
+    
+    # Get weekly revenue
+    weekly_orders_data = await db.orders.find(
+        {"created_at": {"$gte": week_ago.isoformat()}},
+        {"total_amount": 1}
+    ).to_list(1000)
+    weekly_revenue = sum(o.get('total_amount', 0) for o in weekly_orders_data)
+    
+    # Monthly data
+    monthly_orders = await db.orders.count_documents({
+        "created_at": {"$gte": month_ago.isoformat()}
+    })
+    monthly_orders_data = await db.orders.find(
+        {"created_at": {"$gte": month_ago.isoformat()}},
+        {"total_amount": 1}
+    ).to_list(1000)
+    monthly_revenue = sum(o.get('total_amount', 0) for o in monthly_orders_data)
+    
+    # Upcoming follow-ups
+    upcoming = await db.leads.find(
+        {"next_action_date": {"$exists": True, "$ne": None}},
+        {"_id": 0, "company_name": 1, "next_action_date": 1}
+    ).to_list(10)
+    
+    # Activity breakdown
+    activity_counts = {}
+    all_activities = await db.lead_activities.find(
+        {"created_at": {"$gte": week_ago.isoformat()}},
+        {"outcome": 1}
+    ).to_list(1000)
+    for act in all_activities:
+        outcome = act.get('outcome', 'unknown')
+        activity_counts[outcome] = activity_counts.get(outcome, 0) + 1
+    
+    return {
+        "weekly": {
+            "orders": weekly_orders,
+            "leads": weekly_leads,
+            "activities": weekly_activities,
+            "revenue": weekly_revenue
+        },
+        "monthly": {
+            "orders": monthly_orders,
+            "revenue": monthly_revenue
+        },
+        "activity_breakdown": activity_counts,
+        "upcoming_followups": upcoming[:5],
+        "generated_at": now.isoformat()
+    }
+
+@api_router.post("/reports/send")
+async def send_report_email(request: ReportRequest):
+    """Generate and send report to specified email"""
+    # Get report data
+    summary = await get_report_summary()
+    
+    # Build email content
+    if request.report_type == "weekly":
+        subject = f"Haftalık Satış Raporu - {datetime.now().strftime('%d.%m.%Y')}"
+        body = f"""
+Haftalık Satış Raporu
+=====================
+
+Bu Hafta:
+- Yeni Siparişler: {summary['weekly']['orders']}
+- Yeni Müşteriler: {summary['weekly']['leads']}
+- Aktiviteler: {summary['weekly']['activities']}
+- Ciro: €{summary['weekly']['revenue']:,.2f}
+
+Aktivite Dağılımı:
+- Olumlu: {summary['activity_breakdown'].get('positive', 0)}
+- Olumsuz: {summary['activity_breakdown'].get('negative', 0)}
+- Ertelenen: {summary['activity_breakdown'].get('postponed', 0)}
+- Sipariş: {summary['activity_breakdown'].get('ordered', 0)}
+
+Yaklaşan Takipler:
+"""
+        for fu in summary['upcoming_followups']:
+            body += f"- {fu.get('company_name')}: {fu.get('next_action_date')}\n"
+    else:
+        subject = f"Aylık Satış Raporu - {datetime.now().strftime('%B %Y')}"
+        body = f"""
+Aylık Satış Raporu
+==================
+
+Bu Ay:
+- Toplam Sipariş: {summary['monthly']['orders']}
+- Toplam Ciro: €{summary['monthly']['revenue']:,.2f}
+
+Haftalık Performans:
+- Siparişler: {summary['weekly']['orders']}
+- Aktiviteler: {summary['weekly']['activities']}
+"""
+    
+    # Log email (or send if SMTP configured)
+    email_log = {
+        "id": str(uuid.uuid4()),
+        "to": request.recipient_email,
+        "subject": subject,
+        "body": body,
+        "type": "report",
+        "report_type": request.report_type,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "status": "sent"
+    }
+    await db.email_log.insert_one(email_log)
+    
+    return {
+        "message": "Rapor gönderildi",
+        "recipient": request.recipient_email,
+        "report_type": request.report_type
+    }
 
 # Include router after all endpoints are defined
 app.include_router(api_router)

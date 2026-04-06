@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Settings as SettingsIcon, Mail, TestTube, Save, Loader2, CheckCircle, XCircle, Building2, Target, Euro, Inbox } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, TestTube, Save, Loader2, CheckCircle, XCircle, Building2, Target, Euro, Inbox, FileText, Send, BarChart3 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,6 +20,11 @@ const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
+  
+  // Report Settings
+  const [reportEmail, setReportEmail] = useState('');
+  const [sendingReport, setSendingReport] = useState(false);
+  const [reportSummary, setReportSummary] = useState(null);
   
   // SMTP/IMAP Settings
   const [formData, setFormData] = useState({
@@ -45,6 +50,7 @@ const Settings = () => {
   useEffect(() => {
     fetchSettings();
     fetchCompanySettings();
+    fetchReportSummary();
   }, []);
 
   const fetchSettings = async () => {
@@ -83,6 +89,35 @@ const Settings = () => {
       }
     } catch (error) {
       console.error('Failed to fetch company settings:', error);
+    }
+  };
+
+  const fetchReportSummary = async () => {
+    try {
+      const response = await axios.get(`${API}/reports/summary`);
+      setReportSummary(response.data);
+    } catch (error) {
+      console.error('Failed to fetch report summary:', error);
+    }
+  };
+
+  const sendReport = async (reportType) => {
+    if (!reportEmail) {
+      toast.error('Lütfen email adresi girin');
+      return;
+    }
+    
+    setSendingReport(true);
+    try {
+      await axios.post(`${API}/reports/send`, {
+        report_type: reportType,
+        recipient_email: reportEmail
+      });
+      toast.success(`${reportType === 'weekly' ? 'Haftalık' : 'Aylık'} rapor gönderildi`);
+    } catch (error) {
+      toast.error('Rapor gönderilemedi');
+    } finally {
+      setSendingReport(false);
     }
   };
 
@@ -511,6 +546,115 @@ const Settings = () => {
             </div>
 
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Management Reports */}
+      <Card className="border-indigo-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-indigo-600" />
+            Yönetim Raporları
+          </CardTitle>
+          <CardDescription>
+            Haftalık veya aylık performans raporlarını üst yönetime gönderin
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Report Summary */}
+          {reportSummary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-indigo-600">{reportSummary.weekly?.orders || 0}</p>
+                <p className="text-xs text-muted-foreground">Bu Hafta Sipariş</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-green-600">€{(reportSummary.weekly?.revenue || 0).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Bu Hafta Ciro</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-purple-600">{reportSummary.weekly?.activities || 0}</p>
+                <p className="text-xs text-muted-foreground">Bu Hafta Aktivite</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-blue-600">{reportSummary.weekly?.leads || 0}</p>
+                <p className="text-xs text-muted-foreground">Yeni Müşteri</p>
+              </div>
+            </div>
+          )}
+
+          {/* Activity Breakdown */}
+          {reportSummary?.activity_breakdown && Object.keys(reportSummary.activity_breakdown).length > 0 && (
+            <div className="p-4 bg-slate-50 rounded-lg">
+              <h4 className="font-medium mb-3 text-sm">Bu Haftaki Aktivite Sonuçları</h4>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(reportSummary.activity_breakdown).map(([outcome, count]) => (
+                  <div key={outcome} className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                    outcome === 'positive' ? 'bg-green-100 text-green-700' :
+                    outcome === 'negative' ? 'bg-red-100 text-red-700' :
+                    outcome === 'postponed' ? 'bg-amber-100 text-amber-700' :
+                    outcome === 'ordered' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {outcome === 'positive' ? 'Olumlu' :
+                     outcome === 'negative' ? 'Olumsuz' :
+                     outcome === 'postponed' ? 'Ertelenen' :
+                     outcome === 'ordered' ? 'Sipariş' :
+                     outcome}: {count}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Send Report */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Rapor Gönderilecek Email</Label>
+              <Input
+                type="email"
+                value={reportEmail}
+                onChange={(e) => setReportEmail(e.target.value)}
+                placeholder="yonetici@sirket.com"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                onClick={() => sendReport('weekly')} 
+                disabled={sendingReport}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+              >
+                {sendingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                Haftalık Rapor Gönder
+              </Button>
+              <Button 
+                onClick={() => sendReport('monthly')} 
+                disabled={sendingReport}
+                variant="outline"
+                className="flex-1"
+              >
+                {sendingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileText className="w-4 h-4 mr-2" />}
+                Aylık Rapor Gönder
+              </Button>
+            </div>
+          </div>
+
+          {/* Upcoming Follow-ups */}
+          {reportSummary?.upcoming_followups && reportSummary.upcoming_followups.length > 0 && (
+            <div className="p-4 bg-amber-50 rounded-lg">
+              <h4 className="font-medium mb-3 text-sm text-amber-800">Yaklaşan Takipler</h4>
+              <div className="space-y-2">
+                {reportSummary.upcoming_followups.map((fu, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-sm">
+                    <span className="text-amber-900">{fu.company_name}</span>
+                    <span className="text-amber-600 font-mono text-xs">
+                      {fu.next_action_date ? new Date(fu.next_action_date).toLocaleDateString('tr-TR') : '-'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
