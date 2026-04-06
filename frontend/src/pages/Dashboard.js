@@ -86,6 +86,10 @@ const Dashboard = () => {
   // Dashboard Alerts
   const [alerts, setAlerts] = useState([]);
   const [financeSummary, setFinanceSummary] = useState(null);
+  
+  // Recent Emails
+  const [recentEmails, setRecentEmails] = useState([]);
+  const [loadingEmails, setLoadingEmails] = useState(false);
 
   const periods = [
     { value: 'all', label: t('allTime') },
@@ -115,7 +119,22 @@ const Dashboard = () => {
     fetchShipments();
     fetchAlerts();
     fetchFinanceSummary();
+    fetchRecentEmails();
   }, [period]);
+
+  const fetchRecentEmails = async () => {
+    setLoadingEmails(true);
+    try {
+      const response = await axios.get(`${API}/mail/inbox`);
+      if (response.data?.emails) {
+        setRecentEmails(response.data.emails.slice(0, 5));
+      }
+    } catch (error) {
+      console.error('Failed to fetch emails:', error);
+    } finally {
+      setLoadingEmails(false);
+    }
+  };
 
   const fetchStats = async (selectedPeriod) => {
     setLoading(true);
@@ -820,16 +839,21 @@ const Dashboard = () => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => navigate('/compose')}
+                onClick={() => navigate('/mail')}
                 className="text-xs"
               >
                 <Sparkles className="w-3 h-3 mr-1" />
-                {t('aiMailComposer') || 'AI ile Mail'}
+                {t('goToMail') || 'Mail'}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {stats.emails_sent === 0 ? (
+            {loadingEmails ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                <p className="text-sm">Yükleniyor...</p>
+              </div>
+            ) : recentEmails.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Mail className="w-12 h-12 mx-auto mb-3 opacity-50" />
                 <p>{t('noEmails') || 'Henüz mail yok'}</p>
@@ -842,24 +866,35 @@ const Dashboard = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                    <p className="text-2xl font-bold text-green-600">{stats.emails_sent}</p>
-                    <p className="text-xs text-green-700">{t('emailsSent')}</p>
+              <div className="space-y-2">
+                {recentEmails.map((email, index) => (
+                  <div 
+                    key={email.id || index} 
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors border border-slate-100"
+                    onClick={() => navigate('/mail')}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0
+                      ${['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'][index % 5]}`}>
+                      {(email.from_name || email.from_email)?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm truncate ${!email.is_read ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
+                        {email.from_name || email.from_email?.split('@')[0] || 'Bilinmeyen'}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">{email.subject || '(Konu yok)'}</p>
+                    </div>
+                    <div className="text-xs text-slate-400 flex-shrink-0">
+                      {email.date ? new Date(email.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) : ''}
+                    </div>
                   </div>
-                  <div className="p-4 bg-red-50 rounded-lg border border-red-100">
-                    <p className="text-2xl font-bold text-red-600">{stats.emails_failed}</p>
-                    <p className="text-xs text-red-700">{t('emailsFailed')}</p>
-                  </div>
-                </div>
+                ))}
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   className="w-full mt-2"
                   onClick={() => navigate('/mail')}
                 >
-                  {t('mail') || 'Mail'} {t('inbox') || 'Kutusu'} <ArrowRight className="w-4 h-4 ml-1" />
+                  {t('viewAll') || 'Tümünü Gör'} <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
             )}

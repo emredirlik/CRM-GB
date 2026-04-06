@@ -91,6 +91,20 @@ const MailPage = () => {
   const [isEmailFullscreen, setIsEmailFullscreen] = useState(false);
   const [loadingBody, setLoadingBody] = useState(false);
   
+  // Email Settings States
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [emailSettings, setEmailSettings] = useState({
+    sender_name: '',
+    sender_email: '',
+    imap_host: '',
+    imap_port: '993',
+    smtp_host: '',
+    smtp_port: '587',
+    smtp_username: '',
+    smtp_password: ''
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  
   // AI States
   const [aiSummary, setAiSummary] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -159,6 +173,7 @@ const MailPage = () => {
     loadEmails();
     loadSentEmails();
     loadDrafts();
+    loadEmailSettings();
     
     axios.get(`${API}/settings/signature`).then(res => {
       if (isMounted && res.data?.signature) setSignature(res.data.signature);
@@ -168,6 +183,35 @@ const MailPage = () => {
     
     return () => { isMounted = false; };
   }, []);
+
+  const loadEmailSettings = async () => {
+    try {
+      const response = await axios.get(`${API}/settings/email`);
+      if (response.data) {
+        setEmailSettings(prev => ({
+          ...prev,
+          ...response.data
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load email settings:', error);
+    }
+  };
+
+  const saveEmailSettings = async () => {
+    setSavingSettings(true);
+    try {
+      await axios.post(`${API}/settings/email`, emailSettings);
+      toast.success('Email ayarları kaydedildi');
+      setIsSettingsOpen(false);
+      // Refresh emails after settings change
+      handleRefresh();
+    } catch (error) {
+      toast.error('Ayarlar kaydedilemedi');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -592,13 +636,20 @@ const MailPage = () => {
 
       <Separator className="bg-slate-700/50 mx-4" />
       
-      <div className="p-3">
+      <div className="p-3 space-y-1">
         <button 
           onClick={() => setIsSignatureOpen(true)}
-          className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl transition-all"
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl transition-all"
         >
-          <Settings className="w-5 h-5" />
-          <span className="font-medium">İmza Ayarları</span>
+          <Pencil className="w-4 h-4" />
+          <span className="font-medium text-sm">İmza Ayarları</span>
+        </button>
+        <button 
+          onClick={() => setIsSettingsOpen(true)}
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-400 hover:bg-white/5 hover:text-white rounded-xl transition-all"
+        >
+          <Settings className="w-4 h-4" />
+          <span className="font-medium text-sm">Email Ayarları</span>
         </button>
       </div>
     </div>
@@ -885,18 +936,47 @@ const MailPage = () => {
           )}
 
           {/* Body */}
-          <ScrollArea className="flex-1">
-            <div className="p-5 bg-white min-h-full rounded-t-2xl mt-2 mx-2">
+          <div className="flex-1 overflow-auto">
+            <div className="bg-white min-h-full rounded-t-2xl mt-2 mx-2">
               {loadingBody ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
                   <span className="ml-2 text-slate-600">Yükleniyor...</span>
                 </div>
+              ) : selectedEmail.body ? (
+                <iframe
+                  srcDoc={`<!DOCTYPE html>
+                    <html>
+                    <head>
+                      <meta charset="utf-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
+                      <style>
+                        body { 
+                          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                          line-height: 1.6;
+                          color: #1f2937;
+                          padding: 20px;
+                          margin: 0;
+                          background: white;
+                        }
+                        img { max-width: 100%; height: auto; border-radius: 8px; }
+                        a { color: #4f46e5; }
+                        table { max-width: 100%; }
+                        pre, code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+                      </style>
+                    </head>
+                    <body>${selectedEmail.body}</body>
+                    </html>`}
+                  className="w-full border-0"
+                  style={{ minHeight: '400px', height: 'calc(100vh - 450px)' }}
+                  sandbox="allow-same-origin"
+                  title="Email Content"
+                />
               ) : (
-                <div className="prose prose-sm max-w-none" style={{ color: '#1f2937' }} dangerouslySetInnerHTML={{ __html: processEmailBody(selectedEmail.body) || `<p style="color:#6b7280">${selectedEmail.snippet || 'İçerik yok'}</p>` }} />
+                <div className="p-5 text-slate-500">{selectedEmail.snippet || 'İçerik yok'}</div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Actions */}
           <div className="p-4 border-t border-slate-700/50 bg-slate-800/80 flex gap-3">
@@ -1119,6 +1199,143 @@ const MailPage = () => {
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setIsSignatureOpen(false)}>İptal</Button>
             <Button onClick={saveSignature} className="bg-gradient-to-r from-indigo-600 to-purple-600">Kaydet</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="max-w-2xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Settings className="w-5 h-5 text-indigo-600" />
+              E-posta Ayarları
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+            {/* Sender Info */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <MailOpen className="w-4 h-4 text-indigo-500" />
+                Gönderici Bilgileri
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">Gönderici Adı</label>
+                  <Input
+                    value={emailSettings.sender_name}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, sender_name: e.target.value }))}
+                    placeholder="Gewürzberg GmbH"
+                    className="border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">Gönderici E-posta</label>
+                  <Input
+                    value={emailSettings.sender_email}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, sender_email: e.target.value }))}
+                    placeholder="info@gewuerzberg.de"
+                    className="border-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* IMAP Settings */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Inbox className="w-4 h-4 text-green-500" />
+                IMAP Ayarları (Gelen Kutusu)
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">IMAP Sunucusu</label>
+                  <Input
+                    value={emailSettings.imap_host}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, imap_host: e.target.value }))}
+                    placeholder="imap.ionos.de"
+                    className="border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">IMAP Port</label>
+                  <Input
+                    value={emailSettings.imap_port}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, imap_port: e.target.value }))}
+                    placeholder="993"
+                    className="border-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* SMTP Settings */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Send className="w-4 h-4 text-blue-500" />
+                SMTP Ayarları (Giden Kutusu)
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">SMTP Sunucusu</label>
+                  <Input
+                    value={emailSettings.smtp_host}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_host: e.target.value }))}
+                    placeholder="smtp.ionos.de"
+                    className="border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">SMTP Port</label>
+                  <Input
+                    value={emailSettings.smtp_port}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_port: e.target.value }))}
+                    placeholder="587"
+                    className="border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">Kullanıcı Adı</label>
+                  <Input
+                    value={emailSettings.smtp_username}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_username: e.target.value }))}
+                    placeholder="emre@gewuerzberg.de"
+                    className="border-slate-200"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600 mb-1.5 block">Şifre</label>
+                  <Input
+                    type="password"
+                    value={emailSettings.smtp_password}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, smtp_password: e.target.value }))}
+                    placeholder="••••••••"
+                    className="border-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Not:</strong> IMAP/SMTP ayarlarını email sağlayıcınızdan (1&1 IONOS, Gmail, vb.) alabilirsiniz.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+            <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>İptal</Button>
+            <Button 
+              onClick={saveEmailSettings} 
+              disabled={savingSettings}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600"
+            >
+              {savingSettings ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Settings className="w-4 h-4 mr-2" />}
+              Kaydet
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

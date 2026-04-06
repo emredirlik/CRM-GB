@@ -4706,6 +4706,47 @@ async def save_signature(data: dict):
     )
     return {"message": "Signature saved"}
 
+@api_router.get("/settings/email")
+async def get_email_settings():
+    """Get email settings"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    if not settings:
+        return {}
+    return {
+        "sender_name": settings.get("sender_name", ""),
+        "sender_email": settings.get("smtp_username", ""),
+        "imap_host": settings.get("imap_host", ""),
+        "imap_port": str(settings.get("imap_port", "993")),
+        "smtp_host": settings.get("smtp_host", ""),
+        "smtp_port": str(settings.get("smtp_port", "587")),
+        "smtp_username": settings.get("smtp_username", ""),
+        "smtp_password": ""  # Don't return password for security
+    }
+
+@api_router.post("/settings/email")
+async def save_email_settings(data: dict):
+    """Save email settings"""
+    update_data = {
+        "sender_name": data.get("sender_name", ""),
+        "imap_host": data.get("imap_host", ""),
+        "imap_port": int(data.get("imap_port", 993)),
+        "smtp_host": data.get("smtp_host", ""),
+        "smtp_port": int(data.get("smtp_port", 587)),
+        "smtp_username": data.get("smtp_username", ""),
+    }
+    
+    # Only update password if provided
+    if data.get("smtp_password"):
+        update_data["smtp_password"] = data.get("smtp_password")
+    
+    await db.company_settings.update_one(
+        {},
+        {"$set": update_data},
+        upsert=True
+    )
+    return {"message": "Email settings saved"}
+
+
 # Get frontend URL for CORS
 frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://customer-agent-2.preview.emergentagent.com')
 
