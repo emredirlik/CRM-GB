@@ -3969,6 +3969,22 @@ async def send_mail(request: MailSendRequest):
         })
         
         return {"success": True, "message": "Email sent"}
+    except smtplib.SMTPDataError as e:
+        error_msg = str(e)
+        if "policy restrictions" in error_msg.lower() or "554" in error_msg:
+            logger.error(f"SMTP IP blocked: {e}")
+            # Save as draft instead
+            await db.email_drafts.insert_one({
+                "id": str(uuid.uuid4()),
+                "to": request.to,
+                "subject": request.subject,
+                "body": request.body,
+                "status": "blocked",
+                "error": "Sunucu IP'si mail sağlayıcısı tarafından engellenmiş. Deployment sonrası çözülecek.",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            raise HTTPException(status_code=503, detail="Mail sunucusu geçici olarak kullanılamıyor. Email taslak olarak kaydedildi.")
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.error(f"SMTP error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -234,7 +234,12 @@ const MailPage = () => {
       setAttachments([]);
       if (editorRef.current) editorRef.current.innerHTML = '';
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Gönderilemedi');
+      const errorMsg = error.response?.data?.detail || 'Gönderilemedi';
+      if (error.response?.status === 503) {
+        toast.error('Mail sunucusu geçici olarak kullanılamıyor. Taslak olarak kaydedildi.', { duration: 5000 });
+      } else {
+        toast.error(errorMsg);
+      }
     } finally {
       setSending(false);
     }
@@ -281,10 +286,7 @@ const MailPage = () => {
     if (activeFolder === 'sent') return email.folder === 'sent';
     if (activeFolder === 'trash') return email.folder === 'trash';
     if (activeFolder === 'all') return true;
-    // Category filter for inbox
-    if (activeCategory && activeFolder === 'inbox') {
-      return email.category === activeCategory;
-    }
+    // For inbox, show all emails (category filtering removed for now)
     return email.folder === 'inbox';
   }).filter(email => {
     if (!searchTerm) return true;
@@ -472,7 +474,7 @@ const MailPage = () => {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-[#8ab4f8]" />
             </div>
-          ) : connectionStatus === 'error' ? (
+          ) : connectionStatus === 'error' || connectionStatus === 'not_configured' ? (
             <div className="text-center py-20 px-4">
               <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
               <p className="text-lg font-medium text-[#e8eaed] mb-2">Bağlantı Hatası</p>
