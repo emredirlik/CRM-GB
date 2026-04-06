@@ -15,12 +15,13 @@ import Recipes from "@/pages/Recipes";
 import Templates from "@/pages/Templates";
 import EmailComposer from "@/pages/EmailComposer";
 import EmailHistory from "@/pages/EmailHistory";
-import MailInbox from "@/pages/MailInbox";
+import MailPage from "@/pages/MailInbox";
 import Settings from "@/pages/Settings";
 import RoutePlanner from "@/pages/RoutePlanner";
 import Specifications from "@/pages/Specifications";
 import DailyReports from "@/pages/DailyReports";
 import Shipments from "@/pages/Shipments";
+import AdminPage from "@/pages/AdminPage";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -93,12 +94,14 @@ function AppRoutes() {
                 <Route path="/recipes" element={<Recipes />} />
                 <Route path="/specifications" element={<Specifications />} />
                 <Route path="/templates" element={<Templates />} />
-                <Route path="/mail-inbox" element={<MailInbox />} />
+                <Route path="/mail" element={<MailPage />} />
+                <Route path="/mail-inbox" element={<MailPage />} />
                 <Route path="/compose" element={<EmailComposer />} />
                 <Route path="/history" element={<EmailHistory />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/route-planner" element={<RoutePlanner />} />
                 <Route path="/daily-reports" element={<DailyReports />} />
+                <Route path="/admin" element={<AdminPage />} />
               </Routes>
             </Layout>
             {/* AI Chat Widget - floating button */}

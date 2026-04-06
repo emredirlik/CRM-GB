@@ -3793,6 +3793,100 @@ async def delete_product_video(video_id: str):
     
     return {"message": "Video deleted"}
 
+# ===================== ADMIN USER MANAGEMENT =====================
+
+class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: str = 'user'
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[str] = None
+
+@api_router.get("/admin/users")
+async def get_all_users():
+    """Get all users (admin only)"""
+    users = await db.users.find({}, {"_id": 0, "password_hash": 0}).to_list(100)
+    return users
+
+@api_router.post("/admin/users")
+async def create_user(user_data: UserCreate):
+    """Create a new user"""
+    # Check if email already exists
+    existing = await db.users.find_one({"email": user_data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
+    user_id = str(uuid.uuid4())
+    password_hash = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    new_user = {
+        "id": user_id,
+        "name": user_data.name,
+        "email": user_data.email,
+        "username": user_data.email,
+        "password_hash": password_hash,
+        "role": user_data.role,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(new_user)
+    
+    return {"id": user_id, "name": user_data.name, "email": user_data.email, "role": user_data.role}
+
+@api_router.put("/admin/users/{user_id}")
+async def update_user(user_id: str, user_data: UserUpdate):
+    """Update a user"""
+    update_data = {}
+    if user_data.name:
+        update_data["name"] = user_data.name
+    if user_data.email:
+        update_data["email"] = user_data.email
+        update_data["username"] = user_data.email
+    if user_data.password:
+        update_data["password_hash"] = bcrypt.hashpw(user_data.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    if user_data.role:
+        update_data["role"] = user_data.role
+    
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    return {"message": "User updated"}
+
+@api_router.delete("/admin/users/{user_id}")
+async def delete_user(user_id: str):
+    """Delete a user"""
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Cannot delete admin user")
+    
+    await db.users.delete_one({"id": user_id})
+    return {"message": "User deleted"}
+
+# ===================== EMAIL SIGNATURE =====================
+
+@api_router.get("/settings/signature")
+async def get_signature():
+    """Get email signature"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    return {"signature": settings.get("email_signature", "") if settings else ""}
+
+@api_router.post("/settings/signature")
+async def save_signature(data: dict):
+    """Save email signature"""
+    await db.company_settings.update_one(
+        {},
+        {"$set": {"email_signature": data.get("signature", "")}},
+        upsert=True
+    )
+    return {"message": "Signature saved"}
+
 app.include_router(api_router)
 
 # Get frontend URL for CORS

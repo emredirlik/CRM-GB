@@ -642,37 +642,38 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Leads */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <Users className="w-5 h-5 text-blue-600" />
-            {t('recentLeads')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {stats.recent_leads.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{t('noLeadsYet')}</p>
-              <Button 
-                variant="link" 
-                onClick={() => navigate('/leads')}
-                className="text-indigo-600"
-              >
-                Add your first lead <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {stats.recent_leads.map((lead) => (
-                <div 
-                  key={lead.id}
-                  className="p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-                  onClick={() => navigate(`/leads`)}
+      {/* Recent Leads & Recent Emails Grid */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Recent Leads */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Users className="w-5 h-5 text-blue-600" />
+              {t('recentLeads')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.recent_leads.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>{t('noLeadsYet')}</p>
+                <Button 
+                  variant="link" 
+                  onClick={() => navigate('/leads')}
+                  className="text-indigo-600"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  {t('addLead')} <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stats.recent_leads.slice(0, 5).map((lead) => (
+                  <div 
+                    key={lead.id}
+                    className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer flex items-center gap-3"
+                    onClick={() => navigate(`/leads`)}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                       <span className="text-blue-600 font-semibold text-sm">
                         {lead.first_name?.[0]}{lead.last_name?.[0]}
                       </span>
@@ -684,12 +685,77 @@ const Dashboard = () => {
                       </p>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => navigate('/leads')}
+                >
+                  {t('viewAll') || 'Tümünü Gör'} <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Emails */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Mail className="w-5 h-5 text-indigo-600" />
+                {t('recentEmails') || 'Son Mailler'}
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/compose')}
+                className="text-xs"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                {t('aiMailComposer') || 'AI ile Mail'}
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            {stats.emails_sent === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Mail className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>{t('noEmails') || 'Henüz mail yok'}</p>
+                <Button 
+                  variant="link" 
+                  onClick={() => navigate('/mail')}
+                  className="text-indigo-600"
+                >
+                  Mail {t('compose') || 'Yaz'} <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                    <p className="text-2xl font-bold text-green-600">{stats.emails_sent}</p>
+                    <p className="text-xs text-green-700">{t('emailsSent')}</p>
+                  </div>
+                  <div className="p-4 bg-red-50 rounded-lg border border-red-100">
+                    <p className="text-2xl font-bold text-red-600">{stats.emails_failed}</p>
+                    <p className="text-xs text-red-700">{t('emailsFailed')}</p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => navigate('/mail')}
+                >
+                  {t('mail') || 'Mail'} {t('inbox') || 'Kutusu'} <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Visit Planning Dialog */}
       <Dialog open={isVisitDialogOpen} onOpenChange={setIsVisitDialogOpen}>
