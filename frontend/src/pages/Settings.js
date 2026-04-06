@@ -101,6 +101,55 @@ const Settings = () => {
     }
   };
 
+  // Email Provider Presets
+  const applyPreset = (provider) => {
+    const presets = {
+      ionos: {
+        host: 'smtp.ionos.de',
+        port: 587,
+        use_tls: true,
+        use_ssl: false,
+        imap_host: 'imap.ionos.de',
+        imap_port: 993
+      },
+      strato: {
+        host: 'smtp.strato.de',
+        port: 465,
+        use_tls: false,
+        use_ssl: true,
+        imap_host: 'imap.strato.de',
+        imap_port: 993
+      },
+      gmail: {
+        host: 'smtp.gmail.com',
+        port: 587,
+        use_tls: true,
+        use_ssl: false,
+        imap_host: 'imap.gmail.com',
+        imap_port: 993
+      },
+      outlook: {
+        host: 'smtp.office365.com',
+        port: 587,
+        use_tls: true,
+        use_ssl: false,
+        imap_host: 'outlook.office365.com',
+        imap_port: 993
+      }
+    };
+    
+    const preset = presets[provider];
+    if (preset) {
+      setFormData(prev => ({
+        ...prev,
+        ...preset
+      }));
+      toast.success(`${provider.toUpperCase()} ayarları uygulandı`, {
+        description: 'Kullanıcı adı ve şifrenizi girin'
+      });
+    }
+  };
+
   const sendReport = async (reportType) => {
     if (!reportEmail) {
       toast.error('Lütfen email adresi girin');
@@ -515,11 +564,51 @@ const Settings = () => {
       <Card data-testid="help-card">
         <CardContent className="p-4 md:p-6">
           <h3 className="font-semibold font-['Manrope'] mb-3">E-posta Sunucusu Ayarları</h3>
+          
+          {/* Quick Preset Buttons */}
+          <div className="mb-4">
+            <p className="text-sm text-muted-foreground mb-2">Hızlı Ayar:</p>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => applyPreset('ionos')}
+                className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+              >
+                1&1 IONOS
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => applyPreset('strato')}
+                className="bg-green-50 hover:bg-green-100 border-green-200"
+              >
+                Strato
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => applyPreset('gmail')}
+                className="bg-red-50 hover:bg-red-100 border-red-200"
+              >
+                Gmail
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => applyPreset('outlook')}
+                className="bg-purple-50 hover:bg-purple-100 border-purple-200"
+              >
+                Outlook
+              </Button>
+            </div>
+          </div>
+          
           <div className="text-sm text-muted-foreground space-y-4">
             
             {/* IONOS */}
             <div>
-              <p className="font-medium text-foreground mb-2">IONOS:</p>
+              <p className="font-medium text-foreground mb-2">1&1 IONOS:</p>
               <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto">
                 <p>SMTP: smtp.ionos.de, Port: 587 (TLS)</p>
                 <p>IMAP: imap.ionos.de, Port: 993 (SSL)</p>
