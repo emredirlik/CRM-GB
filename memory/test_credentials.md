@@ -1,7 +1,7 @@
 # Test Credentials
 
 ## Admin User
-- Username: admin
+- Username: emre@gewuerzberg.de
 - Password: 190371
 - Role: admin
 

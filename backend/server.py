@@ -469,6 +469,11 @@ async def delete_lead(lead_id: str):
         raise HTTPException(status_code=404, detail="Lead not found")
     return {"message": "Lead deleted successfully"}
 
+@api_router.get("/leads/all/pdf")
+async def download_all_leads_pdf(lang: str = 'tr'):
+    """Download all leads as a single PDF"""
+    return await export_leads_pdf(lang)
+
 @api_router.get("/leads/{lead_id}/pdf")
 async def get_lead_pdf(lead_id: str):
     """Generate PDF for a single lead with their orders and recipes"""
@@ -2003,7 +2008,7 @@ async def export_leads_pdf(lang: str = 'en'):
     return Response(
         content=buffer.getvalue(),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={L['title'].lower().replace(' ', '_')}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=customer_list_{datetime.now().strftime('%Y%m%d')}.pdf"}
     )
 
 @api_router.get("/recipes/{recipe_id}/pdf")

@@ -167,6 +167,26 @@ const Leads = () => {
     }
   };
 
+  const downloadAllLeadsPdf = async () => {
+    try {
+      toast.info('PDF hazırlanıyor...');
+      const response = await axios.get(`${API}/leads/all/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tum_musteriler_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`${leads.length} müşteri PDF olarak indirildi`);
+    } catch (error) {
+      toast.error(t('error'), { description: 'PDF could not be downloaded' });
+    }
+  };
+
   const openLeadDetails = async (lead) => {
     setIsDetailDialogOpen(true);
     setLoadingDetails(true);
@@ -278,13 +298,17 @@ const Leads = () => {
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('leads')}</h1>
           <p className="text-muted-foreground mt-1">{leads.length} {t('totalLeads').toLowerCase()}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {selectedLeads.size > 0 && (
             <Button variant="outline" onClick={openBulkEmailDialog}>
               <Mail className="w-4 h-4 mr-2" />
               {selectedLeads.size} {t('bulkEmail')}
             </Button>
           )}
+          <Button variant="outline" onClick={downloadAllLeadsPdf} data-testid="download-all-pdf">
+            <FileDown className="w-4 h-4 mr-2" />
+            {t('downloadPdf')}
+          </Button>
           <Button variant="outline" onClick={selectAllLeads}>
             {selectedLeads.size === filteredLeads.length ? t('deselectAll') : t('selectAll')}
           </Button>

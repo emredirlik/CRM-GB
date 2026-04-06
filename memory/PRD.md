@@ -86,6 +86,8 @@ Features:
 ## Recent Updates (April 2026)
 
 ### Completed (April 6, 2026 - Latest)
+- [x] **Admin Account Updated** - Username: emre@gewuerzberg.de, Password: 190371
+- [x] **Download All Customers PDF** - New "PDF İndir" button on Leads page
 - [x] **Shipments Mobile Layout Fixed** - Card-based responsive design, no horizontal scroll
 - [x] **Shipments Full Localization** - TR/DE/EN/PL translations for all texts
 - [x] **Specifications Page Translated** - All UI text in Turkish/German/English/Polish
@@ -106,7 +108,6 @@ Features:
 
 ### Pending
 - [ ] Email Signature Configuration (backend wiring)
-- [ ] Download All Customers PDF
 - [ ] Product Videos Drag & Drop + WhatsApp sharing validation
 
 ## API Endpoints
