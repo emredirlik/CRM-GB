@@ -85,7 +85,7 @@ Features:
 
 ## Recent Updates (April 2026)
 
-### Completed
+### Completed (April 6, 2026)
 - [x] **SerpAPI Integration** - Real Google Maps data for Lead Finder
 - [x] **User-defined search keywords** - Custom keyword input field
 - [x] **Keyword presets** - Quick buttons for common searches
@@ -102,9 +102,12 @@ Features:
 - [x] **Mobile Responsive Overhaul** - Card-based layout, no horizontal scroll
 - [x] **Orders/Leads Card View** - Modern card layout instead of tables
 - [x] **Mobile Header Branding** - "Gewürzberg GmbH" and username visible
+- [x] **Specifications Page Translated** - All UI text in Turkish
+- [x] **Daily Reports Card View** - Replaced table with card layout
+- [x] **Monthly Report PDF Download** - New "Aylık Rapor İndir" button
+- [x] **DHL Real Tracking Verified** - CS638795298DE tracking works
 
 ### Pending
-- [ ] Monthly Reports merged single PDF
 - [ ] Email Signature Configuration (backend wiring)
 - [ ] Download All Customers PDF
 - [ ] Product Videos Drag & Drop + WhatsApp sharing validation

@@ -3154,6 +3154,35 @@ async def email_daily_reports(date: str, request: DailyReportEmailRequest):
     
     return {"message": "Email logged successfully", "report_count": len(reports)}
 
+@api_router.get("/daily-reports/month/{year}/{month}/pdf")
+async def download_monthly_reports_pdf(year: int, month: int):
+    """Download all reports for a specific month as single PDF"""
+    # Create date range for the month
+    month_str = f"{year}-{str(month).zfill(2)}"
+    
+    # Find all reports that start with this month
+    reports_cursor = db.daily_reports.find(
+        {"date": {"$regex": f"^{month_str}"}},
+        {"_id": 0}
+    ).sort("date", 1)
+    reports = await reports_cursor.to_list(500)
+    
+    if not reports:
+        raise HTTPException(status_code=404, detail="No reports found for this month")
+    
+    settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
+    
+    # Generate combined PDF for all reports in the month
+    pdf_content = generate_combined_daily_report_pdf(reports, f"{month_str} (Monthly)", settings, 'tr')
+    
+    return Response(
+        content=pdf_content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="monthly_reports_{month_str}.pdf"'
+        }
+    )
+
 # ===================== AI SALES FORECAST =====================
 
 @api_router.get("/sales/forecast")

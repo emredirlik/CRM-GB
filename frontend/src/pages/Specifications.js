@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +39,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const Specifications = () => {
+  const { t, language } = useLanguage();
   const [specs, setSpecs] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,6 +73,54 @@ const Specifications = () => {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Turkish translations
+  const texts = {
+    title: language === 'tr' ? 'Ürün Spesifikasyonları' : language === 'de' ? 'Produktspezifikationen' : 'Product Specifications',
+    subtitle: language === 'tr' ? 'PDF belgesi - Yükle, Düzenle ve Paylaş' : language === 'de' ? 'PDF Dokumente - Hochladen, Bearbeiten & Teilen' : 'PDF documents - Upload, Edit & Share',
+    uploadTitle: language === 'tr' ? 'PDF Spesifikasyonu Yükle' : language === 'de' ? 'PDF-Spezifikation hochladen' : 'Upload PDF Specifications',
+    uploadDesc: language === 'tr' ? 'PDF dosyalarını buraya sürükleyin veya dosya seçmek için tıklayın.' : language === 'de' ? 'PDF-Dateien hier ablegen oder klicken zum Auswählen.' : 'Drag and drop PDF files here, or click to browse.',
+    uploadHint: language === 'tr' ? 'Metin düzenleme için otomatik olarak çıkarılacak!' : language === 'de' ? 'Text wird automatisch zur Bearbeitung extrahiert!' : 'Text will be automatically extracted for editing!',
+    browseFiles: language === 'tr' ? 'Dosya Seç' : language === 'de' ? 'Dateien auswählen' : 'Browse Files',
+    uploading: language === 'tr' ? 'Yükleniyor ve Metin Çıkarılıyor...' : language === 'de' ? 'Hochladen & Text extrahieren...' : 'Uploading & Extracting Text...',
+    searchPlaceholder: language === 'tr' ? 'Spesifikasyon ara...' : language === 'de' ? 'Spezifikation suchen...' : 'Search specifications...',
+    noSpecs: language === 'tr' ? 'Henüz PDF spesifikasyonu yüklenmedi' : language === 'de' ? 'Noch keine PDF-Spezifikationen hochgeladen' : 'No PDF specifications uploaded yet',
+    noSpecsHint: language === 'tr' ? 'Başlamak için yukarıya PDF dosyaları sürükleyin' : language === 'de' ? 'PDF-Dateien oben ablegen um zu starten' : 'Drag and drop PDF files above to get started',
+    notFound: language === 'tr' ? 'Spesifikasyon bulunamadı' : language === 'de' ? 'Keine Spezifikation gefunden' : 'No specifications found',
+    editable: language === 'tr' ? 'Düzenlenebilir' : language === 'de' ? 'Bearbeitbar' : 'Editable',
+    editDetails: language === 'tr' ? 'Detayları Düzenle' : language === 'de' ? 'Details bearbeiten' : 'Edit Specification Details',
+    displayName: language === 'tr' ? 'Görünen Ad' : language === 'de' ? 'Anzeigename' : 'Display Name',
+    description: language === 'tr' ? 'Açıklama' : language === 'de' ? 'Beschreibung' : 'Description',
+    descPlaceholder: language === 'tr' ? 'Bu spesifikasyonun kısa açıklaması...' : language === 'de' ? 'Kurze Beschreibung dieser Spezifikation...' : 'Brief description of this specification...',
+    notes: language === 'tr' ? 'Notlar' : language === 'de' ? 'Notizen' : 'Notes',
+    notesPlaceholder: language === 'tr' ? 'Dahili notlar...' : language === 'de' ? 'Interne Notizen...' : 'Internal notes...',
+    cancel: language === 'tr' ? 'İptal' : language === 'de' ? 'Abbrechen' : 'Cancel',
+    save: language === 'tr' ? 'Değişiklikleri Kaydet' : language === 'de' ? 'Änderungen speichern' : 'Save Changes',
+    saving: language === 'tr' ? 'Kaydediliyor...' : language === 'de' ? 'Speichern...' : 'Saving...',
+    pdfPreview: language === 'tr' ? 'PDF Önizleme' : language === 'de' ? 'PDF-Vorschau' : 'PDF Preview',
+    editText: language === 'tr' ? 'Metin İçeriği Düzenle' : language === 'de' ? 'Textinhalt bearbeiten' : 'Edit Text Content',
+    downloadOriginal: language === 'tr' ? 'Orijinali İndir' : language === 'de' ? 'Original herunterladen' : 'Download Original',
+    loadingText: language === 'tr' ? 'Çıkarılan metin yükleniyor...' : language === 'de' ? 'Extrahierter Text wird geladen...' : 'Loading extracted text...',
+    editMode: language === 'tr' ? 'Düzenleme Modu:' : language === 'de' ? 'Bearbeitungsmodus:' : 'Edit Mode:',
+    editModeDesc: language === 'tr' ? 'Aşağıdaki metni değiştirin ve değişikliklerinizle yeni bir PDF oluşturun. Orijinal PDF korunur.' : language === 'de' ? 'Ändern Sie den Text unten und generieren Sie eine neue PDF mit Ihren Änderungen. Das Original-PDF bleibt erhalten.' : 'Modify the text below and generate a new PDF with your changes. The original PDF is preserved.',
+    noTextExtracted: language === 'tr' ? 'Bu PDF\'den metin çıkarılamadı. PDF görüntü tabanlı veya şifreli olabilir.' : language === 'de' ? 'Aus dieser PDF konnte kein Text extrahiert werden. Die PDF könnte bildbasiert oder verschlüsselt sein.' : 'No text could be extracted from this PDF. The PDF might be image-based or encrypted.',
+    chars: language === 'tr' ? 'karakter' : language === 'de' ? 'Zeichen' : 'characters',
+    pageBreak: language === 'tr' ? '"---SAYFA SONU---" sayfa ayrımlarını işaretler' : language === 'de' ? '"---SEITENUMBRUCH---" markiert Seitentrennungen' : '"---PAGE BREAK---" marks page separations',
+    saveText: language === 'tr' ? 'Metni Kaydet' : language === 'de' ? 'Text speichern' : 'Save Text',
+    generatePdf: language === 'tr' ? 'Düzenlenmiş PDF Oluştur' : language === 'de' ? 'Bearbeitete PDF generieren' : 'Generate Edited PDF',
+    close: language === 'tr' ? 'Kapat' : language === 'de' ? 'Schließen' : 'Close',
+    sendEmail: language === 'tr' ? 'E-posta ile Spesifikasyon Gönder' : language === 'de' ? 'Spezifikation per E-Mail senden' : 'Send Specification via Email',
+    willBeAttached: language === 'tr' ? 'E-postaya eklenecek' : language === 'de' ? 'Wird der E-Mail angehängt' : 'Will be attached to the email',
+    selectCustomer: language === 'tr' ? 'Müşteri Seç *' : language === 'de' ? 'Kunde auswählen *' : 'Select Customer *',
+    selectCustomerPlaceholder: language === 'tr' ? 'Bir müşteri seçin' : language === 'de' ? 'Kunde auswählen' : 'Select a customer',
+    subject: language === 'tr' ? 'Konu' : language === 'de' ? 'Betreff' : 'Subject',
+    message: language === 'tr' ? 'Mesaj' : language === 'de' ? 'Nachricht' : 'Message',
+    send: language === 'tr' ? 'E-posta Gönder' : language === 'de' ? 'E-Mail senden' : 'Send Email',
+    sending: language === 'tr' ? 'Gönderiliyor...' : language === 'de' ? 'Senden...' : 'Sending...',
+    deleteSpec: language === 'tr' ? 'Spesifikasyonu Sil' : language === 'de' ? 'Spezifikation löschen' : 'Delete Specification',
+    deleteConfirm: language === 'tr' ? 'silmek istediğinize emin misiniz? Bu işlem geri alınamaz.' : language === 'de' ? 'löschen? Diese Aktion kann nicht rückgängig gemacht werden.' : 'This action cannot be undone.',
+    delete: language === 'tr' ? 'Sil' : language === 'de' ? 'Löschen' : 'Delete',
+  };
 
   useEffect(() => {
     fetchData();
@@ -202,8 +252,14 @@ const Specifications = () => {
 
   const openEmailDialog = (spec) => {
     setSelectedSpec(spec);
-    setEmailSubject(`Product Specification: ${spec.name || spec.filename}`);
-    setEmailBody(`Dear Customer,\n\nPlease find attached the product specification document.\n\nFile: ${spec.filename || spec.name}\n\nBest regards,\nGewürzberg GmbH`);
+    const subjectText = language === 'tr' ? 'Ürün Spesifikasyonu:' : language === 'de' ? 'Produktspezifikation:' : 'Product Specification:';
+    const bodyText = language === 'tr' 
+      ? `Sayın Müşterimiz,\n\nEkli ürün spesifikasyon belgesini bulabilirsiniz.\n\nDosya: ${spec.filename || spec.name}\n\nSaygılarımızla,\nGewürzberg GmbH`
+      : language === 'de'
+      ? `Sehr geehrter Kunde,\n\nAnbei finden Sie das Produktspezifikationsdokument.\n\nDatei: ${spec.filename || spec.name}\n\nMit freundlichen Grüßen,\nGewürzberg GmbH`
+      : `Dear Customer,\n\nPlease find attached the product specification document.\n\nFile: ${spec.filename || spec.name}\n\nBest regards,\nGewürzberg GmbH`;
+    setEmailSubject(`${subjectText} ${spec.name || spec.filename}`);
+    setEmailBody(bodyText);
     setSelectedLeadId('');
     setIsEmailDialogOpen(true);
   };
@@ -369,8 +425,8 @@ const Specifications = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Product Specifications</h1>
-          <p className="text-muted-foreground mt-1">{specs.length} PDF documents - Upload, Edit & Share</p>
+          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{texts.title}</h1>
+          <p className="text-muted-foreground mt-1">{specs.length} {texts.subtitle}</p>
         </div>
       </div>
 
@@ -400,15 +456,15 @@ const Specifications = () => {
             {uploadingFile ? (
               <div className="flex items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-                <span className="text-lg">Uploading & Extracting Text...</span>
+                <span className="text-lg">{texts.uploading}</span>
               </div>
             ) : (
               <>
                 <FileUp className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-xl font-semibold mb-2">Upload PDF Specifications</h3>
+                <h3 className="text-xl font-semibold mb-2">{texts.uploadTitle}</h3>
                 <p className="text-muted-foreground mb-4">
-                  Drag and drop PDF files here, or click to browse.<br />
-                  <span className="text-sm text-orange-600 font-medium">Text will be automatically extracted for editing!</span>
+                  {texts.uploadDesc}<br />
+                  <span className="text-sm text-orange-600 font-medium">{texts.uploadHint}</span>
                 </p>
                 <Button
                   variant="outline"
@@ -416,7 +472,7 @@ const Specifications = () => {
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Upload className="w-5 h-5 mr-2" />
-                  Browse Files
+                  {texts.browseFiles}
                 </Button>
               </>
             )}
@@ -429,7 +485,7 @@ const Specifications = () => {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search specifications..."
+            placeholder={texts.searchPlaceholder}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -443,8 +499,8 @@ const Specifications = () => {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>{searchTerm ? 'No specifications found' : 'No PDF specifications uploaded yet'}</p>
-            <p className="text-sm mt-1">Drag and drop PDF files above to get started</p>
+            <p>{searchTerm ? texts.notFound : texts.noSpecs}</p>
+            <p className="text-sm mt-1">{texts.noSpecsHint}</p>
           </CardContent>
         </Card>
       ) : (
@@ -467,7 +523,7 @@ const Specifications = () => {
                 {spec.has_text && (
                   <Badge variant="secondary" className="bg-green-100 text-green-700 mb-2">
                     <Type className="w-3 h-3 mr-1" />
-                    Editable
+                    {texts.editable}
                   </Badge>
                 )}
                 
@@ -482,19 +538,19 @@ const Specifications = () => {
                 )}
                 
                 <div className="flex items-center justify-end gap-1 pt-3 border-t">
-                  <Button variant="ghost" size="sm" onClick={() => openPreview(spec)} title="View & Edit">
+                  <Button variant="ghost" size="sm" onClick={() => openPreview(spec)} title={texts.pdfPreview}>
                     <Eye className="w-4 h-4 text-blue-600" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => downloadPdf(spec.id)} title="Download Original">
+                  <Button variant="ghost" size="sm" onClick={() => downloadPdf(spec.id)} title={texts.downloadOriginal}>
                     <FileDown className="w-4 h-4 text-green-600" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openEmailDialog(spec)} title="Send Email">
+                  <Button variant="ghost" size="sm" onClick={() => openEmailDialog(spec)} title={texts.send}>
                     <Mail className="w-4 h-4 text-purple-600" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(spec)} title="Edit Details">
+                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(spec)} title={texts.editDetails}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(spec)} className="text-destructive hover:text-destructive" title="Delete">
+                  <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(spec)} className="text-destructive hover:text-destructive" title={texts.delete}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
@@ -508,44 +564,44 @@ const Specifications = () => {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Edit Specification Details</DialogTitle>
+            <DialogTitle className="font-['Manrope']">{texts.editDetails}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Display Name</Label>
+              <Label htmlFor="edit-name">{texts.displayName}</Label>
               <Input
                 id="edit-name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                placeholder="Product specification name"
+                placeholder={texts.displayName}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">{texts.description}</Label>
               <Textarea
                 id="edit-description"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 rows={3}
-                placeholder="Brief description of this specification..."
+                placeholder={texts.descPlaceholder}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
+              <Label htmlFor="edit-notes">{texts.notes}</Label>
               <Input
                 id="edit-notes"
                 value={editNotes}
                 onChange={(e) => setEditNotes(e.target.value)}
-                placeholder="Internal notes..."
+                placeholder={texts.notesPlaceholder}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
+              {texts.cancel}
             </Button>
             <Button onClick={handleSaveEdit} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? texts.saving : texts.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -565,11 +621,11 @@ const Specifications = () => {
             <TabsList className="mx-4">
               <TabsTrigger value="preview" className="flex items-center gap-2">
                 <Eye className="w-4 h-4" />
-                PDF Preview
+                {texts.pdfPreview}
               </TabsTrigger>
               <TabsTrigger value="edit" className="flex items-center gap-2">
                 <Type className="w-4 h-4" />
-                Edit Text Content
+                {texts.editText}
               </TabsTrigger>
             </TabsList>
             
@@ -597,7 +653,7 @@ const Specifications = () => {
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => downloadPdf(selectedSpec?.id)}>
                         <FileDown className="w-4 h-4 mr-2" />
-                        Download Original
+                        {texts.downloadOriginal}
                       </Button>
                     </div>
                   </div>
@@ -611,14 +667,13 @@ const Specifications = () => {
                   {loadingText ? (
                     <div className="flex items-center justify-center h-[55vh] bg-muted/30 rounded-lg">
                       <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
-                      <span className="ml-3">Loading extracted text...</span>
+                      <span className="ml-3">{texts.loadingText}</span>
                     </div>
                   ) : (
                     <>
                       {/* Info Banner */}
                       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                        <strong>Edit Mode:</strong> Modify the text below and generate a new PDF with your changes. 
-                        The original PDF is preserved.
+                        <strong>{texts.editMode}</strong> {texts.editModeDesc}
                       </div>
                       
                       {/* Text Editor */}
@@ -626,14 +681,14 @@ const Specifications = () => {
                         value={editedText}
                         onChange={(e) => setEditedText(e.target.value)}
                         className="h-[45vh] font-mono text-sm resize-none"
-                        placeholder="No text could be extracted from this PDF. The PDF might be image-based or encrypted."
+                        placeholder={texts.noTextExtracted}
                         data-testid="pdf-text-editor"
                       />
                       
                       {/* Action Buttons */}
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-muted-foreground">
-                          {editedText.length} characters • "---PAGE BREAK---" marks page separations
+                          {editedText.length} {texts.chars} • {texts.pageBreak}
                         </p>
                         <div className="flex gap-2">
                           <Button 
@@ -646,7 +701,7 @@ const Specifications = () => {
                             ) : (
                               <Save className="w-4 h-4 mr-2" />
                             )}
-                            Save Text
+                            {texts.saveText}
                           </Button>
                           <Button 
                             onClick={handleGenerateEditedPdf}
@@ -658,7 +713,7 @@ const Specifications = () => {
                             ) : (
                               <FileOutput className="w-4 h-4 mr-2" />
                             )}
-                            Generate Edited PDF
+                            {texts.generatePdf}
                           </Button>
                         </div>
                       </div>
@@ -672,9 +727,9 @@ const Specifications = () => {
           <DialogFooter className="p-4 pt-0">
             <Button variant="outline" onClick={() => openEditDialog(selectedSpec)}>
               <Pencil className="w-4 h-4 mr-2" />
-              Edit Details
+              {texts.editDetails}
             </Button>
-            <Button onClick={() => setIsPreviewOpen(false)}>Close</Button>
+            <Button onClick={() => setIsPreviewOpen(false)}>{texts.close}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -683,21 +738,21 @@ const Specifications = () => {
       <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Send Specification via Email</DialogTitle>
+            <DialogTitle className="font-['Manrope']">{texts.sendEmail}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
               <File className="w-8 h-8 text-red-600" />
               <div>
                 <p className="font-medium text-sm">{selectedSpec?.name || selectedSpec?.filename}</p>
-                <p className="text-xs text-muted-foreground">Will be attached to the email</p>
+                <p className="text-xs text-muted-foreground">{texts.willBeAttached}</p>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Select Customer *</Label>
+              <Label>{texts.selectCustomer}</Label>
               <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a customer" />
+                  <SelectValue placeholder={texts.selectCustomerPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {leads.map(lead => (
@@ -709,14 +764,14 @@ const Specifications = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Subject</Label>
+              <Label>{texts.subject}</Label>
               <Input
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Message</Label>
+              <Label>{texts.message}</Label>
               <Textarea
                 value={emailBody}
                 onChange={(e) => setEmailBody(e.target.value)}
@@ -726,10 +781,10 @@ const Specifications = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
-              Cancel
+              {texts.cancel}
             </Button>
             <Button onClick={sendEmail} disabled={sendingEmail}>
-              {sendingEmail ? 'Sending...' : 'Send Email'}
+              {sendingEmail ? texts.sending : texts.send}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -739,15 +794,15 @@ const Specifications = () => {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Specification</AlertDialogTitle>
+            <AlertDialogTitle>{texts.deleteSpec}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedSpec?.name || selectedSpec?.filename}"? This action cannot be undone.
+              "{selectedSpec?.name || selectedSpec?.filename}" {texts.deleteConfirm}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{texts.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+              {texts.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

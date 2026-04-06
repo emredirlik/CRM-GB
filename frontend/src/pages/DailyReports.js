@@ -531,6 +531,39 @@ const DailyReports = () => {
     }
   };
 
+  const downloadMonthlyPdf = async () => {
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth() + 1;
+    const monthStr = `${year}-${month.toString().padStart(2, '0')}`;
+    
+    // Filter reports for the current month
+    const monthReports = reports.filter(r => r.date && r.date.startsWith(monthStr));
+    
+    if (monthReports.length === 0) {
+      const noMonthlyReports = language === 'tr' ? 'Bu ay için rapor yok' : language === 'de' ? 'Keine Berichte für diesen Monat' : 'No reports for this month';
+      toast.error(t.error, { description: noMonthlyReports });
+      return;
+    }
+
+    try {
+      const response = await axios.get(`${API}/daily-reports/month/${year}/${month}/pdf`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `monthly_reports_${monthStr}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      const monthlyDownloaded = language === 'tr' ? `${monthReports.length} rapor aylık PDF olarak indirildi` : language === 'de' ? `${monthReports.length} Berichte als monatliches PDF heruntergeladen` : `${monthReports.length} reports downloaded as monthly PDF`;
+      toast.success(monthlyDownloaded);
+    } catch (error) {
+      toast.error(t.error, { description: t.couldNotDownload });
+    }
+  };
+
   const handleSendEmail = async () => {
     if (!emailTo.trim()) {
       toast.error(t.error, { description: t.emailRequired });
@@ -710,51 +743,64 @@ const DailyReports = () => {
         </Card>
       </div>
 
-      {/* All Reports Summary */}
+      {/* All Reports Summary - Card View */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{t.recentReports}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">{t.recentReports}</CardTitle>
+            <Button variant="outline" size="sm" onClick={downloadMonthlyPdf}>
+              <FileDown className="w-4 h-4 mr-2" />
+              {language === 'tr' ? 'Aylık Rapor İndir' : language === 'de' ? 'Monatsbericht herunterladen' : 'Download Monthly Report'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>{t.date}</th>
-                  <th>{t.customer}</th>
-                  <th>{t.city}</th>
-                  <th>{t.visitType}</th>
-                  <th>{t.notes}</th>
-                  <th>{t.actions}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.slice(0, 10).map((report) => (
-                  <tr key={report.id}>
-                    <td className="font-medium">{report.date}</td>
-                    <td>{report.company_name}</td>
-                    <td>{report.city}</td>
-                    <td>
-                      <Badge className={getVisitTypeColor(report.visit_type)}>
-                        {getVisitTypeLabel(report.visit_type)}
-                      </Badge>
-                    </td>
-                    <td className="max-w-xs truncate">{report.notes}</td>
-                    <td>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => downloadPdf(report.id)}>
-                          <FileDown className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(report)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
+          {reports.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Building2 className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>{t.noReports}</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reports.slice(0, 10).map((report) => (
+                <div key={report.id} className="p-4 bg-muted/30 rounded-lg border">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                        <CalendarIcon className="w-5 h-5 text-orange-600" />
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <div>
+                        <p className="font-semibold text-sm">{report.company_name}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{report.date}</span>
+                          <span>•</span>
+                          <MapPin className="w-3 h-3" />
+                          <span>{report.city}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Badge className={getVisitTypeColor(report.visit_type)}>
+                      {getVisitTypeLabel(report.visit_type)}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground mb-2 line-clamp-2 pl-13">{report.notes}</p>
+                  
+                  <div className="flex items-center justify-end gap-1 pt-2 border-t">
+                    <Button variant="ghost" size="sm" onClick={() => downloadPdf(report.id)} className="h-8 w-8 p-0">
+                      <FileDown className="w-4 h-4 text-blue-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(report)} className="h-8 w-8 p-0">
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(report)} className="h-8 w-8 p-0 text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
