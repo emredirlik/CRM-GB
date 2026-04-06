@@ -4048,6 +4048,41 @@ async def mark_email_read(email_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@api_router.get("/mail/sent")
+async def get_sent_emails():
+    """Get sent emails from local database"""
+    try:
+        sent = await db.sent_emails.find({}, {"_id": 0}).sort("date", -1).limit(50).to_list(50)
+        return {"emails": sent}
+    except Exception as e:
+        return {"emails": []}
+
+@api_router.get("/mail/drafts")
+async def get_draft_emails():
+    """Get draft emails"""
+    try:
+        drafts = await db.draft_emails.find({}, {"_id": 0}).sort("date", -1).limit(20).to_list(20)
+        return {"drafts": drafts}
+    except Exception as e:
+        return {"drafts": []}
+
+@api_router.post("/mail/drafts")
+async def save_draft(data: dict):
+    """Save email as draft"""
+    try:
+        draft = {
+            "id": str(uuid.uuid4()),
+            "to": data.get("to", ""),
+            "subject": data.get("subject", ""),
+            "body": data.get("body", ""),
+            "date": datetime.now(timezone.utc).isoformat()
+        }
+        await db.draft_emails.insert_one(draft)
+        return {"success": True, "id": draft["id"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
     """Send email via SMTP"""
@@ -4081,6 +4116,15 @@ async def send_mail(request: MailSendRequest):
         server.login(settings['smtp_username'], settings['smtp_password'])
         server.send_message(msg)
         server.quit()
+        
+        # Save to sent_emails
+        await db.sent_emails.insert_one({
+            "id": str(uuid.uuid4()),
+            "to": request.to,
+            "subject": request.subject,
+            "body": request.body,
+            "date": datetime.now(timezone.utc).isoformat()
+        })
         
         # Log to email_log
         await db.email_log.insert_one({

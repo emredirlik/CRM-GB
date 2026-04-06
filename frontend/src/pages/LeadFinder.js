@@ -155,13 +155,30 @@ const LeadFinder = () => {
     const loadDbLeads = async () => {
       try {
         const response = await axios.get(`${API}/potential-leads?limit=1000`);
-        setDbLeads(response.data.leads || []);
+        const leads = response.data.leads || [];
+        setDbLeads(leads);
+        
+        // If Germany is selected, auto-load results
+        if (country === 'Germany' && leads.length > 0) {
+          const formattedResults = leads.map(lead => ({
+            name: lead.company_name,
+            address: lead.address || lead.city,
+            phone: lead.phone || '',
+            website: '',
+            city: lead.city,
+            region: lead.region,
+            source: 'database',
+            id: lead.id,
+            status: lead.status
+          }));
+          setResults(formattedResults);
+        }
       } catch (error) {
         console.error('Failed to load database leads:', error);
       }
     };
     loadDbLeads();
-  }, []);
+  }, [country]);
 
   const cities = COUNTRIES[country] || [];
   

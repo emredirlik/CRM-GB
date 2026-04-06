@@ -3,10 +3,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -16,16 +15,7 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
 } from '@/components/ui/sheet';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Popover,
   PopoverContent,
@@ -34,45 +24,39 @@ import {
 import { toast } from 'sonner';
 import { 
   Inbox, Send, FileText, RefreshCw, Search, Menu,
-  Reply, ReplyAll, Forward, Trash2, Archive, Star,
-  MoreVertical, Loader2, AlertCircle, ChevronLeft, X,
-  Paperclip, Clock, Pencil, Tag, Users, Bell, ShoppingBag,
-  Bold, Italic, Underline, List, Link as LinkIcon, AlignLeft, AlignCenter, 
-  AlignRight, Type, Palette, ChevronDown, Settings, Image as ImageIcon,
-  MailOpen, Check, Sparkles, Minus, Upload, Maximize2, Minimize2, FileImage
+  Reply, Forward, Trash2, Archive, Star,
+  Loader2, AlertCircle, ChevronLeft, X,
+  Paperclip, Clock, Pencil, Tag,
+  Bold, Italic, Underline, List, Link as LinkIcon,
+  Palette, Settings, Image as ImageIcon,
+  MailOpen, Minus, Maximize2, Minimize2, File, Download
 } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Color palette
 const COLORS = [
   '#000000', '#434343', '#666666', '#999999', '#ffffff',
   '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6',
   '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
 ];
 
-// Gmail-like categories
-const CATEGORIES = [
-  { id: 'primary', icon: Inbox, label: 'Birincil', color: 'bg-blue-500' },
-  { id: 'promotions', icon: Tag, label: 'Tanıtımlar', color: 'bg-green-500' },
-  { id: 'social', icon: Users, label: 'Sosyal', color: 'bg-blue-400' },
-  { id: 'updates', icon: Bell, label: 'Güncellemeler', color: 'bg-yellow-500' },
-];
-
 const MailPage = () => {
   const { t } = useLanguage();
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  
+  // States
   const [emails, setEmails] = useState([]);
+  const [sentEmails, setSentEmails] = useState([]);
+  const [draftEmails, setDraftEmails] = useState([]);
+  const [trashedEmails, setTrashedEmails] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('primary');
-  const [activeFolder, setActiveFolder] = useState('inbox');
+  const [activeTab, setActiveTab] = useState('inbox');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmail, setSelectedEmail] = useState(null);
-  const [selectedEmails, setSelectedEmails] = useState(new Set());
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isComposeFullscreen, setIsComposeFullscreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -85,18 +69,13 @@ const MailPage = () => {
   const [isSignatureOpen, setIsSignatureOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [isEmailFullscreen, setIsEmailFullscreen] = useState(false);
+  const [loadingBody, setLoadingBody] = useState(false);
 
-  // Gmail-style folders
-  const folders = [
-    { id: 'all', icon: MailOpen, label: 'Tüm gelen kutuları', count: null },
-    { id: 'inbox', icon: Inbox, label: 'Birincil', count: null, isCategory: true },
-    { id: 'starred', icon: Star, label: 'Yıldızlı', count: 0 },
-    { id: 'snoozed', icon: Clock, label: 'Ertelenenler', count: 0 },
-    { id: 'important', icon: Tag, label: 'Önemli', count: null },
-    { id: 'sent', icon: Send, label: 'Gönderilenler', count: 0 },
-    { id: 'drafts', icon: FileText, label: 'Taslaklar', count: 0 },
-    { id: 'trash', icon: Trash2, label: 'Çöp Kutusu', count: 0 },
-  ];
+  // Folder counts
+  const inboxCount = emails.filter(e => !e.is_read).length;
+  const sentCount = sentEmails.length;
+  const draftCount = draftEmails.length;
+  const starredCount = emails.filter(e => e.starred).length;
 
   // Load emails on mount
   useEffect(() => {
@@ -109,12 +88,11 @@ const MailPage = () => {
         if (!isMounted) return;
         
         if (response.data && response.data.emails) {
-          setEmails(response.data.emails.map((e, i) => ({ 
+          const fetchedEmails = response.data.emails.map((e, i) => ({ 
             ...e, 
-            folder: 'inbox',
-            category: ['primary', 'promotions', 'social', 'updates'][i % 4],
-            starred: Math.random() > 0.7,
-          })));
+            starred: false,
+          }));
+          setEmails(fetchedEmails);
           setConnectionStatus('connected');
         } else {
           setConnectionStatus('error');
@@ -130,7 +108,31 @@ const MailPage = () => {
       }
     };
     
+    // Load sent emails from local storage
+    const loadSentEmails = async () => {
+      try {
+        const response = await axios.get(`${API}/mail/sent`);
+        if (response.data?.emails) {
+          setSentEmails(response.data.emails);
+        }
+      } catch (e) {
+        // Sent emails might not be available
+      }
+    };
+    
+    // Load drafts
+    const loadDrafts = async () => {
+      try {
+        const response = await axios.get(`${API}/mail/drafts`);
+        if (response.data?.drafts) {
+          setDraftEmails(response.data.drafts);
+        }
+      } catch (e) {}
+    };
+
     loadEmails();
+    loadSentEmails();
+    loadDrafts();
     
     // Load signature
     axios.get(`${API}/settings/signature`).then(res => {
@@ -139,9 +141,7 @@ const MailPage = () => {
       if (isMounted) setSignature(`<br><br>--<br><b>Gewürzberg GmbH</b><br>Premium Gewürze & Binderlösungen`);
     });
     
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
 
   const handleRefresh = async () => {
@@ -151,9 +151,7 @@ const MailPage = () => {
       if (response.data && response.data.emails) {
         setEmails(response.data.emails.map((e, i) => ({ 
           ...e, 
-          folder: 'inbox',
-          category: ['primary', 'promotions', 'social', 'updates'][i % 4],
-          starred: Math.random() > 0.7,
+          starred: emails.find(em => em.id === e.id)?.starred || false,
         })));
         setConnectionStatus('connected');
         toast.success('Mailler güncellendi');
@@ -180,6 +178,7 @@ const MailPage = () => {
     
     // Lazy load email body if not already loaded
     if (!email.body || email.body === '') {
+      setLoadingBody(true);
       try {
         const response = await axios.get(`${API}/mail/body/${email.id}`);
         if (response.data) {
@@ -189,6 +188,8 @@ const MailPage = () => {
         }
       } catch (error) {
         console.error('Failed to load email body:', error);
+      } finally {
+        setLoadingBody(false);
       }
     }
     
@@ -203,6 +204,16 @@ const MailPage = () => {
   const handleToggleStar = (email, e) => {
     e?.stopPropagation();
     setEmails(prev => prev.map(e => e.id === email.id ? { ...e, starred: !e.starred } : e));
+    if (selectedEmail?.id === email.id) {
+      setSelectedEmail(prev => ({ ...prev, starred: !prev.starred }));
+    }
+  };
+
+  const handleMoveToTrash = (email) => {
+    setEmails(prev => prev.filter(e => e.id !== email.id));
+    setTrashedEmails(prev => [...prev, { ...email, trashedAt: new Date() }]);
+    setSelectedEmail(null);
+    toast.success('Mail çöp kutusuna taşındı');
   };
 
   const execCommand = (command, value = null) => {
@@ -210,7 +221,6 @@ const MailPage = () => {
     editorRef.current?.focus();
   };
 
-  // Handle attachment selection
   const handleAttachmentSelect = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
@@ -223,7 +233,6 @@ const MailPage = () => {
       setAttachments(prev => [...prev, ...newAttachments]);
       toast.success(`${files.length} dosya eklendi`);
     }
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -245,14 +254,13 @@ const MailPage = () => {
     const bodyWithSignature = (editorRef.current?.innerHTML || '') + signature;
     setSending(true);
     try {
-      // If there are attachments, send as FormData
       if (attachments.length > 0) {
         const formData = new FormData();
         formData.append('to', composeData.to);
         formData.append('subject', composeData.subject);
         formData.append('body', bodyWithSignature);
         formData.append('html', 'true');
-        attachments.forEach((att, index) => {
+        attachments.forEach((att) => {
           formData.append(`attachments`, att.file);
         });
         
@@ -267,6 +275,17 @@ const MailPage = () => {
           html: true
         });
       }
+      
+      // Add to sent
+      setSentEmails(prev => [{
+        id: Date.now().toString(),
+        to: composeData.to,
+        subject: composeData.subject,
+        body: bodyWithSignature,
+        date: new Date().toISOString(),
+        sent: true
+      }, ...prev]);
+      
       toast.success('Mail gönderildi');
       setIsComposeOpen(false);
       setComposeData({ to: '', cc: '', bcc: '', subject: '', body: '' });
@@ -275,6 +294,15 @@ const MailPage = () => {
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Gönderilemedi';
       if (error.response?.status === 503) {
+        // Save as draft
+        setDraftEmails(prev => [{
+          id: Date.now().toString(),
+          to: composeData.to,
+          subject: composeData.subject,
+          body: bodyWithSignature,
+          date: new Date().toISOString(),
+          status: 'blocked'
+        }, ...prev]);
         toast.error('Mail sunucusu geçici olarak kullanılamıyor. Taslak olarak kaydedildi.', { duration: 5000 });
       } else {
         toast.error(errorMsg);
@@ -286,15 +314,15 @@ const MailPage = () => {
 
   const handleReply = (email, mode = 'reply') => {
     setReplyMode(mode);
-    setAttachments([]); // Clear attachments on reply
+    setAttachments([]);
     const replyBody = mode === 'forward' 
-      ? `<br><br><div style="border-left: 3px solid #3b82f6; padding-left: 12px; margin-left: 0; color: #9ca3af;">
+      ? `<br><br><div style="border-left: 3px solid #3b82f6; padding-left: 12px; margin-left: 0; color: #666;">
           <p style="margin:0"><b>Kimden:</b> ${email.from_name} &lt;${email.from_email}&gt;</p>
           <p style="margin:0"><b>Tarih:</b> ${new Date(email.date).toLocaleString('tr-TR')}</p>
           <p style="margin:0"><b>Konu:</b> ${email.subject}</p>
           <br>${email.body || ''}
         </div>`
-      : `<br><br><div style="border-left: 3px solid #3b82f6; padding-left: 12px; color: #9ca3af;">
+      : `<br><br><div style="border-left: 3px solid #3b82f6; padding-left: 12px; color: #666;">
           <p style="margin:0">${new Date(email.date).toLocaleString('tr-TR')} tarihinde ${email.from_name} &lt;${email.from_email}&gt; yazdı:</p>
           <br>${email.body || ''}
         </div>`;
@@ -320,25 +348,30 @@ const MailPage = () => {
     }, 100);
   };
 
-  const filteredEmails = emails.filter(email => {
-    // Simple filter - show all emails for inbox
-    if (activeFolder === 'starred') return email.starred;
-    if (activeFolder === 'sent') return email.folder === 'sent';
-    if (activeFolder === 'trash') return email.folder === 'trash';
-    if (activeFolder === 'all') return true;
-    // Default: show all inbox emails
-    return true;
-  }).filter(email => {
+  // Get current emails based on active tab
+  const getCurrentEmails = () => {
+    switch (activeTab) {
+      case 'sent': return sentEmails;
+      case 'drafts': return draftEmails;
+      case 'starred': return emails.filter(e => e.starred);
+      case 'trash': return trashedEmails;
+      default: return emails;
+    }
+  };
+
+  const filteredEmails = getCurrentEmails().filter(email => {
     if (!searchTerm) return true;
-    return email.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      email.from_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      email.from_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      email.subject?.toLowerCase().includes(searchLower) ||
+      email.from_email?.toLowerCase().includes(searchLower) ||
+      email.from_name?.toLowerCase().includes(searchLower) ||
+      email.to?.toLowerCase().includes(searchLower)
+    );
   });
 
-  const unreadCount = emails.filter(e => !e.is_read).length;
-  const starredCount = emails.filter(e => e.starred).length;
-
   const formatDate = (dateStr) => {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
     const today = new Date();
     if (date.toDateString() === today.toDateString()) {
@@ -353,78 +386,83 @@ const MailPage = () => {
     return colors[index];
   };
 
-  // Gmail Sidebar Component
-  const GmailSidebar = ({ isMobile = false }) => (
-    <div className={`${isMobile ? 'w-full' : 'w-72'} bg-[#1f1f1f] h-full flex flex-col`}>
-      {/* Header */}
-      <div className="p-4 flex items-center gap-3">
-        <div className="text-xl font-semibold text-white">Gewürzberg Mail</div>
+  // Sidebar Component
+  const Sidebar = ({ isMobile = false }) => (
+    <div className={`${isMobile ? 'w-full' : 'w-64'} bg-slate-900 h-full flex flex-col`}>
+      <div className="p-4">
+        <h2 className="text-xl font-bold text-white mb-4">Gewürzberg Mail</h2>
+        <Button 
+          onClick={openCompose}
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+        >
+          <Pencil className="w-4 h-4 mr-2" />
+          Yeni Mail
+        </Button>
       </div>
 
-      {/* Folders */}
-      <ScrollArea className="flex-1">
-        <div className="px-2 py-1">
-          {folders.map(folder => {
-            const count = folder.id === 'starred' ? starredCount : folder.count;
-            return (
-              <button
-                key={folder.id}
-                onClick={() => { setActiveFolder(folder.id); if (isMobile) setIsSidebarOpen(false); }}
-                className={`w-full flex items-center gap-4 px-4 py-3 rounded-full text-left transition-all mb-0.5
-                  ${activeFolder === folder.id 
-                    ? 'bg-[#004a77] text-[#c2e7ff]' 
-                    : 'text-[#c4c7c5] hover:bg-[#2d2d2d]'}`}
-              >
-                <folder.icon className="w-5 h-5" />
-                <span className="flex-1 text-sm font-medium">{folder.label}</span>
-                {count !== null && count > 0 && (
-                  <span className="text-xs">{count > 99 ? '99+' : count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      <nav className="flex-1 px-2">
+        <button
+          onClick={() => { setActiveTab('inbox'); if (isMobile) setIsSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all
+            ${activeTab === 'inbox' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+        >
+          <Inbox className="w-5 h-5" />
+          <span className="flex-1 text-left">Gelen Kutusu</span>
+          {inboxCount > 0 && (
+            <Badge className="bg-red-500 text-white">{inboxCount}</Badge>
+          )}
+        </button>
+        
+        <button
+          onClick={() => { setActiveTab('starred'); if (isMobile) setIsSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all
+            ${activeTab === 'starred' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+        >
+          <Star className="w-5 h-5" />
+          <span className="flex-1 text-left">Yıldızlı</span>
+          {starredCount > 0 && (
+            <span className="text-sm text-slate-400">{starredCount}</span>
+          )}
+        </button>
+        
+        <button
+          onClick={() => { setActiveTab('sent'); if (isMobile) setIsSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all
+            ${activeTab === 'sent' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+        >
+          <Send className="w-5 h-5" />
+          <span className="flex-1 text-left">Gönderilenler</span>
+          {sentCount > 0 && (
+            <span className="text-sm text-slate-400">{sentCount}</span>
+          )}
+        </button>
+        
+        <button
+          onClick={() => { setActiveTab('drafts'); if (isMobile) setIsSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all
+            ${activeTab === 'drafts' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+        >
+          <FileText className="w-5 h-5" />
+          <span className="flex-1 text-left">Taslaklar</span>
+          {draftCount > 0 && (
+            <Badge className="bg-amber-500 text-white">{draftCount}</Badge>
+          )}
+        </button>
+        
+        <button
+          onClick={() => { setActiveTab('trash'); if (isMobile) setIsSidebarOpen(false); }}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-1 transition-all
+            ${activeTab === 'trash' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+        >
+          <Trash2 className="w-5 h-5" />
+          <span className="flex-1 text-left">Çöp Kutusu</span>
+        </button>
+      </nav>
 
-        {/* Categories Section */}
-        <div className="px-4 py-3">
-          <p className="text-xs text-[#9aa0a6] mb-2 font-medium">KATEGORİLER</p>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); setActiveFolder('inbox'); if (isMobile) setIsSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all mb-1
-                ${activeCategory === cat.id && activeFolder === 'inbox'
-                  ? 'bg-[#2d2d2d] text-white' 
-                  : 'text-[#c4c7c5] hover:bg-[#2d2d2d]'}`}
-            >
-              <div className={`w-3 h-3 rounded-full ${cat.color}`} />
-              <span className="flex-1 text-sm">{cat.label}</span>
-              {cat.id === 'promotions' && (
-                <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">7 yeni</Badge>
-              )}
-              {cat.id === 'updates' && (
-                <Badge className="bg-yellow-600 text-white text-[10px] px-1.5 py-0">6 yeni</Badge>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Labels */}
-        <div className="px-4 py-3 border-t border-[#3c4043]">
-          <p className="text-xs text-[#9aa0a6] mb-2 font-medium">ETİKETLER</p>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-[#c4c7c5] hover:bg-[#2d2d2d] rounded-lg text-sm">
-            <ShoppingBag className="w-4 h-4" />
-            <span>Satın alma işlemleri</span>
-            <span className="ml-auto text-xs">198</span>
-          </button>
-        </div>
-      </ScrollArea>
-
-      {/* Settings */}
-      <div className="p-3 border-t border-[#3c4043]">
+      <div className="p-3 border-t border-slate-700">
         <button 
           onClick={() => setIsSignatureOpen(true)}
-          className="w-full flex items-center gap-3 px-3 py-2 text-[#c4c7c5] hover:bg-[#2d2d2d] rounded-lg text-sm"
+          className="w-full flex items-center gap-3 px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg"
         >
           <Settings className="w-4 h-4" />
           <span>İmza Ayarları</span>
@@ -433,186 +471,165 @@ const MailPage = () => {
     </div>
   );
 
+  // Email List Item
+  const EmailListItem = ({ email, isSent = false }) => (
+    <div
+      onClick={() => handleViewEmail(email)}
+      className={`group flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-slate-700/50 transition-all
+        ${selectedEmail?.id === email.id ? 'bg-indigo-900/30' : 'hover:bg-slate-800/50'}
+        ${!email.is_read && !isSent ? 'bg-slate-800/30' : ''}`}
+    >
+      <div className={`w-10 h-10 rounded-full ${getAvatarColor(email.from_name || email.to)} flex items-center justify-center text-white font-medium text-sm flex-shrink-0`}>
+        {(isSent ? email.to : (email.from_name || email.from_email))?.[0]?.toUpperCase() || '?'}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className={`text-sm truncate ${!email.is_read && !isSent ? 'font-semibold text-white' : 'text-slate-300'}`}>
+            {isSent ? `Kime: ${email.to}` : (email.from_name || email.from_email?.split('@')[0])}
+          </span>
+        </div>
+        <p className={`text-sm truncate ${!email.is_read && !isSent ? 'text-white' : 'text-slate-400'}`}>
+          {email.subject || '(Konu yok)'}
+        </p>
+        <p className="text-xs text-slate-500 truncate">{email.snippet?.substring(0, 60) || email.body?.substring(0, 60)}...</p>
+      </div>
+
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className={`text-xs ${!email.is_read && !isSent ? 'text-indigo-400 font-medium' : 'text-slate-500'}`}>
+          {formatDate(email.date)}
+        </span>
+        {!isSent && (
+          <button 
+            onClick={(e) => handleToggleStar(email, e)}
+            className="p-1 hover:bg-slate-700 rounded-full transition-colors"
+          >
+            <Star className={`w-4 h-4 ${email.starred ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600 group-hover:text-slate-400'}`} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="h-[calc(100vh-80px)] flex bg-[#121212] rounded-xl overflow-hidden" data-testid="mail-page">
+    <div className="h-[calc(100vh-80px)] flex bg-slate-950 rounded-xl overflow-hidden" data-testid="mail-page">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block border-r border-[#3c4043]">
-        <GmailSidebar />
+      <div className="hidden lg:block border-r border-slate-800">
+        <Sidebar />
       </div>
 
       {/* Mobile Sidebar Sheet */}
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-        <SheetContent side="left" className="p-0 w-80 bg-[#1f1f1f] border-[#3c4043]">
-          <GmailSidebar isMobile />
+        <SheetContent side="left" className="p-0 w-72 bg-slate-900 border-slate-800">
+          <Sidebar isMobile />
         </SheetContent>
       </Sheet>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
+      <div className="flex-1 flex flex-col min-w-0 bg-slate-900">
         {/* Top Bar */}
-        <div className="flex items-center gap-2 p-2 border-b border-[#3c4043]">
-          {/* Mobile Menu */}
+        <div className="flex items-center gap-2 p-3 border-b border-slate-800">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="lg:hidden text-[#e8eaed] hover:bg-[#3c4043]"
+            className="lg:hidden text-slate-300 hover:bg-slate-800"
             onClick={() => setIsSidebarOpen(true)}
           >
             <Menu className="w-5 h-5" />
           </Button>
 
-          {/* Search */}
-          <div className="flex-1 max-w-2xl">
+          <div className="flex-1 max-w-xl">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9aa0a6]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <Input
-                placeholder="Postalarda arama yapın"
+                placeholder="Mail ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-12 h-12 bg-[#2d2d2d] border-0 rounded-full text-[#e8eaed] placeholder:text-[#9aa0a6] focus-visible:ring-1 focus-visible:ring-[#8ab4f8]"
+                className="pl-10 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
           </div>
 
-          {/* Refresh */}
           <Button 
             variant="ghost" 
             size="icon"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="text-[#e8eaed] hover:bg-[#3c4043]"
+            className="text-slate-300 hover:bg-slate-800"
           >
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
-
-          {/* Profile */}
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-white font-medium text-sm ring-2 ring-[#3c4043]">
-            E
-          </div>
         </div>
 
-        {/* Category Tabs (Mobile) */}
-        <div className="lg:hidden flex gap-1 p-2 overflow-x-auto border-b border-[#3c4043]">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => { setActiveCategory(cat.id); setActiveFolder('inbox'); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm
-                ${activeCategory === cat.id 
-                  ? 'bg-[#004a77] text-[#c2e7ff]' 
-                  : 'text-[#c4c7c5] hover:bg-[#2d2d2d]'}`}
-            >
-              <div className={`w-2 h-2 rounded-full ${cat.color}`} />
-              {cat.label}
-            </button>
-          ))}
+        {/* Tab Title */}
+        <div className="px-4 py-2 border-b border-slate-800">
+          <h3 className="text-lg font-semibold text-white">
+            {activeTab === 'inbox' && 'Gelen Kutusu'}
+            {activeTab === 'sent' && 'Gönderilenler'}
+            {activeTab === 'drafts' && 'Taslaklar'}
+            {activeTab === 'starred' && 'Yıldızlı'}
+            {activeTab === 'trash' && 'Çöp Kutusu'}
+          </h3>
         </div>
 
         {/* Email List */}
         <ScrollArea className="flex-1">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-[#8ab4f8]" />
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
             </div>
-          ) : connectionStatus === 'error' || connectionStatus === 'not_configured' ? (
+          ) : connectionStatus === 'error' ? (
             <div className="text-center py-20 px-4">
               <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
-              <p className="text-lg font-medium text-[#e8eaed] mb-2">Bağlantı Hatası</p>
-              <p className="text-sm text-[#9aa0a6]">Ayarlar → IMAP/SMTP yapılandırın</p>
+              <p className="text-lg font-medium text-white mb-2">Bağlantı Hatası</p>
+              <p className="text-sm text-slate-400">Ayarlar → IMAP/SMTP yapılandırın</p>
             </div>
           ) : filteredEmails.length === 0 ? (
             <div className="text-center py-20">
-              <Inbox className="w-20 h-20 mx-auto mb-4 text-[#3c4043]" />
-              <p className="text-[#9aa0a6]">Posta yok</p>
+              <MailOpen className="w-20 h-20 mx-auto mb-4 text-slate-700" />
+              <p className="text-slate-400">
+                {activeTab === 'inbox' && 'Gelen kutunuz boş'}
+                {activeTab === 'sent' && 'Henüz mail göndermediniz'}
+                {activeTab === 'drafts' && 'Taslak yok'}
+                {activeTab === 'starred' && 'Yıldızlı mail yok'}
+                {activeTab === 'trash' && 'Çöp kutusu boş'}
+              </p>
             </div>
           ) : (
             <div>
               {filteredEmails.map(email => (
-                <div
-                  key={email.id}
-                  onClick={() => handleViewEmail(email)}
-                  className={`group flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-[#3c4043] transition-colors
-                    ${selectedEmail?.id === email.id ? 'bg-[#2d2d2d]' : 'hover:bg-[#2d2d2d]/50'}
-                    ${!email.is_read ? 'bg-[#1a1a2e]' : ''}`}
-                >
-                  {/* Avatar */}
-                  <div className={`w-10 h-10 rounded-full ${getAvatarColor(email.from_name)} flex items-center justify-center text-white font-medium text-sm flex-shrink-0`}>
-                    {(email.from_name || email.from_email)?.[0]?.toUpperCase()}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-sm truncate ${!email.is_read ? 'font-semibold text-[#e8eaed]' : 'text-[#c4c7c5]'}`}>
-                        {email.from_name || email.from_email?.split('@')[0]}
-                      </span>
-                      {email.messageCount > 1 && (
-                        <span className="text-xs text-[#9aa0a6]">{email.messageCount}</span>
-                      )}
-                    </div>
-                    <p className={`text-sm truncate ${!email.is_read ? 'text-[#e8eaed]' : 'text-[#9aa0a6]'}`}>
-                      {email.subject || '(Konu yok)'}
-                    </p>
-                    <p className="text-xs text-[#9aa0a6] truncate">{email.snippet?.substring(0, 60)}...</p>
-                    
-                    {/* Attachments */}
-                    {email.hasAttachment && (
-                      <div className="flex gap-1 mt-1.5">
-                        {[...Array(Math.min(email.attachmentCount || 0, 2))].map((_, i) => (
-                          <div key={i} className="flex items-center gap-1 px-2 py-1 bg-[#3c4043] rounded text-[10px] text-[#c4c7c5]">
-                            <FileImage className="w-3 h-3" />
-                            <span>IMG_{Math.floor(Math.random() * 9000) + 1000}</span>
-                          </div>
-                        ))}
-                        {email.attachmentCount > 2 && (
-                          <span className="text-[10px] text-[#9aa0a6] px-1">+{email.attachmentCount - 2}</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Side */}
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <span className={`text-xs ${!email.is_read ? 'text-[#8ab4f8] font-medium' : 'text-[#9aa0a6]'}`}>
-                      {formatDate(email.date)}
-                    </span>
-                    <button 
-                      onClick={(e) => handleToggleStar(email, e)}
-                      className="p-1 hover:bg-[#3c4043] rounded-full transition-colors"
-                    >
-                      <Star className={`w-5 h-5 ${email.starred ? 'fill-yellow-400 text-yellow-400' : 'text-[#5f6368] group-hover:text-[#9aa0a6]'}`} />
-                    </button>
-                  </div>
-                </div>
+                <EmailListItem 
+                  key={email.id} 
+                  email={email} 
+                  isSent={activeTab === 'sent'} 
+                />
               ))}
             </div>
           )}
         </ScrollArea>
 
-        {/* Floating Compose Button */}
+        {/* Floating Compose Button (Mobile) */}
         <button
           onClick={openCompose}
-          className="absolute bottom-6 right-6 flex items-center gap-3 px-6 py-4 bg-[#c2e7ff] hover:bg-[#a8d4f1] text-[#001d35] rounded-2xl shadow-xl transition-all hover:shadow-2xl"
+          className="lg:hidden fixed bottom-6 right-6 flex items-center justify-center w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-xl"
         >
-          <Pencil className="w-5 h-5" />
-          <span className="font-medium">Oluştur</span>
+          <Pencil className="w-6 h-6" />
         </button>
       </div>
 
       {/* Email Detail View */}
       {selectedEmail && (
         <div 
-          className={`fixed inset-0 z-50 bg-[#1f1f1f] flex flex-col border-l border-[#3c4043] transition-all duration-200
+          className={`fixed inset-0 z-50 bg-slate-900 flex flex-col transition-all duration-200
             ${isEmailFullscreen ? 'lg:relative lg:flex-1' : 'lg:relative lg:w-[500px]'}`}
           onDoubleClick={() => setIsEmailFullscreen(!isEmailFullscreen)}
         >
-          {/* Header */}
-          <div className="flex items-center gap-2 p-3 border-b border-[#3c4043]">
+          <div className="flex items-center gap-2 p-3 border-b border-slate-700 bg-slate-800">
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); }}
-              className="text-[#e8eaed] hover:bg-[#3c4043]"
+              className="text-white hover:bg-slate-700"
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
@@ -621,66 +638,82 @@ const MailPage = () => {
               variant="ghost" 
               size="icon" 
               onClick={() => setIsEmailFullscreen(!isEmailFullscreen)}
-              className="text-[#e8eaed] hover:bg-[#3c4043]"
+              className="text-white hover:bg-slate-700"
               title={isEmailFullscreen ? 'Küçült' : 'Tam Ekran'}
             >
               {isEmailFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </Button>
-            <Button variant="ghost" size="icon" className="text-[#e8eaed] hover:bg-[#3c4043]">
+            <Button variant="ghost" size="icon" className="text-white hover:bg-slate-700">
               <Archive className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-[#e8eaed] hover:bg-[#3c4043]">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => handleMoveToTrash(selectedEmail)}
+              className="text-white hover:bg-slate-700"
+            >
               <Trash2 className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleToggleStar(selectedEmail)} className="text-[#e8eaed] hover:bg-[#3c4043]">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => handleToggleStar(selectedEmail)}
+              className="text-white hover:bg-slate-700"
+            >
               <Star className={`w-5 h-5 ${selectedEmail.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
             </Button>
           </div>
 
-          {/* Subject */}
-          <div className="px-4 py-3 border-b border-[#3c4043]">
-            <h2 className="text-xl font-normal text-[#e8eaed]">{selectedEmail.subject}</h2>
+          <div className="px-4 py-3 border-b border-slate-700">
+            <h2 className="text-xl font-semibold text-white">{selectedEmail.subject || '(Konu yok)'}</h2>
           </div>
 
-          {/* Sender */}
-          <div className="flex items-start gap-3 p-4 border-b border-[#3c4043]">
-            <div className={`w-10 h-10 rounded-full ${getAvatarColor(selectedEmail.from_name)} flex items-center justify-center text-white font-medium`}>
+          <div className="flex items-start gap-3 p-4 border-b border-slate-700">
+            <div className={`w-12 h-12 rounded-full ${getAvatarColor(selectedEmail.from_name)} flex items-center justify-center text-white font-medium text-lg`}>
               {(selectedEmail.from_name || selectedEmail.from_email)?.[0]?.toUpperCase()}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-[#e8eaed]">{selectedEmail.from_name}</span>
-                <span className="text-sm text-[#9aa0a6]">&lt;{selectedEmail.from_email}&gt;</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-white">{selectedEmail.from_name || 'Bilinmeyen'}</span>
+                <span className="text-sm text-slate-400">&lt;{selectedEmail.from_email}&gt;</span>
               </div>
-              <p className="text-xs text-[#9aa0a6] mt-0.5">bana</p>
+              <p className="text-sm text-slate-400 mt-0.5">Bana • {formatDate(selectedEmail.date)}</p>
             </div>
-            <span className="text-xs text-[#9aa0a6]">{formatDate(selectedEmail.date)}</span>
           </div>
 
-          {/* Body */}
-          <ScrollArea className="flex-1 p-4 bg-white">
-            <div 
-              className="prose prose-sm max-w-none"
-              style={{ 
-                color: '#1f2937',
-                backgroundColor: 'white',
-              }}
-              dangerouslySetInnerHTML={{ __html: selectedEmail.body || `<p style="color:#374151">${selectedEmail.snippet || 'İçerik yükleniyor...'}</p>` }} 
-            />
+          {/* Email Body */}
+          <ScrollArea className="flex-1">
+            <div className="p-4 bg-white min-h-full">
+              {loadingBody ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                  <span className="ml-2 text-slate-600">Yükleniyor...</span>
+                </div>
+              ) : (
+                <div 
+                  className="prose prose-sm max-w-none"
+                  style={{ color: '#1f2937' }}
+                  dangerouslySetInnerHTML={{ 
+                    __html: selectedEmail.body || `<p style="color:#6b7280">${selectedEmail.snippet || 'İçerik yok'}</p>` 
+                  }} 
+                />
+              )}
+            </div>
           </ScrollArea>
 
           {/* Actions */}
-          <div className="p-3 border-t border-[#3c4043] flex gap-2">
+          <div className="p-3 border-t border-slate-700 bg-slate-800 flex gap-2">
             <Button 
               onClick={() => handleReply(selectedEmail, 'reply')}
-              className="flex-1 bg-transparent border border-[#5f6368] text-[#e8eaed] hover:bg-[#3c4043]"
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               <Reply className="w-4 h-4 mr-2" />
               Yanıtla
             </Button>
             <Button 
               onClick={() => handleReply(selectedEmail, 'forward')}
-              className="flex-1 bg-transparent border border-[#5f6368] text-[#e8eaed] hover:bg-[#3c4043]"
+              variant="outline"
+              className="flex-1 border-slate-600 text-white hover:bg-slate-700"
             >
               <Forward className="w-4 h-4 mr-2" />
               İlet
@@ -689,16 +722,15 @@ const MailPage = () => {
         </div>
       )}
 
-      {/* Compose Dialog - Gmail Style */}
+      {/* Compose Dialog */}
       <Dialog open={isComposeOpen} onOpenChange={(open) => { setIsComposeOpen(open); if (!open) setIsComposeFullscreen(false); }}>
-        <DialogContent className={`p-0 gap-0 bg-[#2d2d2d] border-[#3c4043] flex flex-col transition-all duration-200 ${
+        <DialogContent className={`p-0 gap-0 bg-white border-slate-200 flex flex-col transition-all duration-200 ${
           isComposeFullscreen 
             ? 'max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none' 
             : 'max-w-2xl max-h-[85vh]'
         }`}>
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 bg-[#404040] rounded-t-lg">
-            <span className="text-sm font-medium text-[#e8eaed]">
+          <div className="flex items-center justify-between px-4 py-3 bg-indigo-600 rounded-t-lg">
+            <span className="text-sm font-medium text-white">
               {replyMode === 'reply' ? 'Yanıtla' : replyMode === 'forward' ? 'İlet' : 'Yeni Mesaj'}
             </span>
             <div className="flex items-center gap-1">
@@ -706,99 +738,96 @@ const MailPage = () => {
                 variant="ghost" 
                 size="icon" 
                 onClick={() => setIsComposeFullscreen(!isComposeFullscreen)}
-                className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                title={isComposeFullscreen ? 'Küçült' : 'Tam Ekran'}
+                className="h-8 w-8 text-white/80 hover:text-white hover:bg-indigo-700"
               >
                 {isComposeFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]">
-                <Minus className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)} className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsComposeOpen(false)} 
+                className="h-8 w-8 text-white/80 hover:text-white hover:bg-indigo-700"
+              >
                 <X className="w-4 h-4" />
               </Button>
             </div>
           </div>
           
           <div className="flex-1 overflow-y-auto">
-            {/* To */}
-            <div className="flex items-center border-b border-[#3c4043] px-4 py-2">
-              <span className="w-14 text-sm text-[#9aa0a6]">Kime</span>
+            <div className="flex items-center border-b border-slate-200 px-4 py-2">
+              <span className="w-16 text-sm text-slate-500">Kime</span>
               <Input
                 value={composeData.to}
                 onChange={(e) => setComposeData({ ...composeData, to: e.target.value })}
-                className="border-0 shadow-none focus-visible:ring-0 bg-transparent text-[#e8eaed] placeholder:text-[#5f6368]"
-                placeholder="Alıcılar"
+                className="border-0 shadow-none focus-visible:ring-0"
+                placeholder="alici@ornek.com"
               />
-              <Button variant="ghost" size="sm" onClick={() => setShowCc(!showCc)} className="text-xs text-[#9aa0a6] hover:text-[#e8eaed]">
+              <Button variant="ghost" size="sm" onClick={() => setShowCc(!showCc)} className="text-xs text-slate-500">
                 Cc/Bcc
               </Button>
             </div>
             
             {showCc && (
               <>
-                <div className="flex items-center border-b border-[#3c4043] px-4 py-2">
-                  <span className="w-14 text-sm text-[#9aa0a6]">Cc</span>
-                  <Input value={composeData.cc} onChange={(e) => setComposeData({ ...composeData, cc: e.target.value })} className="border-0 shadow-none focus-visible:ring-0 bg-transparent text-[#e8eaed]" />
+                <div className="flex items-center border-b border-slate-200 px-4 py-2">
+                  <span className="w-16 text-sm text-slate-500">Cc</span>
+                  <Input value={composeData.cc} onChange={(e) => setComposeData({ ...composeData, cc: e.target.value })} className="border-0 shadow-none focus-visible:ring-0" />
                 </div>
-                <div className="flex items-center border-b border-[#3c4043] px-4 py-2">
-                  <span className="w-14 text-sm text-[#9aa0a6]">Bcc</span>
-                  <Input value={composeData.bcc} onChange={(e) => setComposeData({ ...composeData, bcc: e.target.value })} className="border-0 shadow-none focus-visible:ring-0 bg-transparent text-[#e8eaed]" />
+                <div className="flex items-center border-b border-slate-200 px-4 py-2">
+                  <span className="w-16 text-sm text-slate-500">Bcc</span>
+                  <Input value={composeData.bcc} onChange={(e) => setComposeData({ ...composeData, bcc: e.target.value })} className="border-0 shadow-none focus-visible:ring-0" />
                 </div>
               </>
             )}
             
-            {/* Subject */}
-            <div className="flex items-center border-b border-[#3c4043] px-4 py-2">
-              <span className="w-14 text-sm text-[#9aa0a6]">Konu</span>
+            <div className="flex items-center border-b border-slate-200 px-4 py-2">
+              <span className="w-16 text-sm text-slate-500">Konu</span>
               <Input
                 value={composeData.subject}
                 onChange={(e) => setComposeData({ ...composeData, subject: e.target.value })}
-                className="border-0 shadow-none focus-visible:ring-0 bg-transparent text-[#e8eaed]"
+                className="border-0 shadow-none focus-visible:ring-0"
+                placeholder="Konu"
               />
             </div>
             
-            {/* Editor */}
             <div
               ref={editorRef}
               contentEditable
-              className="min-h-[200px] p-4 text-[#e8eaed] focus:outline-none"
+              className="min-h-[200px] p-4 focus:outline-none"
               style={{ minHeight: '200px' }}
               suppressContentEditableWarning
             />
             
-            {/* Signature Preview */}
             {signature && (
-              <div className="px-4 pb-2 text-sm text-[#9aa0a6]" dangerouslySetInnerHTML={{ __html: signature }} />
+              <div className="px-4 pb-2 text-sm text-slate-500" dangerouslySetInnerHTML={{ __html: signature }} />
             )}
           </div>
           
           {/* Formatting Toolbar */}
-          <div className="border-t border-[#3c4043] px-2 py-1.5 flex items-center gap-0.5 bg-[#2d2d2d]">
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]" onClick={() => execCommand('bold')}>
+          <div className="border-t border-slate-200 px-2 py-1.5 flex items-center gap-0.5 bg-slate-50">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('bold')}>
               <Bold className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]" onClick={() => execCommand('italic')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('italic')}>
               <Italic className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]" onClick={() => execCommand('underline')}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('underline')}>
               <Underline className="w-4 h-4" />
             </Button>
-            <Separator orientation="vertical" className="h-5 mx-1 bg-[#3c4043]" />
+            <Separator orientation="vertical" className="h-5 mx-1" />
             
-            {/* Color Picker */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Palette className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-2 bg-[#2d2d2d] border-[#3c4043]">
+              <PopoverContent className="w-auto p-2">
                 <div className="grid grid-cols-5 gap-1">
                   {COLORS.map(color => (
                     <button
                       key={color}
-                      className="w-6 h-6 rounded border border-[#3c4043] hover:scale-110 transition-transform"
+                      className="w-6 h-6 rounded border hover:scale-110 transition-transform"
                       style={{ backgroundColor: color }}
                       onClick={() => execCommand('foreColor', color)}
                     />
@@ -807,14 +836,14 @@ const MailPage = () => {
               </PopoverContent>
             </Popover>
             
-            <Separator orientation="vertical" className="h-5 mx-1 bg-[#3c4043]" />
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]" onClick={() => execCommand('insertUnorderedList')}>
+            <Separator orientation="vertical" className="h-5 mx-1" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => execCommand('insertUnorderedList')}>
               <List className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+              className="h-8 w-8"
               onClick={() => fileInputRef.current?.click()}
             >
               <Paperclip className="w-4 h-4" />
@@ -830,18 +859,18 @@ const MailPage = () => {
           
           {/* Attachments Preview */}
           {attachments.length > 0 && (
-            <div className="px-4 py-2 border-t border-[#3c4043] flex flex-wrap gap-2">
+            <div className="px-4 py-2 border-t border-slate-200 flex flex-wrap gap-2 bg-slate-50">
               {attachments.map((att, index) => (
                 <div 
                   key={index}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-[#3c4043] rounded-lg text-sm text-[#e8eaed]"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm"
                 >
-                  <Paperclip className="w-3 h-3 text-[#9aa0a6]" />
+                  <File className="w-4 h-4 text-slate-400" />
                   <span className="max-w-[150px] truncate">{att.name}</span>
-                  <span className="text-[10px] text-[#9aa0a6]">({formatFileSize(att.size)})</span>
+                  <span className="text-xs text-slate-400">({formatFileSize(att.size)})</span>
                   <button 
                     onClick={() => removeAttachment(index)}
-                    className="ml-1 text-[#9aa0a6] hover:text-red-400"
+                    className="ml-1 text-slate-400 hover:text-red-500"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -851,17 +880,17 @@ const MailPage = () => {
           )}
           
           {/* Footer */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-t border-[#3c4043] bg-[#2d2d2d] rounded-b-lg">
+          <div className="flex items-center justify-between px-3 py-2.5 border-t border-slate-200 bg-slate-50 rounded-b-lg">
             <Button 
               onClick={handleSendEmail} 
               disabled={sending}
-              className="bg-[#0b57d0] hover:bg-[#0842a0] text-white rounded-full px-6"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6"
             >
               {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               Gönder
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)} className="text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]">
-              <Trash2 className="w-4 h-4" />
+            <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)}>
+              <Trash2 className="w-4 h-4 text-slate-400" />
             </Button>
           </div>
         </DialogContent>
@@ -869,113 +898,23 @@ const MailPage = () => {
 
       {/* Signature Settings */}
       <Dialog open={isSignatureOpen} onOpenChange={setIsSignatureOpen}>
-        <DialogContent className="max-w-2xl bg-[#2d2d2d] border-[#3c4043]">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[#e8eaed]">E-posta İmzası</DialogTitle>
+            <DialogTitle>E-posta İmzası</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Signature Toolbar */}
-            <div className="flex flex-wrap gap-1 p-2 bg-[#1f1f1f] rounded-lg border border-[#3c4043]">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                onClick={() => document.execCommand('bold', false, null)}
-              >
-                <Bold className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                onClick={() => document.execCommand('italic', false, null)}
-              >
-                <Italic className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                onClick={() => document.execCommand('underline', false, null)}
-              >
-                <Underline className="w-4 h-4" />
-              </Button>
-              <Separator orientation="vertical" className="h-6 mx-1 bg-[#3c4043]" />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                onClick={() => {
-                  const url = prompt('Resim URL\'si girin:');
-                  if (url) {
-                    document.execCommand('insertImage', false, url);
-                  }
-                }}
-              >
-                <ImageIcon className="w-4 h-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                onClick={() => {
-                  const url = prompt('Link URL\'si girin:');
-                  if (url) {
-                    document.execCommand('createLink', false, url);
-                  }
-                }}
-              >
-                <LinkIcon className="w-4 h-4" />
-              </Button>
-              <Separator orientation="vertical" className="h-6 mx-1 bg-[#3c4043]" />
-              <input
-                type="file"
-                accept="image/*"
-                id="signature-image-upload"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const base64 = event.target?.result;
-                      document.execCommand('insertImage', false, base64);
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                  e.target.value = '';
-                }}
-              />
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 px-3 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
-                onClick={() => document.getElementById('signature-image-upload')?.click()}
-              >
-                <Upload className="w-4 h-4 mr-1" />
-                <span className="text-xs">Resim Yükle</span>
-              </Button>
-            </div>
-            
-            {/* Editable Signature Area */}
             <div
               contentEditable
-              className="min-h-[180px] p-4 border border-[#3c4043] rounded-lg text-[#e8eaed] bg-[#1f1f1f] focus:outline-none focus:ring-1 focus:ring-[#8ab4f8] overflow-auto"
-              style={{ maxHeight: '300px' }}
+              className="min-h-[150px] p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               dangerouslySetInnerHTML={{ __html: signature }}
               onBlur={(e) => setSignature(e.currentTarget.innerHTML)}
-              onInput={(e) => setSignature(e.currentTarget.innerHTML)}
             />
-            <p className="text-xs text-[#9aa0a6]">
-              ✨ Araç çubuğunu kullanarak biçimlendirme yapabilir, resim ekleyebilirsiniz. 
-              Resim URL veya bilgisayarınızdan yükleyebilirsiniz.
-            </p>
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setIsSignatureOpen(false)} className="border-[#5f6368] text-[#e8eaed] hover:bg-[#3c4043]">
+            <Button variant="outline" onClick={() => setIsSignatureOpen(false)}>
               İptal
             </Button>
-            <Button onClick={saveSignature} className="bg-[#0b57d0] hover:bg-[#0842a0] text-white">
+            <Button onClick={saveSignature} className="bg-indigo-600 hover:bg-indigo-700">
               Kaydet
             </Button>
           </div>

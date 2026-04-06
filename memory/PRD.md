@@ -41,12 +41,17 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 
 ### Mail Module
 - ✅ IMAP/SMTP integration with 1&1 IONOS
-- Gmail-style dark UI
-- ✅ Fullscreen/Maximize toggle added
+- ✅ Modern dark theme UI (Gmail-inspired)
 - ✅ **FIXED: Infinite loading spinner** - Optimized IMAP fetch (5s vs 22s)
 - ✅ Lazy body loading - Email bodies loaded on-demand
+- ✅ **All tabs working**: Gelen Kutusu, Yıldızlı, Gönderilenler, Taslaklar, Çöp Kutusu
+- ✅ Email detail panel with fullscreen mode (double-click or button)
+- ✅ Compose email with formatting toolbar
+- ✅ Attachments support
+- ✅ Reply/Forward functionality
+- ✅ Signature settings
 - 20 emails displayed (optimized for speed)
-- API: GET /api/mail/inbox, GET /api/mail/body/{id}
+- API: GET /api/mail/inbox, GET /api/mail/body/{id}, GET /api/mail/sent, GET /api/mail/drafts
 
 ### Other Modules
 - DHL Shipment Tracking (indigo theme)
