@@ -29,6 +29,14 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // Force re-render when language changes
+  const [, forceUpdate] = useState(0);
+  
+  const handleLanguageChange = (langCode) => {
+    setLanguage(langCode);
+    forceUpdate(prev => prev + 1);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,10 +66,7 @@ const Login = () => {
             {LANGUAGES.map((lang) => (
               <DropdownMenuItem 
                 key={lang.code} 
-                onClick={() => {
-                  console.log('Changing language to:', lang.code);
-                  setLanguage(lang.code);
-                }}
+                onClick={() => handleLanguageChange(lang.code)}
                 className={`cursor-pointer ${language === lang.code ? 'bg-indigo-100 text-indigo-700' : ''}`}
               >
                 <span className="mr-2">{lang.flag}</span>

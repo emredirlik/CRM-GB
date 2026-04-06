@@ -3894,14 +3894,17 @@ class MailSendRequest(BaseModel):
     html: bool = False
 
 @api_router.get("/mail/inbox")
-async def get_mail_inbox():
-    """Fetch emails from IMAP inbox"""
+async def get_mail_inbox(page: int = 1, limit: int = 20, folder: str = "INBOX"):
+    """Fetch emails from IMAP inbox with pagination"""
     settings = await db.company_settings.find_one({}, {"_id": 0})
     
     if not settings or not settings.get('imap_host'):
         return {
             "status": "not_configured",
             "emails": [],
+            "total": 0,
+            "page": page,
+            "pages": 0,
             "message": "IMAP settings not configured"
         }
     
@@ -3913,7 +3916,7 @@ async def get_mail_inbox():
         imap_pass = settings.get('smtp_password')
         
         if not imap_user or not imap_pass:
-            return {"status": "error", "emails": [], "message": "IMAP credentials not configured"}
+            return {"status": "error", "emails": [], "total": 0, "page": page, "pages": 0, "message": "IMAP credentials not configured"}
         
         logger.info(f"Connecting to IMAP: {imap_host}:{imap_port} as {imap_user}")
         
@@ -3927,16 +3930,28 @@ async def get_mail_inbox():
             mail.starttls()
         
         mail.login(imap_user, imap_pass)
-        mail.select('INBOX')
         
-        # Fetch last 20 emails (reduced for speed)
+        # Select folder (INBOX, Sent, Drafts, etc.)
+        try:
+            mail.select(folder)
+        except:
+            mail.select('INBOX')
+        
+        # Fetch all email IDs
         _, message_numbers = mail.search(None, 'ALL')
-        email_ids = message_numbers[0].split()[-20:]  # Last 20 for faster load
+        all_email_ids = message_numbers[0].split()
+        total_emails = len(all_email_ids)
+        total_pages = max(1, (total_emails + limit - 1) // limit)
+        
+        # Calculate pagination slice
+        start_idx = max(0, total_emails - (page * limit))
+        end_idx = total_emails - ((page - 1) * limit)
+        email_ids = all_email_ids[start_idx:end_idx]
         
         emails = []
         for eid in reversed(email_ids):
-            # Fetch only headers and flags for speed
-            _, msg_data = mail.fetch(eid, '(BODY.PEEK[HEADER] FLAGS)')
+            # Fetch headers, flags and body structure for attachment detection
+            _, msg_data = mail.fetch(eid, '(BODY.PEEK[HEADER] FLAGS BODYSTRUCTURE)')
             for response_part in msg_data:
                 if isinstance(response_part, tuple):
                     msg = email.message_from_bytes(response_part[1])
@@ -3962,6 +3977,14 @@ async def get_mail_inbox():
                     # Check flags
                     is_read = b'\\Seen' in response_part[0]
                     
+                    # Check for attachments in BODYSTRUCTURE
+                    has_attachments = False
+                    attachment_count = 0
+                    body_struct_str = str(response_part[0])
+                    if 'ATTACHMENT' in body_struct_str.upper() or 'attachment' in body_struct_str:
+                        has_attachments = True
+                        attachment_count = body_struct_str.upper().count('ATTACHMENT')
+                    
                     emails.append({
                         "id": eid.decode(),
                         "subject": subject,
@@ -3970,15 +3993,24 @@ async def get_mail_inbox():
                         "date": msg.get('Date', ''),
                         "body": '',  # Load on demand
                         "snippet": subject[:100] if subject else '',
-                        "is_read": is_read
+                        "is_read": is_read,
+                        "has_attachments": has_attachments,
+                        "attachmentCount": attachment_count
                     })
         
         mail.logout()
-        return {"status": "connected", "emails": emails}
+        return {
+            "status": "connected", 
+            "emails": emails,
+            "total": total_emails,
+            "page": page,
+            "pages": total_pages,
+            "limit": limit
+        }
         
     except Exception as e:
         logger.error(f"IMAP error: {e}")
-        return {"status": "error", "emails": [], "message": str(e)}
+        return {"status": "error", "emails": [], "total": 0, "page": page, "pages": 0, "message": str(e)}
 
 @api_router.get("/mail/body/{email_id}")
 async def get_email_body(email_id: str):
@@ -4250,6 +4282,201 @@ async def ai_improve_text(data: dict):
             return {"improved": text, "error": "İyileştirme yapılamadı"}
     except Exception as e:
         return {"improved": "", "error": str(e)}
+
+
+@api_router.post("/ai/analyze-spam")
+async def ai_analyze_spam(data: dict):
+    """AI-powered spam analysis"""
+    try:
+        subject = data.get('subject', '')
+        body = data.get('body', '')
+        from_email = data.get('from_email', '')
+        
+        import re
+        clean_body = re.sub(r'<[^>]+>', '', body)[:1500]
+        
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import os
+            
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"spam-{uuid.uuid4()}",
+                system_message="Sen bir spam analiz uzmanısın. E-postaları analiz et ve spam olup olmadığını belirle."
+            ).with_model("gemini", "gemini-2.5-flash")
+            
+            prompt = f"""Bu e-postanın spam olup olmadığını analiz et:
+
+Gönderen: {from_email}
+Konu: {subject}
+İçerik: {clean_body[:500]}
+
+Şu JSON formatında yanıt ver:
+{{"is_spam": true/false, "confidence": 0-100, "reason": "kısa açıklama"}}"""
+
+            user_message = UserMessage(text=prompt)
+            response = await chat.send_message(user_message)
+            
+            import json
+            try:
+                result = json.loads(str(response).strip())
+                return result
+            except:
+                return {"is_spam": False, "confidence": 50, "reason": "Analiz yapılamadı"}
+        except Exception as e:
+            logger.error(f"Spam analysis error: {e}")
+            return {"is_spam": False, "confidence": 0, "reason": "Analiz servisi kullanılamıyor"}
+    except Exception as e:
+        return {"is_spam": False, "confidence": 0, "reason": str(e)}
+
+
+@api_router.post("/ai/recognize-customer")
+async def ai_recognize_customer(data: dict):
+    """AI-powered customer recognition from email"""
+    try:
+        from_email = data.get('from_email', '')
+        from_name = data.get('from_name', '')
+        body = data.get('body', '')
+        
+        # First try to find customer by email
+        customer = await db.leads.find_one({
+            "$or": [
+                {"email": from_email},
+                {"email": {"$regex": from_email.split('@')[0], "$options": "i"}}
+            ]
+        }, {"_id": 0})
+        
+        if customer:
+            return {
+                "found": True,
+                "customer": {
+                    "id": customer.get('id'),
+                    "company_name": customer.get('company_name'),
+                    "email": customer.get('email'),
+                    "phone": customer.get('phone'),
+                    "city": customer.get('city')
+                },
+                "source": "database"
+            }
+        
+        # Try to find by company name mentioned in email
+        import re
+        clean_body = re.sub(r'<[^>]+>', '', body)[:1000]
+        
+        # Search for company names
+        leads = await db.leads.find({}, {"_id": 0, "id": 1, "company_name": 1, "email": 1}).to_list(500)
+        
+        for lead in leads:
+            company = lead.get('company_name', '')
+            if company and len(company) > 3:
+                if company.lower() in from_name.lower() or company.lower() in clean_body.lower():
+                    return {
+                        "found": True,
+                        "customer": lead,
+                        "source": "name_match"
+                    }
+        
+        return {"found": False, "customer": None, "source": None}
+    except Exception as e:
+        logger.error(f"Customer recognition error: {e}")
+        return {"found": False, "customer": None, "error": str(e)}
+
+
+@api_router.post("/ai/analyze-sentiment")
+async def ai_analyze_sentiment(data: dict):
+    """AI-powered sentiment analysis for emails"""
+    try:
+        subject = data.get('subject', '')
+        body = data.get('body', '')
+        
+        import re
+        clean_body = re.sub(r'<[^>]+>', '', body)[:1500]
+        
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import os
+            
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"sentiment-{uuid.uuid4()}",
+                system_message="Sen bir duygu analizi uzmanısın. E-postaların tonunu analiz et."
+            ).with_model("gemini", "gemini-2.5-flash")
+            
+            prompt = f"""Bu e-postanın duygusal tonunu analiz et:
+
+Konu: {subject}
+İçerik: {clean_body[:500]}
+
+Şu JSON formatında yanıt ver:
+{{"sentiment": "positive/negative/neutral", "urgency": "high/medium/low", "confidence": 0-100, "summary": "kısa açıklama"}}"""
+
+            user_message = UserMessage(text=prompt)
+            response = await chat.send_message(user_message)
+            
+            import json
+            try:
+                result = json.loads(str(response).strip())
+                return result
+            except:
+                return {"sentiment": "neutral", "urgency": "medium", "confidence": 50, "summary": "Analiz yapılamadı"}
+        except Exception as e:
+            logger.error(f"Sentiment analysis error: {e}")
+            return {"sentiment": "neutral", "urgency": "medium", "confidence": 0, "summary": "Analiz servisi kullanılamıyor"}
+    except Exception as e:
+        return {"sentiment": "neutral", "urgency": "medium", "confidence": 0, "summary": str(e)}
+
+
+# Custom Folder Management
+@api_router.get("/mail/folders")
+async def get_mail_folders():
+    """Get custom mail folders"""
+    try:
+        folders = await db.mail_folders.find({}, {"_id": 0}).to_list(100)
+        # Add default folders
+        default_folders = [
+            {"id": "inbox", "name": "Gelen Kutusu", "icon": "inbox", "is_default": True},
+            {"id": "sent", "name": "Gönderilenler", "icon": "send", "is_default": True},
+            {"id": "drafts", "name": "Taslaklar", "icon": "file-text", "is_default": True},
+            {"id": "starred", "name": "Yıldızlı", "icon": "star", "is_default": True},
+            {"id": "trash", "name": "Çöp Kutusu", "icon": "trash", "is_default": True},
+        ]
+        return {"default_folders": default_folders, "custom_folders": folders}
+    except Exception as e:
+        return {"default_folders": [], "custom_folders": [], "error": str(e)}
+
+
+@api_router.post("/mail/folders")
+async def create_mail_folder(data: dict):
+    """Create a custom mail folder"""
+    try:
+        folder = {
+            "id": str(uuid.uuid4()),
+            "name": data.get("name", "Yeni Klasör"),
+            "color": data.get("color", "#6366f1"),
+            "icon": data.get("icon", "folder"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_default": False
+        }
+        await db.mail_folders.insert_one(folder)
+        # Return folder without MongoDB _id
+        folder_response = {k: v for k, v in folder.items() if k != '_id'}
+        return {"success": True, "folder": folder_response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/mail/folders/{folder_id}")
+async def delete_mail_folder(folder_id: str):
+    """Delete a custom mail folder"""
+    try:
+        result = await db.mail_folders.delete_one({"id": folder_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @api_router.post("/mail/mark-read/{email_id}")
