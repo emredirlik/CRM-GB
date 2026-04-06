@@ -4065,59 +4065,57 @@ async def ai_summarize_email(data: dict):
         
         # Try to use AI service
         try:
-            from emergentintegrations.llm.chat import chat, LlmModel
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import os
             
-            prompt = f"""Aşağıdaki e-postayı Türkçe olarak özetle (maksimum 2-3 cümle):
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"email-summary-{uuid.uuid4()}",
+                system_message="Sen profesyonel bir e-posta asistanısın. Türkçe yanıt ver. Kısa ve öz ol."
+            ).with_model("gemini", "gemini-2.5-flash")
+            
+            prompt = f"""Aşağıdaki e-postayı Türkçe olarak özetle (maksimum 2 cümle):
 
 Kimden: {from_name}
 Konu: {subject}
 İçerik:
 {clean_body}
 
-Ayrıca bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt önerisi sun."""
+Sonra bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt önerisi ver. Her öneriyi yeni satırda numaralı olarak yaz."""
 
-            response = await chat(
-                model=LlmModel.GEMINI_2_0_FLASH,
-                system_prompt="Sen profesyonel bir e-posta asistanısın. Türkçe yanıt ver.",
-                user_prompt=prompt
-            )
+            user_message = UserMessage(text=prompt)
+            response = await chat.send_message(user_message)
             
             # Parse response
-            text = response.message if hasattr(response, 'message') else str(response)
+            text = str(response)
+            lines = [l.strip() for l in text.strip().split('\n') if l.strip()]
             
-            # Extract summary and replies
-            lines = text.strip().split('\n')
-            summary = lines[0] if lines else 'Özet oluşturulamadı'
-            
-            # Find reply suggestions
+            # First lines are summary
+            summary_lines = []
             replies = []
             for line in lines:
-                line = line.strip()
-                if line.startswith(('1.', '2.', '3.', '-', '•', '*')):
-                    reply = line.lstrip('123.-•* ')
-                    if len(reply) > 10:
+                if line.startswith(('1.', '2.', '3.', '1)', '2)', '3)')):
+                    reply = line.lstrip('123.)- ').strip()
+                    if len(reply) > 5:
                         replies.append(reply)
+                elif not replies:
+                    summary_lines.append(line)
+            
+            summary = ' '.join(summary_lines[:2]) if summary_lines else f"{from_name} tarafından gönderilen e-posta."
             
             if not replies:
                 replies = [
                     'Teşekkür ederim, en kısa sürede inceleyeceğim.',
                     'Bu konuda size geri dönüş yapacağım.',
-                    'Detaylı bilgi için teşekkürler, değerlendireceğim.'
+                    'Detaylı bilgi için teşekkürler.'
                 ]
             
             return {"summary": summary, "replies": replies[:3]}
             
         except Exception as ai_error:
             logger.error(f"AI service error: {ai_error}")
-            # Fallback: Simple summary
             summary = f"{from_name} tarafından gönderilen '{subject}' konulu e-posta."
-            if 'sipariş' in clean_body.lower() or 'order' in clean_body.lower():
-                summary += " Sipariş ile ilgili içerik."
-            elif 'fiyat' in clean_body.lower() or 'price' in clean_body.lower():
-                summary += " Fiyat bilgisi içeriyor."
-            elif 'toplantı' in clean_body.lower() or 'meeting' in clean_body.lower():
-                summary += " Toplantı ile ilgili."
-            
             return {
                 "summary": summary,
                 "replies": [
@@ -4136,6 +4134,122 @@ Ayrıca bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt �
                 'Bilgilendirme için teşekkürler.'
             ]
         }
+
+
+@api_router.post("/ai/translate-email")
+async def ai_translate_email(data: dict):
+    """Translate email content"""
+    try:
+        body = data.get('body', '')
+        target_lang = data.get('target_lang', 'tr')
+        
+        import re
+        clean_body = re.sub(r'<[^>]+>', '', body)[:3000]
+        
+        lang_map = {'tr': 'Türkçe', 'en': 'İngilizce', 'de': 'Almanca'}
+        target = lang_map.get(target_lang, 'Türkçe')
+        
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import os
+            
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"translate-{uuid.uuid4()}",
+                system_message=f"Sen profesyonel bir çevirmensin. Metni {target} diline çevir. Sadece çeviriyi yaz, başka bir şey yazma."
+            ).with_model("gemini", "gemini-2.5-flash")
+            
+            user_message = UserMessage(text=clean_body)
+            response = await chat.send_message(user_message)
+            
+            return {"translated": str(response)}
+        except Exception as e:
+            logger.error(f"Translation error: {e}")
+            return {"translated": clean_body, "error": "Çeviri yapılamadı"}
+    except Exception as e:
+        return {"translated": "", "error": str(e)}
+
+
+@api_router.post("/ai/compose-email")
+async def ai_compose_email(data: dict):
+    """AI-assisted email composition"""
+    try:
+        prompt = data.get('prompt', '')
+        context = data.get('context', '')
+        tone = data.get('tone', 'professional')  # professional, friendly, formal
+        
+        tone_map = {
+            'professional': 'profesyonel ve resmi',
+            'friendly': 'samimi ve sıcak',
+            'formal': 'çok resmi ve kurumsal'
+        }
+        tone_desc = tone_map.get(tone, 'profesyonel')
+        
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import os
+            
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"compose-{uuid.uuid4()}",
+                system_message=f"Sen profesyonel bir e-posta yazarısın. {tone_desc} bir üslupla Türkçe e-posta yaz. Sadece e-posta metnini yaz, başka bir şey yazma."
+            ).with_model("gemini", "gemini-2.5-flash")
+            
+            full_prompt = f"""Aşağıdaki bilgilere göre bir e-posta yaz:
+
+İstek: {prompt}
+{f'Bağlam: {context}' if context else ''}
+
+E-postayı {tone_desc} bir üslupla yaz."""
+
+            user_message = UserMessage(text=full_prompt)
+            response = await chat.send_message(user_message)
+            
+            return {"email": str(response)}
+        except Exception as e:
+            logger.error(f"Compose error: {e}")
+            return {"email": "", "error": "E-posta oluşturulamadı"}
+    except Exception as e:
+        return {"email": "", "error": str(e)}
+
+
+@api_router.post("/ai/improve-text")
+async def ai_improve_text(data: dict):
+    """Improve email text"""
+    try:
+        text = data.get('text', '')
+        action = data.get('action', 'improve')  # improve, shorten, expand, formal
+        
+        action_map = {
+            'improve': 'daha iyi ve profesyonel hale getir',
+            'shorten': 'kısalt ama anlamı koru',
+            'expand': 'daha detaylı ve açıklayıcı yaz',
+            'formal': 'daha resmi bir dille yeniden yaz'
+        }
+        action_desc = action_map.get(action, 'iyileştir')
+        
+        try:
+            from emergentintegrations.llm.chat import LlmChat, UserMessage
+            import os
+            
+            api_key = os.environ.get('EMERGENT_LLM_KEY')
+            chat = LlmChat(
+                api_key=api_key,
+                session_id=f"improve-{uuid.uuid4()}",
+                system_message="Sen profesyonel bir editörsün. Sadece düzeltilmiş metni yaz, başka bir şey yazma."
+            ).with_model("gemini", "gemini-2.5-flash")
+            
+            user_message = UserMessage(text=f"Aşağıdaki metni {action_desc}:\n\n{text}")
+            response = await chat.send_message(user_message)
+            
+            return {"improved": str(response)}
+        except Exception as e:
+            logger.error(f"Improve error: {e}")
+            return {"improved": text, "error": "İyileştirme yapılamadı"}
+    except Exception as e:
+        return {"improved": "", "error": str(e)}
 
 
 @api_router.post("/mail/mark-read/{email_id}")

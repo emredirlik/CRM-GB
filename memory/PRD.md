@@ -47,11 +47,22 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - ✅ **All tabs working**: Gelen Kutusu, Yıldızlı, Gönderilenler, Taslaklar, Çöp Kutusu
 - ✅ Email detail panel with fullscreen mode (double-click or button)
 - ✅ Compose email with formatting toolbar
-- ✅ Attachments support
+- ✅ Attachments support (display in detail view)
 - ✅ Reply/Forward functionality
-- ✅ Signature settings
+- ✅ Signature settings with image upload support
+- ✅ **AI Features:**
+  - AI Özet & Hızlı Yanıt (Email summarization + smart replies)
+  - Çeviri (Türkçe, İngilizce, Almanca)
+  - AI ile E-posta Yazma
+  - Metin İyileştirme (improve, shorten, expand, formal)
 - 20 emails displayed (optimized for speed)
 - API: GET /api/mail/inbox, GET /api/mail/body/{id}, GET /api/mail/sent, GET /api/mail/drafts
+- API: POST /api/ai/summarize-email, POST /api/ai/translate-email, POST /api/ai/compose-email, POST /api/ai/improve-text
+
+### Lead Finder Module
+- ✅ **FIXED: Germany search now works** - Removed default keywords, search button loads 97 factories
+- ✅ Database shows 97 German Döner factories
+- ✅ No auto-load on page open - Results only load when "Ara" button clicked
 
 ### Other Modules
 - DHL Shipment Tracking (indigo theme)

@@ -145,12 +145,12 @@ const LeadFinder = () => {
   const [importing, setImporting] = useState(false);
   const [country, setCountry] = useState('Germany');
   const [city, setCity] = useState('');
-  const [keywords, setKeywords] = useState('döner fabrikası, gyros üretim, kebap üretim, et işleme');
+  const [keywords, setKeywords] = useState('');
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [dbLeads, setDbLeads] = useState([]);
 
-  // Load database leads on mount and when country changes
+  // Load database leads on mount (just count, not results)
   useEffect(() => {
     const loadDbLeads = async () => {
       try {
@@ -164,23 +164,7 @@ const LeadFinder = () => {
     loadDbLeads();
   }, []);
 
-  // Auto-load Germany results when dbLeads is loaded and country is Germany
-  useEffect(() => {
-    if (country === 'Germany' && dbLeads.length > 0 && results.length === 0) {
-      const formattedResults = dbLeads.map(lead => ({
-        name: lead.company_name,
-        address: lead.address || lead.city,
-        phone: lead.phone || '',
-        website: '',
-        city: lead.city,
-        region: lead.region,
-        source: 'database',
-        id: lead.id,
-        status: lead.status
-      }));
-      setResults(formattedResults);
-    }
-  }, [country, dbLeads]);
+  // Don't auto-load results - wait for search button click
 
   const cities = COUNTRIES[country] || [];
   

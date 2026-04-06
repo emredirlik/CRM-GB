@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -20,17 +21,25 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { 
   Inbox, Send, FileText, RefreshCw, Search, Menu,
   Reply, Forward, Trash2, Archive, Star,
   Loader2, AlertCircle, ChevronLeft, X,
-  Paperclip, Clock, Pencil, Tag,
-  Bold, Italic, Underline, List, Link as LinkIcon,
+  Paperclip, Clock, Pencil,
+  Bold, Italic, Underline, List,
   Palette, Settings, Image as ImageIcon,
   MailOpen, Minimize2, Maximize2, File, Download,
-  Sparkles, Wand2, MessageSquare, Zap, Brain,
-  FileImage, FileVideo, FileArchive, FileType
+  Sparkles, Wand2, Languages, PenLine, Zap, Brain,
+  FileImage, FileVideo, FileArchive, FileType, Upload,
+  ChevronDown, MoreVertical
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -43,7 +52,6 @@ const COLORS = [
   '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
 ];
 
-// File type icons
 const getFileIcon = (filename) => {
   const ext = filename?.split('.').pop()?.toLowerCase();
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext)) return FileImage;
@@ -57,6 +65,7 @@ const MailPage = () => {
   const { t } = useLanguage();
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
+  const signatureImageRef = useRef(null);
   
   // States
   const [emails, setEmails] = useState([]);
@@ -87,6 +96,15 @@ const MailPage = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [smartReplies, setSmartReplies] = useState([]);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [translating, setTranslating] = useState(false);
+  const [translatedBody, setTranslatedBody] = useState('');
+  const [showTranslation, setShowTranslation] = useState(false);
+  
+  // AI Compose States
+  const [showAiCompose, setShowAiCompose] = useState(false);
+  const [aiComposePrompt, setAiComposePrompt] = useState('');
+  const [aiComposing, setAiComposing] = useState(false);
+  const [aiTone, setAiTone] = useState('professional');
 
   // Folder counts
   const inboxCount = emails.filter(e => !e.is_read).length;
@@ -105,7 +123,7 @@ const MailPage = () => {
         if (!isMounted) return;
         
         if (response.data && response.data.emails) {
-          const fetchedEmails = response.data.emails.map((e, i) => ({ 
+          const fetchedEmails = response.data.emails.map((e) => ({ 
             ...e, 
             starred: false,
             attachments: e.attachments || [],
@@ -120,27 +138,21 @@ const MailPage = () => {
         console.error('Mail fetch error:', error);
         setConnectionStatus('error');
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
     
     const loadSentEmails = async () => {
       try {
         const response = await axios.get(`${API}/mail/sent`);
-        if (response.data?.emails) {
-          setSentEmails(response.data.emails);
-        }
+        if (response.data?.emails) setSentEmails(response.data.emails);
       } catch (e) {}
     };
     
     const loadDrafts = async () => {
       try {
         const response = await axios.get(`${API}/mail/drafts`);
-        if (response.data?.drafts) {
-          setDraftEmails(response.data.drafts);
-        }
+        if (response.data?.drafts) setDraftEmails(response.data.drafts);
       } catch (e) {}
     };
 
@@ -162,7 +174,7 @@ const MailPage = () => {
     try {
       const response = await axios.get(`${API}/mail/inbox`);
       if (response.data && response.data.emails) {
-        setEmails(response.data.emails.map((e, i) => ({ 
+        setEmails(response.data.emails.map((e) => ({ 
           ...e, 
           starred: emails.find(em => em.id === e.id)?.starred || false,
           attachments: e.attachments || [],
@@ -187,11 +199,25 @@ const MailPage = () => {
     }
   };
 
+  const handleSignatureImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const imgHtml = `<img src="${event.target.result}" style="max-width:200px;height:auto;margin:8px 0;" />`;
+        setSignature(prev => prev + imgHtml);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleViewEmail = async (email) => {
     setSelectedEmail(email);
     setAiSummary('');
     setSmartReplies([]);
     setShowAiPanel(false);
+    setTranslatedBody('');
+    setShowTranslation(false);
     
     if (!email.body || email.body === '') {
       setLoadingBody(true);
@@ -246,7 +272,70 @@ const MailPage = () => {
     }
   };
 
-  // AI: Generate Reply
+  // AI: Translate Email
+  const handleTranslate = async (targetLang = 'tr') => {
+    if (!selectedEmail?.body) return;
+    setTranslating(true);
+    try {
+      const response = await axios.post(`${API}/ai/translate-email`, {
+        body: selectedEmail.body,
+        target_lang: targetLang
+      });
+      setTranslatedBody(response.data.translated || '');
+      setShowTranslation(true);
+    } catch (error) {
+      toast.error('Çeviri yapılamadı');
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  // AI: Compose Email
+  const handleAiCompose = async () => {
+    if (!aiComposePrompt.trim()) {
+      toast.error('Lütfen ne yazmak istediğinizi belirtin');
+      return;
+    }
+    setAiComposing(true);
+    try {
+      const response = await axios.post(`${API}/ai/compose-email`, {
+        prompt: aiComposePrompt,
+        tone: aiTone,
+        context: composeData.subject ? `Konu: ${composeData.subject}` : ''
+      });
+      if (response.data.email) {
+        if (editorRef.current) {
+          editorRef.current.innerHTML = response.data.email.replace(/\n/g, '<br>');
+        }
+        setShowAiCompose(false);
+        setAiComposePrompt('');
+        toast.success('E-posta oluşturuldu');
+      }
+    } catch (error) {
+      toast.error('E-posta oluşturulamadı');
+    } finally {
+      setAiComposing(false);
+    }
+  };
+
+  // AI: Improve Text
+  const handleImproveText = async (action) => {
+    const text = editorRef.current?.innerText || '';
+    if (!text.trim()) {
+      toast.error('Önce bir metin yazın');
+      return;
+    }
+    try {
+      const response = await axios.post(`${API}/ai/improve-text`, { text, action });
+      if (response.data.improved && editorRef.current) {
+        editorRef.current.innerHTML = response.data.improved.replace(/\n/g, '<br>');
+        toast.success('Metin iyileştirildi');
+      }
+    } catch (error) {
+      toast.error('İyileştirme yapılamadı');
+    }
+  };
+
   const handleSmartReply = (reply) => {
     setReplyMode('reply');
     setComposeData({
@@ -364,7 +453,7 @@ const MailPage = () => {
           date: new Date().toISOString(),
           status: 'blocked'
         }, ...prev]);
-        toast.error('Mail sunucusu geçici olarak kullanılamıyor. Taslak olarak kaydedildi.', { duration: 5000 });
+        toast.error('Mail sunucusu geçici kullanılamıyor. Taslak olarak kaydedildi. (Preview ortamı sınırlaması)', { duration: 6000 });
       } else {
         toast.error(errorMsg);
       }
@@ -446,7 +535,13 @@ const MailPage = () => {
     return colors[index];
   };
 
-  // Sidebar Component
+  const processEmailBody = (body) => {
+    if (!body) return '';
+    let processed = body.replace(/<img/g, '<img style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;"');
+    return processed;
+  };
+
+  // Sidebar
   const Sidebar = ({ isMobile = false }) => (
     <div className={`${isMobile ? 'w-full' : 'w-72'} bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950 h-full flex flex-col`}>
       <div className="p-5">
@@ -461,7 +556,7 @@ const MailPage = () => {
         </div>
         <Button 
           onClick={openCompose}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25 transition-all duration-200"
+          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/25"
         >
           <Pencil className="w-4 h-4 mr-2" />
           Yeni Mail
@@ -479,7 +574,7 @@ const MailPage = () => {
           <button
             key={item.id}
             onClick={() => { setActiveTab(item.id); if (isMobile) setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all
               ${activeTab === item.id 
                 ? 'bg-gradient-to-r from-indigo-600/90 to-purple-600/90 text-white shadow-lg shadow-indigo-500/20' 
                 : 'text-slate-300 hover:bg-white/5 hover:text-white'}`}
@@ -516,7 +611,7 @@ const MailPage = () => {
     return (
       <div
         onClick={() => handleViewEmail(email)}
-        className={`group flex items-center gap-4 px-5 py-4 cursor-pointer border-b border-slate-700/30 transition-all duration-200
+        className={`group flex items-center gap-4 px-5 py-4 cursor-pointer border-b border-slate-700/30 transition-all
           ${selectedEmail?.id === email.id ? 'bg-indigo-900/40 border-l-4 border-l-indigo-500' : 'hover:bg-slate-800/50 border-l-4 border-l-transparent'}
           ${!email.is_read && !isSent ? 'bg-slate-800/30' : ''}`}
       >
@@ -529,9 +624,7 @@ const MailPage = () => {
             <span className={`text-sm truncate ${!email.is_read && !isSent ? 'font-bold text-white' : 'font-medium text-slate-200'}`}>
               {isSent ? `Kime: ${email.to}` : (email.from_name || email.from_email?.split('@')[0])}
             </span>
-            {hasAttachments && (
-              <Paperclip className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-            )}
+            {hasAttachments && <Paperclip className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
           </div>
           <p className={`text-sm truncate ${!email.is_read && !isSent ? 'text-white font-medium' : 'text-slate-300'}`}>
             {email.subject || '(Konu yok)'}
@@ -558,14 +651,6 @@ const MailPage = () => {
     );
   };
 
-  // Process email body to show images properly
-  const processEmailBody = (body) => {
-    if (!body) return '';
-    // Allow images to display with proper styling
-    let processed = body.replace(/<img/g, '<img style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;"');
-    return processed;
-  };
-
   return (
     <div className="h-[calc(100vh-80px)] flex bg-slate-950 rounded-2xl overflow-hidden shadow-2xl" data-testid="mail-page">
       {/* Desktop Sidebar */}
@@ -573,7 +658,7 @@ const MailPage = () => {
         <Sidebar />
       </div>
 
-      {/* Mobile Sidebar Sheet */}
+      {/* Mobile Sidebar */}
       <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
         <SheetContent side="left" className="p-0 w-80 bg-slate-900 border-slate-800">
           <Sidebar isMobile />
@@ -584,15 +669,9 @@ const MailPage = () => {
       <div className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-slate-900 to-slate-950">
         {/* Top Bar */}
         <div className="flex items-center gap-3 p-4 border-b border-slate-800/50 bg-slate-900/80 backdrop-blur-sm">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="lg:hidden text-slate-300 hover:bg-slate-800"
-            onClick={() => setIsSidebarOpen(true)}
-          >
+          <Button variant="ghost" size="icon" className="lg:hidden text-slate-300 hover:bg-slate-800" onClick={() => setIsSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
-
           <div className="flex-1 max-w-xl">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -600,18 +679,11 @@ const MailPage = () => {
                 placeholder="Mail ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-11 py-5 bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 rounded-xl focus:ring-2 focus:ring-indigo-500/50"
+                className="pl-11 py-5 bg-slate-800/50 border-slate-700/50 text-white placeholder:text-slate-500 rounded-xl"
               />
             </div>
           </div>
-
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="text-slate-300 hover:bg-slate-800 rounded-xl"
-          >
+          <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={refreshing} className="text-slate-300 hover:bg-slate-800 rounded-xl">
             <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
@@ -625,33 +697,25 @@ const MailPage = () => {
             {activeTab === 'starred' && 'Yıldızlı'}
             {activeTab === 'trash' && 'Çöp Kutusu'}
           </h3>
-          <Badge variant="outline" className="text-slate-400 border-slate-700">
-            {filteredEmails.length} mail
-          </Badge>
+          <Badge variant="outline" className="text-slate-400 border-slate-700">{filteredEmails.length} mail</Badge>
         </div>
 
         {/* Email List */}
         <ScrollArea className="flex-1">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-4 animate-pulse">
-                <Loader2 className="w-8 h-8 animate-spin text-white" />
-              </div>
+              <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
               <p className="text-slate-400">Mailler yükleniyor...</p>
             </div>
           ) : connectionStatus === 'error' ? (
             <div className="text-center py-20 px-4">
-              <div className="w-20 h-20 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-10 h-10 text-red-400" />
-              </div>
+              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
               <p className="text-lg font-bold text-white mb-2">Bağlantı Hatası</p>
               <p className="text-sm text-slate-400">Ayarlar → IMAP/SMTP yapılandırın</p>
             </div>
           ) : filteredEmails.length === 0 ? (
             <div className="text-center py-20">
-              <div className="w-24 h-24 rounded-2xl bg-slate-800/50 flex items-center justify-center mx-auto mb-4">
-                <MailOpen className="w-12 h-12 text-slate-600" />
-              </div>
+              <MailOpen className="w-20 h-20 mx-auto mb-4 text-slate-700" />
               <p className="text-slate-400 font-medium">
                 {activeTab === 'inbox' && 'Gelen kutunuz boş'}
                 {activeTab === 'sent' && 'Henüz mail göndermediniz'}
@@ -663,82 +727,63 @@ const MailPage = () => {
           ) : (
             <div>
               {filteredEmails.map(email => (
-                <EmailListItem 
-                  key={email.id} 
-                  email={email} 
-                  isSent={activeTab === 'sent'} 
-                />
+                <EmailListItem key={email.id} email={email} isSent={activeTab === 'sent'} />
               ))}
             </div>
           )}
         </ScrollArea>
 
-        {/* Floating Compose Button (Mobile) */}
+        {/* Mobile Compose Button */}
         <button
           onClick={openCompose}
-          className="lg:hidden fixed bottom-6 right-6 flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl shadow-2xl shadow-indigo-500/30 transition-all duration-200"
+          className="lg:hidden fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl shadow-2xl"
         >
-          <Pencil className="w-6 h-6" />
+          <Pencil className="w-6 h-6 mx-auto" />
         </button>
       </div>
 
       {/* Email Detail View */}
       {selectedEmail && (
-        <div 
-          className={`fixed inset-0 z-50 bg-slate-900 flex flex-col transition-all duration-300
-            ${isEmailFullscreen ? 'lg:relative lg:flex-1' : 'lg:relative lg:w-[550px]'}`}
-        >
+        <div className={`fixed inset-0 z-50 bg-slate-900 flex flex-col transition-all ${isEmailFullscreen ? 'lg:relative lg:flex-1' : 'lg:relative lg:w-[550px]'}`}>
           {/* Header */}
           <div className="flex items-center gap-2 p-4 border-b border-slate-700/50 bg-slate-800/80 backdrop-blur-sm">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); setShowAiPanel(false); }}
-              className="text-white hover:bg-slate-700 rounded-xl"
-            >
+            <Button variant="ghost" size="icon" onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); setShowAiPanel(false); }} className="text-white hover:bg-slate-700 rounded-xl">
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div className="flex-1" />
             
-            {/* AI Button */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={handleAiSummarize}
-              disabled={aiLoading}
-              className="text-purple-400 hover:bg-purple-500/20 hover:text-purple-300 rounded-xl"
-              title="AI ile Özetle"
-            >
-              {aiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-            </Button>
+            {/* AI Actions */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-purple-400 hover:bg-purple-500/20 rounded-xl">
+                  <Sparkles className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-slate-800 border-slate-700">
+                <DropdownMenuItem onClick={handleAiSummarize} className="text-white hover:bg-slate-700">
+                  <Brain className="w-4 h-4 mr-2 text-purple-400" /> AI Özet & Hızlı Yanıt
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-slate-700" />
+                <DropdownMenuItem onClick={() => handleTranslate('tr')} className="text-white hover:bg-slate-700">
+                  <Languages className="w-4 h-4 mr-2 text-blue-400" /> Türkçe'ye Çevir
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate('en')} className="text-white hover:bg-slate-700">
+                  <Languages className="w-4 h-4 mr-2 text-blue-400" /> İngilizce'ye Çevir
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate('de')} className="text-white hover:bg-slate-700">
+                  <Languages className="w-4 h-4 mr-2 text-blue-400" /> Almanca'ya Çevir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsEmailFullscreen(!isEmailFullscreen)}
-              className="text-white hover:bg-slate-700 rounded-xl"
-              title={isEmailFullscreen ? 'Küçült' : 'Tam Ekran'}
-            >
+            <Button variant="ghost" size="icon" onClick={() => setIsEmailFullscreen(!isEmailFullscreen)} className="text-white hover:bg-slate-700 rounded-xl">
               {isEmailFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
             </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-slate-700 rounded-xl">
-              <Archive className="w-5 h-5" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => handleMoveToTrash(selectedEmail)}
-              className="text-white hover:bg-red-500/20 hover:text-red-400 rounded-xl"
-            >
+            <Button variant="ghost" size="icon" onClick={() => handleMoveToTrash(selectedEmail)} className="text-white hover:bg-red-500/20 hover:text-red-400 rounded-xl">
               <Trash2 className="w-5 h-5" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => handleToggleStar(selectedEmail)}
-              className="text-white hover:bg-slate-700 rounded-xl"
-            >
-              <Star className={`w-5 h-5 transition-all ${selectedEmail.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+            <Button variant="ghost" size="icon" onClick={() => handleToggleStar(selectedEmail)} className="text-white hover:bg-slate-700 rounded-xl">
+              <Star className={`w-5 h-5 ${selectedEmail.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
             </Button>
           </div>
 
@@ -747,20 +792,15 @@ const MailPage = () => {
             <h2 className="text-xl font-bold text-white">{selectedEmail.subject || '(Konu yok)'}</h2>
           </div>
 
-          {/* Sender Info */}
+          {/* Sender */}
           <div className="flex items-start gap-4 p-5 border-b border-slate-700/50">
             <div className={`w-14 h-14 rounded-2xl ${getAvatarColor(selectedEmail.from_name)} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>
               {(selectedEmail.from_name || selectedEmail.from_email)?.[0]?.toUpperCase()}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-white text-lg">{selectedEmail.from_name || 'Bilinmeyen'}</span>
-              </div>
+              <span className="font-bold text-white text-lg">{selectedEmail.from_name || 'Bilinmeyen'}</span>
               <p className="text-sm text-slate-400">&lt;{selectedEmail.from_email}&gt;</p>
-              <p className="text-xs text-slate-500 mt-1">
-                <Clock className="w-3 h-3 inline mr-1" />
-                {new Date(selectedEmail.date).toLocaleString('tr-TR')}
-              </p>
+              <p className="text-xs text-slate-500 mt-1"><Clock className="w-3 h-3 inline mr-1" />{new Date(selectedEmail.date).toLocaleString('tr-TR')}</p>
             </div>
           </div>
 
@@ -770,8 +810,10 @@ const MailPage = () => {
               <div className="flex items-center gap-2 mb-3">
                 <Brain className="w-5 h-5 text-purple-400" />
                 <span className="font-semibold text-purple-300">AI Asistan</span>
+                <button onClick={() => setShowAiPanel(false)} className="ml-auto text-slate-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              
               {aiLoading ? (
                 <div className="flex items-center gap-2 text-purple-300">
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -780,7 +822,6 @@ const MailPage = () => {
               ) : (
                 <>
                   <p className="text-sm text-slate-300 mb-4">{aiSummary}</p>
-                  
                   {smartReplies.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs text-purple-400 font-medium flex items-center gap-1">
@@ -788,12 +829,8 @@ const MailPage = () => {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {smartReplies.map((reply, i) => (
-                          <button
-                            key={i}
-                            onClick={() => handleSmartReply(reply)}
-                            className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-sm rounded-lg transition-all"
-                          >
-                            {reply.length > 40 ? reply.substring(0, 40) + '...' : reply}
+                          <button key={i} onClick={() => handleSmartReply(reply)} className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-sm rounded-lg transition-all">
+                            {reply.length > 50 ? reply.substring(0, 50) + '...' : reply}
                           </button>
                         ))}
                       </div>
@@ -804,20 +841,38 @@ const MailPage = () => {
             </div>
           )}
 
+          {/* Translation Panel */}
+          {showTranslation && translatedBody && (
+            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/30 rounded-xl">
+              <div className="flex items-center gap-2 mb-3">
+                <Languages className="w-5 h-5 text-blue-400" />
+                <span className="font-semibold text-blue-300">Çeviri</span>
+                <button onClick={() => setShowTranslation(false)} className="ml-auto text-slate-400 hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {translating ? (
+                <div className="flex items-center gap-2 text-blue-300">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Çevriliyor...</span>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-300 whitespace-pre-wrap">{translatedBody}</p>
+              )}
+            </div>
+          )}
+
           {/* Attachments */}
           {selectedEmail.attachments?.length > 0 && (
             <div className="px-5 py-3 border-b border-slate-700/50">
               <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                <Paperclip className="w-3 h-3" /> {selectedEmail.attachments.length} Ek
+                <Paperclip className="w-3 h-3" /> {selectedEmail.attachments.length} Ek Dosya
               </p>
               <div className="flex flex-wrap gap-2">
                 {selectedEmail.attachments.map((att, index) => {
                   const FileIcon = getFileIcon(att.name || att.filename);
                   return (
-                    <div 
-                      key={index}
-                      className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl text-sm hover:bg-slate-700/50 cursor-pointer transition-all"
-                    >
+                    <div key={index} className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl text-sm hover:bg-slate-700/50 cursor-pointer transition-all">
                       <FileIcon className="w-4 h-4 text-indigo-400" />
                       <span className="max-w-[150px] truncate text-slate-300">{att.name || att.filename}</span>
                       {att.size && <span className="text-xs text-slate-500">({formatFileSize(att.size)})</span>}
@@ -829,7 +884,7 @@ const MailPage = () => {
             </div>
           )}
 
-          {/* Email Body */}
+          {/* Body */}
           <ScrollArea className="flex-1">
             <div className="p-5 bg-white min-h-full rounded-t-2xl mt-2 mx-2">
               {loadingBody ? (
@@ -838,33 +893,18 @@ const MailPage = () => {
                   <span className="ml-2 text-slate-600">Yükleniyor...</span>
                 </div>
               ) : (
-                <div 
-                  className="prose prose-sm max-w-none"
-                  style={{ color: '#1f2937' }}
-                  dangerouslySetInnerHTML={{ 
-                    __html: processEmailBody(selectedEmail.body) || `<p style="color:#6b7280">${selectedEmail.snippet || 'İçerik yok'}</p>` 
-                  }} 
-                />
+                <div className="prose prose-sm max-w-none" style={{ color: '#1f2937' }} dangerouslySetInnerHTML={{ __html: processEmailBody(selectedEmail.body) || `<p style="color:#6b7280">${selectedEmail.snippet || 'İçerik yok'}</p>` }} />
               )}
             </div>
           </ScrollArea>
 
           {/* Actions */}
-          <div className="p-4 border-t border-slate-700/50 bg-slate-800/80 backdrop-blur-sm flex gap-3">
-            <Button 
-              onClick={() => handleReply(selectedEmail, 'reply')}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl py-5"
-            >
-              <Reply className="w-4 h-4 mr-2" />
-              Yanıtla
+          <div className="p-4 border-t border-slate-700/50 bg-slate-800/80 flex gap-3">
+            <Button onClick={() => handleReply(selectedEmail, 'reply')} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl py-5">
+              <Reply className="w-4 h-4 mr-2" />Yanıtla
             </Button>
-            <Button 
-              onClick={() => handleReply(selectedEmail, 'forward')}
-              variant="outline"
-              className="flex-1 border-slate-600 text-white hover:bg-slate-700 rounded-xl py-5"
-            >
-              <Forward className="w-4 h-4 mr-2" />
-              İlet
+            <Button onClick={() => handleReply(selectedEmail, 'forward')} variant="outline" className="flex-1 border-slate-600 text-white hover:bg-slate-700 rounded-xl py-5">
+              <Forward className="w-4 h-4 mr-2" />İlet
             </Button>
           </div>
         </div>
@@ -872,30 +912,16 @@ const MailPage = () => {
 
       {/* Compose Dialog */}
       <Dialog open={isComposeOpen} onOpenChange={(open) => { setIsComposeOpen(open); if (!open) setIsComposeFullscreen(false); }}>
-        <DialogContent className={`p-0 gap-0 bg-white border-0 flex flex-col transition-all duration-200 shadow-2xl ${
-          isComposeFullscreen 
-            ? 'max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none' 
-            : 'max-w-2xl max-h-[85vh] rounded-2xl'
-        }`}>
+        <DialogContent className={`p-0 gap-0 bg-white border-0 flex flex-col shadow-2xl ${isComposeFullscreen ? 'max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none' : 'max-w-2xl max-h-[85vh] rounded-2xl'}`}>
           <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-2xl">
             <span className="text-sm font-bold text-white">
               {replyMode === 'reply' ? 'Yanıtla' : replyMode === 'forward' ? 'İlet' : 'Yeni Mesaj'}
             </span>
             <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsComposeFullscreen(!isComposeFullscreen)}
-                className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20 rounded-lg"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setIsComposeFullscreen(!isComposeFullscreen)} className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20 rounded-lg">
                 {isComposeFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsComposeOpen(false)} 
-                className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20 rounded-lg"
-              >
+              <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)} className="h-8 w-8 text-white/80 hover:text-white hover:bg-white/20 rounded-lg">
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -904,15 +930,8 @@ const MailPage = () => {
           <div className="flex-1 overflow-y-auto">
             <div className="flex items-center border-b border-slate-200 px-5 py-3">
               <span className="w-16 text-sm text-slate-500 font-medium">Kime</span>
-              <Input
-                value={composeData.to}
-                onChange={(e) => setComposeData({ ...composeData, to: e.target.value })}
-                className="border-0 shadow-none focus-visible:ring-0 text-slate-800"
-                placeholder="alici@ornek.com"
-              />
-              <Button variant="ghost" size="sm" onClick={() => setShowCc(!showCc)} className="text-xs text-indigo-600 hover:text-indigo-700">
-                Cc/Bcc
-              </Button>
+              <Input value={composeData.to} onChange={(e) => setComposeData({ ...composeData, to: e.target.value })} className="border-0 shadow-none focus-visible:ring-0 text-slate-800" placeholder="alici@ornek.com" />
+              <Button variant="ghost" size="sm" onClick={() => setShowCc(!showCc)} className="text-xs text-indigo-600">Cc/Bcc</Button>
             </div>
             
             {showCc && (
@@ -930,100 +949,80 @@ const MailPage = () => {
             
             <div className="flex items-center border-b border-slate-200 px-5 py-3">
               <span className="w-16 text-sm text-slate-500 font-medium">Konu</span>
-              <Input
-                value={composeData.subject}
-                onChange={(e) => setComposeData({ ...composeData, subject: e.target.value })}
-                className="border-0 shadow-none focus-visible:ring-0 text-slate-800 font-medium"
-                placeholder="Konu"
-              />
+              <Input value={composeData.subject} onChange={(e) => setComposeData({ ...composeData, subject: e.target.value })} className="border-0 shadow-none focus-visible:ring-0 text-slate-800 font-medium" placeholder="Konu" />
             </div>
             
-            <div
-              ref={editorRef}
-              contentEditable
-              className="min-h-[200px] p-5 focus:outline-none text-slate-800"
-              style={{ minHeight: '200px' }}
-              suppressContentEditableWarning
-            />
+            <div ref={editorRef} contentEditable className="min-h-[200px] p-5 focus:outline-none text-slate-800" style={{ minHeight: '200px' }} suppressContentEditableWarning />
             
-            {signature && (
-              <div className="px-5 pb-3 text-sm text-slate-500" dangerouslySetInnerHTML={{ __html: signature }} />
-            )}
+            {signature && <div className="px-5 pb-3 text-sm text-slate-500" dangerouslySetInnerHTML={{ __html: signature }} />}
           </div>
           
-          {/* Formatting Toolbar */}
-          <div className="border-t border-slate-200 px-3 py-2 flex items-center gap-1 bg-slate-50">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('bold')}>
-              <Bold className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('italic')}>
-              <Italic className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('underline')}>
-              <Underline className="w-4 h-4" />
-            </Button>
+          {/* Toolbar */}
+          <div className="border-t border-slate-200 px-3 py-2 flex items-center gap-1 bg-slate-50 flex-wrap">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('bold')}><Bold className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('italic')}><Italic className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('underline')}><Underline className="w-4 h-4" /></Button>
             <Separator orientation="vertical" className="h-5 mx-1" />
             
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200">
-                  <Palette className="w-4 h-4" />
-                </Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200"><Palette className="w-4 h-4" /></Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-3 rounded-xl">
                 <div className="grid grid-cols-5 gap-2">
                   {COLORS.map(color => (
-                    <button
-                      key={color}
-                      className="w-7 h-7 rounded-lg border-2 border-transparent hover:border-slate-300 hover:scale-110 transition-all"
-                      style={{ backgroundColor: color }}
-                      onClick={() => execCommand('foreColor', color)}
-                    />
+                    <button key={color} className="w-7 h-7 rounded-lg border-2 border-transparent hover:border-slate-300 hover:scale-110 transition-all" style={{ backgroundColor: color }} onClick={() => execCommand('foreColor', color)} />
                   ))}
                 </div>
               </PopoverContent>
             </Popover>
             
             <Separator orientation="vertical" className="h-5 mx-1" />
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('insertUnorderedList')}>
-              <List className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9 rounded-lg hover:bg-slate-200"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleAttachmentSelect}
-            />
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => execCommand('insertUnorderedList')}><List className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg hover:bg-slate-200" onClick={() => fileInputRef.current?.click()}><Paperclip className="w-4 h-4" /></Button>
+            <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleAttachmentSelect} />
+            
+            <Separator orientation="vertical" className="h-5 mx-1" />
+            
+            {/* AI Writing Tools */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-9 px-3 rounded-lg hover:bg-purple-100 text-purple-600">
+                  <Wand2 className="w-4 h-4 mr-1" /> AI Yardımcı
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-white border-slate-200">
+                <DropdownMenuItem onClick={() => setShowAiCompose(true)} className="text-slate-800">
+                  <PenLine className="w-4 h-4 mr-2 text-purple-500" /> AI ile Yaz
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleImproveText('improve')} className="text-slate-800">
+                  <Sparkles className="w-4 h-4 mr-2 text-indigo-500" /> İyileştir
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleImproveText('shorten')} className="text-slate-800">
+                  <ChevronDown className="w-4 h-4 mr-2 text-green-500" /> Kısalt
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleImproveText('expand')} className="text-slate-800">
+                  <MoreVertical className="w-4 h-4 mr-2 text-blue-500" /> Genişlet
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleImproveText('formal')} className="text-slate-800">
+                  <FileText className="w-4 h-4 mr-2 text-amber-500" /> Resmileştir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
-          {/* Attachments Preview */}
+          {/* Attachments */}
           {attachments.length > 0 && (
             <div className="px-4 py-3 border-t border-slate-200 flex flex-wrap gap-2 bg-slate-50">
               {attachments.map((att, index) => {
                 const FileIcon = getFileIcon(att.name);
                 return (
-                  <div 
-                    key={index}
-                    className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm shadow-sm"
-                  >
+                  <div key={index} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm shadow-sm">
                     <FileIcon className="w-4 h-4 text-indigo-500" />
                     <span className="max-w-[150px] truncate text-slate-700">{att.name}</span>
                     <span className="text-xs text-slate-400">({formatFileSize(att.size)})</span>
-                    <button 
-                      onClick={() => removeAttachment(index)}
-                      className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => removeAttachment(index)} className="ml-1 text-slate-400 hover:text-red-500"><X className="w-4 h-4" /></button>
                   </div>
                 );
               })}
@@ -1032,16 +1031,64 @@ const MailPage = () => {
           
           {/* Footer */}
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
-            <Button 
-              onClick={handleSendEmail} 
-              disabled={sending}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 rounded-xl shadow-lg shadow-indigo-500/25"
-            >
+            <Button onClick={handleSendEmail} disabled={sending} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 rounded-xl shadow-lg">
               {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               Gönder
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsComposeOpen(false)} className="rounded-lg hover:bg-slate-200">
               <Trash2 className="w-4 h-4 text-slate-400" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Compose Dialog */}
+      <Dialog open={showAiCompose} onOpenChange={setShowAiCompose}>
+        <DialogContent className="max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-purple-500" />
+              AI ile E-posta Yaz
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Ne yazmak istiyorsunuz?</label>
+              <Textarea 
+                value={aiComposePrompt}
+                onChange={(e) => setAiComposePrompt(e.target.value)}
+                placeholder="Örn: Müşteriye sipariş gecikmesi hakkında özür dileyen bir mail yaz"
+                className="min-h-[100px]"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Üslup</label>
+              <div className="flex gap-2">
+                {[
+                  { id: 'professional', label: 'Profesyonel' },
+                  { id: 'friendly', label: 'Samimi' },
+                  { id: 'formal', label: 'Resmi' },
+                ].map(tone => (
+                  <button
+                    key={tone.id}
+                    onClick={() => setAiTone(tone.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      aiTone === tone.id 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {tone.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowAiCompose(false)}>İptal</Button>
+            <Button onClick={handleAiCompose} disabled={aiComposing} className="bg-gradient-to-r from-indigo-600 to-purple-600">
+              {aiComposing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              Oluştur
             </Button>
           </div>
         </DialogContent>
@@ -1060,14 +1107,18 @@ const MailPage = () => {
               dangerouslySetInnerHTML={{ __html: signature }}
               onBlur={(e) => setSignature(e.currentTarget.innerHTML)}
             />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => signatureImageRef.current?.click()} className="gap-2">
+                <ImageIcon className="w-4 h-4" />
+                Görsel Ekle
+              </Button>
+              <input ref={signatureImageRef} type="file" accept="image/*" className="hidden" onChange={handleSignatureImageUpload} />
+              <span className="text-xs text-slate-500">Logo veya imza görseli ekleyebilirsiniz</span>
+            </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setIsSignatureOpen(false)} className="rounded-xl">
-              İptal
-            </Button>
-            <Button onClick={saveSignature} className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl">
-              Kaydet
-            </Button>
+            <Button variant="outline" onClick={() => setIsSignatureOpen(false)}>İptal</Button>
+            <Button onClick={saveSignature} className="bg-gradient-to-r from-indigo-600 to-purple-600">Kaydet</Button>
           </div>
         </DialogContent>
       </Dialog>
