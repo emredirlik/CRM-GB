@@ -22,6 +22,7 @@ import Specifications from "@/pages/Specifications";
 import DailyReports from "@/pages/DailyReports";
 import Shipments from "@/pages/Shipments";
 import AdminPage from "@/pages/AdminPage";
+import AIAnalytics from "@/pages/AIAnalytics";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -102,6 +103,7 @@ function AppRoutes() {
                 <Route path="/route-planner" element={<RoutePlanner />} />
                 <Route path="/daily-reports" element={<DailyReports />} />
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/ai-analytics" element={<AIAnalytics />} />
               </Routes>
             </Layout>
             {/* AI Chat Widget - floating button */}

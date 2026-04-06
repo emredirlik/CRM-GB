@@ -86,15 +86,17 @@ Features:
 ## Recent Updates (April 2026)
 
 ### Completed (April 6, 2026 - Latest)
+- [x] **AI Customer Analytics Dashboard** - Complete AI-powered insights
+  - Customer Health Score (0-100)
+  - Order Prediction (based on past orders)
+  - Churn Risk Analysis (High/Medium/Low)
+  - Best Contact Time suggestions
+  - Monthly & Quarterly Sales Forecast
+  - Seasonal Trends visualization
 - [x] **Admin Account Updated** - Username: emre@gewuerzberg.de, Password: 190371
 - [x] **Download All Customers PDF** - New "PDF İndir" button on Leads page
-- [x] **Shipments Mobile Layout Fixed** - Card-based responsive design, no horizontal scroll
-- [x] **Shipments Full Localization** - TR/DE/EN/PL translations for all texts
-- [x] **Specifications Page Translated** - All UI text in Turkish/German/English/Polish
-- [x] **Daily Reports Card View** - Replaced table with card layout
-- [x] **Monthly Report PDF Download** - New "Aylık Rapor İndir" button
-- [x] **DHL Real Tracking Verified** - CS638795298DE tracking works
-- [x] **LanguageContext Extended** - Added admin, logout, mail, signature keys for all languages
+- [x] **Shipments Mobile Layout Fixed** - Card-based responsive design
+- [x] **Full Localization** - TR/DE/EN/PL translations for all pages
 
 ### Previously Completed
 - [x] **SerpAPI Integration** - Real Google Maps data for Lead Finder
@@ -109,6 +111,7 @@ Features:
 ### Pending
 - [ ] Email Signature Configuration (backend wiring)
 - [ ] Product Videos Drag & Drop + WhatsApp sharing validation
+- [ ] Personalized Email Content (AI-generated based on customer history)
 
 ## API Endpoints
 

@@ -21,7 +21,8 @@ import {
   Video,
   X,
   Sparkles,
-  UserCog
+  UserCog,
+  Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -33,6 +34,7 @@ const Sidebar = ({ onClose }) => {
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'dashboard' },
+    { path: '/ai-analytics', icon: Brain, label: 'aiAnalytics', highlight: true },
     { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
     { path: '/leads', icon: Users, label: 'leads' },
     { path: '/orders', icon: ShoppingCart, label: 'orders' },
