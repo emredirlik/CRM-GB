@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles, AlertTriangle } from 'lucide-react';
+import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles, AlertTriangle, Trophy } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { tr, de, enUS, pl } from 'date-fns/locale';
 import axios from 'axios';
@@ -328,259 +328,248 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64" data-testid="dashboard-loading">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6" data-testid="dashboard-page">
-      {/* Header with Period Filter */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('dashboard')}</h1>
-          <p className="text-muted-foreground mt-1">{t('welcomeTo')} Gewürzberg CRM</p>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-transparent">{t('dashboard')}</h1>
+          <p className="text-slate-500 mt-1">{t('welcomeTo')} Gewürzberg CRM</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
           {periods.map((p) => (
-            <Button
+            <button
               key={p.value}
-              variant={period === p.value ? 'default' : 'outline'}
-              size="sm"
               onClick={() => setPeriod(p.value)}
-              className={period === p.value ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                period === p.value 
+                  ? 'bg-white text-indigo-600 shadow-sm' 
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
               {p.label}
-            </Button>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Cards - Modern Glass Style */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => (
-          <Card 
+          <div 
             key={index} 
-            className={`card-hover cursor-pointer transition-all ${stat.hoverBg}`}
+            className={`relative overflow-hidden bg-white rounded-2xl p-5 cursor-pointer shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 group ${stat.hoverBg}`}
             onClick={() => navigate(stat.link)}
+            data-testid={`stat-card-${index}`}
           >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                  <p className={`text-2xl font-bold mt-1 ${stat.color}`}>
-                    {stat.isText ? stat.value : stat.value.toLocaleString()}
-                  </p>
+            <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bgColor} rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500`} />
+            <div className="relative">
+              <div className={`w-10 h-10 ${stat.bgColor} rounded-xl flex items-center justify-center mb-3`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              </div>
+              <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
+              <p className={`text-2xl md:text-3xl font-bold mt-1 ${stat.color}`}>
+                {stat.isText ? stat.value : stat.value.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          {alerts.map((alert, idx) => (
+            <div 
+              key={idx} 
+              className={`flex items-center justify-between p-4 rounded-xl border ${
+                alert.severity === 'high' ? 'bg-red-50 border-red-200' :
+                alert.severity === 'medium' ? 'bg-amber-50 border-amber-200' :
+                'bg-blue-50 border-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  alert.severity === 'high' ? 'bg-red-100' :
+                  alert.severity === 'medium' ? 'bg-amber-100' :
+                  'bg-blue-100'
+                }`}>
+                  <AlertTriangle className={`w-5 h-5 ${
+                    alert.severity === 'high' ? 'text-red-600' :
+                    alert.severity === 'medium' ? 'text-amber-600' :
+                    'text-blue-600'
+                  }`} />
                 </div>
-                <div className={`w-12 h-12 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                <div>
+                  <p className="font-semibold text-slate-900">{alert.title}</p>
+                  <p className="text-sm text-slate-600">{alert.message}</p>
+                </div>
+              </div>
+              {alert.action && (
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(alert.link)}
+                  className="text-indigo-600 hover:text-indigo-700"
+                >
+                  {alert.action} →
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Finance Summary Card */}
+        {financeSummary && (
+          <Card className="lg:col-span-2 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white pb-4">
+              <CardTitle className="flex items-center gap-2">
+                <Euro className="w-5 h-5" />
+                {language === 'tr' ? 'Finansal Özet' : 'Financial Summary'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-2 md:grid-cols-4">
+                <div className="p-4 border-r border-b border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Toplam Ciro' : 'Total Revenue'}</p>
+                  <p className="text-xl md:text-2xl font-bold text-slate-900">{formatCurrency(financeSummary.total_revenue)}</p>
+                </div>
+                <div className="p-4 border-r border-b border-slate-100 bg-emerald-50/50">
+                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Ödenen' : 'Paid'}</p>
+                  <p className="text-xl md:text-2xl font-bold text-emerald-600">{formatCurrency(financeSummary.total_paid)}</p>
+                </div>
+                <div className="p-4 border-r border-b border-slate-100">
+                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Bekleyen' : 'Pending'}</p>
+                  <p className="text-xl md:text-2xl font-bold text-amber-600">{formatCurrency(financeSummary.total_pending)}</p>
+                </div>
+                <div className="p-4 border-b border-slate-100 bg-indigo-50/50">
+                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Ödeme Oranı' : 'Payment Rate'}</p>
+                  <p className="text-xl md:text-2xl font-bold text-indigo-600">
+                    {financeSummary.total_revenue > 0 
+                      ? Math.round((financeSummary.total_paid / financeSummary.total_revenue) * 100) 
+                      : 0}%
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* Critical Alerts Section */}
-      {alerts.length > 0 && (
-        <div className="space-y-3">
-          {alerts.map((alert, idx) => (
-            <Card 
-              key={idx} 
-              className={`border-l-4 ${
-                alert.severity === 'high' ? 'border-l-red-500 bg-red-50' :
-                alert.severity === 'medium' ? 'border-l-orange-500 bg-orange-50' :
-                'border-l-blue-500 bg-blue-50'
-              }`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
+        )}
+        
+        {/* Top Customers Card */}
+        {financeSummary?.customer_ranking?.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-500" />
+                {language === 'tr' ? 'En Değerli Müşteriler' : 'Top Customers'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {financeSummary.customer_ranking.slice(0, 5).map((customer, idx) => (
+                <div 
+                  key={customer.id} 
+                  className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
-                    <AlertTriangle className={`w-5 h-5 ${
-                      alert.severity === 'high' ? 'text-red-600' :
-                      alert.severity === 'medium' ? 'text-orange-600' :
-                      'text-blue-600'
-                    }`} />
-                    <div>
-                      <h4 className="font-semibold">{alert.title}</h4>
-                      <p className="text-sm text-muted-foreground">{alert.message}</p>
-                    </div>
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                      idx === 0 ? 'bg-amber-100 text-amber-700' :
+                      idx === 1 ? 'bg-slate-200 text-slate-700' :
+                      idx === 2 ? 'bg-orange-100 text-orange-700' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {idx + 1}
+                    </span>
+                    <span className="font-medium text-sm text-slate-700 truncate max-w-[120px]">{customer.company_name}</span>
                   </div>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => navigate(alert.action_url || '/')}
-                  >
-                    {t('viewDetails') || 'Detaylar'}
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  <span className="font-bold text-sm text-emerald-600">{formatCurrency(customer.total_revenue)}</span>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Finance Summary Widget */}
-      {financeSummary && (
-        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Euro className="w-5 h-5 text-green-600" />
-              {language === 'tr' ? 'Finansal Özet' : 'Financial Summary'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-3 bg-white rounded-lg border">
-                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Toplam Ciro' : 'Total Revenue'}</p>
-                <p className="text-xl font-bold text-green-700">{formatCurrency(financeSummary.total_revenue)}</p>
-              </div>
-              <div className="p-3 bg-white rounded-lg border">
-                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Ödenen' : 'Paid'}</p>
-                <p className="text-xl font-bold text-emerald-700">{formatCurrency(financeSummary.total_paid)}</p>
-              </div>
-              <div className="p-3 bg-white rounded-lg border">
-                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Bekleyen' : 'Pending'}</p>
-                <p className="text-xl font-bold text-orange-600">{formatCurrency(financeSummary.total_pending)}</p>
-              </div>
-              <div className="p-3 bg-white rounded-lg border">
-                <p className="text-xs text-muted-foreground">{language === 'tr' ? 'Ödeme Oranı' : 'Payment Rate'}</p>
-                <p className="text-xl font-bold text-blue-700">
-                  {financeSummary.total_revenue > 0 
-                    ? Math.round((financeSummary.total_paid / financeSummary.total_revenue) * 100) 
-                    : 0}%
-                </p>
-              </div>
-            </div>
-            
-            {/* Top Customers */}
-            {financeSummary.customer_ranking?.length > 0 && (
-              <div className="mt-4">
-                <p className="text-sm font-medium mb-2">{language === 'tr' ? 'En Değerli Müşteriler' : 'Top Customers'}</p>
-                <div className="space-y-2">
-                  {financeSummary.customer_ranking.slice(0, 3).map((customer, idx) => (
-                    <div key={customer.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                          idx === 0 ? 'bg-yellow-400 text-yellow-900' :
-                          idx === 1 ? 'bg-gray-300 text-gray-700' :
-                          'bg-orange-300 text-orange-800'
-                        }`}>{idx + 1}</span>
-                        <span className="font-medium text-sm">{customer.company_name}</span>
-                      </div>
-                      <span className="font-bold text-green-700">{formatCurrency(customer.total_revenue)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              ))}
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Revenue Target Progress */}
       {stats.yearly_target > 0 && (
-        <Card className="bg-gradient-to-r from-indigo-50 to-violet-50 border-indigo-200">
+        <Card className="overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <Target className="w-6 h-6 text-indigo-600" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <Target className="w-6 h-6 text-white" />
+                </div>
                 <div>
-                  <h3 className="font-semibold">Annual Revenue Target</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {formatCurrency(stats.total_revenue)} of {formatCurrency(stats.yearly_target)}
+                  <h3 className="font-semibold text-slate-900">{language === 'tr' ? 'Yıllık Hedef' : 'Annual Target'}</h3>
+                  <p className="text-sm text-slate-500">
+                    {formatCurrency(stats.total_revenue)} / {formatCurrency(stats.yearly_target)}
                   </p>
                 </div>
               </div>
-              <Badge className="bg-indigo-600 text-white">
-                {revenueProgress.toFixed(1)}%
-              </Badge>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-indigo-600">{revenueProgress.toFixed(1)}%</p>
+                <p className="text-xs text-slate-500">{language === 'tr' ? 'tamamlandı' : 'completed'}</p>
+              </div>
             </div>
-            <Progress value={revenueProgress} className="h-3" />
+            <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(revenueProgress, 100)}%` }}
+              />
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* AI Sales Forecast */}
       {forecast && forecast.forecast && (
-        <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Sparkles className="w-5 h-5 text-purple-600" />
-              AI Sales Forecast
-              <Badge variant="outline" className="ml-2 text-xs">
-                {forecast.forecast.confidence}% confidence
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden" data-testid="ai-forecast">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold">AI Sales Forecast</h3>
+                <p className="text-sm text-slate-400">Confidence: {forecast.forecast.confidence}%</p>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Prediction */}
-              <div className="p-4 bg-white rounded-lg border border-purple-100">
-                <p className="text-sm text-muted-foreground mb-1">{forecast.forecast.next_month_name}</p>
-                <div className="flex items-center gap-2">
-                  <p className="text-2xl font-bold text-purple-700">
-                    {formatCurrency(forecast.forecast.predicted_revenue)}
-                  </p>
-                  {forecast.forecast.trend === 'up' ? (
-                    <TrendingUp className="w-5 h-5 text-green-500" />
-                  ) : forecast.forecast.trend === 'down' ? (
-                    <TrendingDown className="w-5 h-5 text-red-500" />
-                  ) : (
-                    <ArrowRight className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ~{forecast.forecast.predicted_orders} orders expected
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-slate-400 mb-1">{language === 'tr' ? 'Tahmin Edilen Gelir' : 'Predicted Revenue'}</p>
+                <p className="text-2xl font-bold text-emerald-400">
+                  {formatCurrency(forecast.forecast.predicted_monthly_revenue)}
                 </p>
               </div>
-              
-              {/* Summary */}
-              <div className="p-4 bg-white rounded-lg border border-purple-100">
-                <p className="text-sm text-muted-foreground mb-1">Monthly Average</p>
-                <p className="text-xl font-semibold text-gray-700">
-                  {formatCurrency(forecast.summary?.avg_monthly_revenue || 0)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {forecast.summary?.avg_monthly_orders || 0} orders/month
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-slate-400 mb-1">Trend</p>
+                <p className={`text-2xl font-bold ${
+                  forecast.forecast.trend === 'up' ? 'text-emerald-400' : 
+                  forecast.forecast.trend === 'down' ? 'text-red-400' : 'text-slate-400'
+                }`}>
+                  {forecast.forecast.trend === 'up' ? '↑ Yükseliş' : 
+                   forecast.forecast.trend === 'down' ? '↓ Düşüş' : '→ Stabil'}
                 </p>
               </div>
-              
-              {/* Total */}
-              <div className="p-4 bg-white rounded-lg border border-purple-100">
-                <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
-                <p className="text-xl font-semibold text-gray-700">
-                  {formatCurrency(forecast.summary?.total_revenue || 0)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {forecast.summary?.total_orders || 0} orders total
+              <div className="bg-white/5 rounded-xl p-4">
+                <p className="text-xs text-slate-400 mb-1">{language === 'tr' ? 'Ana Faktör' : 'Top Factor'}</p>
+                <p className="text-lg text-white">
+                  {forecast.forecast.factors?.[0] || 'Seasonal patterns'}
                 </p>
               </div>
             </div>
-            
-            {/* Mini Chart - Historical Data */}
-            {forecast.historical_data && forecast.historical_data.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-purple-100">
-                <p className="text-xs text-muted-foreground mb-2">Revenue History (Last 6 months)</p>
-                <div className="flex items-end gap-1 h-16">
-                  {forecast.historical_data.slice(-6).map((month, idx) => {
-                    const maxRev = Math.max(...forecast.historical_data.slice(-6).map(m => m.revenue));
-                    const height = maxRev > 0 ? (month.revenue / maxRev) * 100 : 0;
-                    return (
-                      <div key={idx} className="flex-1 flex flex-col items-center">
-                        <div 
-                          className="w-full bg-purple-400 rounded-t transition-all hover:bg-purple-500"
-                          style={{ height: `${Math.max(height, 5)}%` }}
-                          title={`${month.month}: ${formatCurrency(month.revenue)}`}
-                        />
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          {month.month.slice(5)}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
+            {forecast.forecast.recommendation && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <p className="text-sm text-slate-400">{language === 'tr' ? 'Öneri' : 'Recommendation'}</p>
+                <p className="text-white/90 mt-1">{forecast.forecast.recommendation}</p>
               </div>
             )}
           </CardContent>
@@ -592,8 +581,8 @@ const Dashboard = () => {
         {/* Calendar */}
         <Card className="lg:col-span-2 overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <CalendarIcon className="w-5 h-5 text-indigo-600" />
+            <CardTitle className="flex items-center gap-2 text-xl font-['IBM_Plex_Sans']">
+              <CalendarIcon className="w-5 h-5 text-[#002FA7]" />
               Calendar & Visit Planning
             </CardTitle>
           </CardHeader>
@@ -612,7 +601,8 @@ const Dashboard = () => {
                   }}
                   modifiersStyles={{
                     hasEvent: { 
-                      backgroundColor: '#fed7aa',
+                      backgroundColor: '#002FA7',
+                      color: 'white',
                       borderRadius: '50%'
                     }
                   }}
@@ -628,19 +618,17 @@ const Dashboard = () => {
                   <Button 
                     size="sm"
                     onClick={openVisitDialog}
-                    className="bg-indigo-600 hover:bg-indigo-700"
+                    className="bg-[#002FA7] hover:bg-[#002FA7]/90"
                   >
                     <Plus className="w-4 h-4 mr-1" />
                     Schedule Visit
                   </Button>
                 </div>
                 
-                {/* Event List */}
                 {selectedDateEvents.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg">
                     <Clock className="w-10 h-10 mx-auto mb-2 opacity-50" />
                     <p className="text-sm">{t('noEventsToday')}</p>
-                    <p className="text-xs mt-1">{t('addEvent')}</p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">

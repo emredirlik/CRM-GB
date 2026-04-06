@@ -4894,6 +4894,259 @@ Haftalık Performans:
         "report_type": request.report_type
     }
 
+# ===================== ACTIVITY PDF REPORT =====================
+
+class ActivityReportRequest(BaseModel):
+    lead_id: Optional[str] = None  # If None, generate for all leads
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    recipient_email: Optional[str] = None
+
+@api_router.post("/reports/activities/pdf")
+async def generate_activity_pdf_report(request: ActivityReportRequest):
+    """Generate PDF report of activities and optionally send via email"""
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.units import cm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import io
+    import base64
+    
+    # Register font
+    try:
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        font_name = 'DejaVu'
+    except:
+        font_name = 'Helvetica'
+    
+    # Build query
+    query = {}
+    if request.lead_id:
+        query["lead_id"] = request.lead_id
+    if request.start_date:
+        query["created_at"] = {"$gte": request.start_date}
+    if request.end_date:
+        if "created_at" in query:
+            query["created_at"]["$lte"] = request.end_date
+        else:
+            query["created_at"] = {"$lte": request.end_date}
+    
+    # Fetch activities
+    activities = await db.lead_activities.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    if not activities:
+        raise HTTPException(status_code=404, detail="No activities found")
+    
+    # Get lead info for each activity
+    lead_ids = list(set(a.get("lead_id") for a in activities))
+    leads = await db.leads.find({"id": {"$in": lead_ids}}, {"_id": 0, "id": 1, "company_name": 1}).to_list(100)
+    lead_map = {l["id"]: l.get("company_name", "Unknown") for l in leads}
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontName=font_name, fontSize=18)
+    normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontName=font_name, fontSize=10)
+    
+    elements = []
+    
+    # Title
+    title = Paragraph(f"Aktivite Raporu - {datetime.now().strftime('%d.%m.%Y')}", title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Summary
+    outcome_counts = {}
+    for act in activities:
+        outcome = act.get("outcome", "unknown")
+        outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+    
+    summary_text = f"Toplam Aktivite: {len(activities)}"
+    for outcome, count in outcome_counts.items():
+        label = {'positive': 'Olumlu', 'negative': 'Olumsuz', 'postponed': 'Ertelenen', 'ordered': 'Sipariş', 'no_answer': 'Cevapsız'}.get(outcome, outcome)
+        summary_text += f" | {label}: {count}"
+    elements.append(Paragraph(summary_text, normal_style))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Table data
+    table_data = [["Tarih", "Müşteri", "Tip", "Sonuç", "Notlar"]]
+    
+    type_labels = {'visit': 'Ziyaret', 'call': 'Telefon', 'email': 'Email', 'order': 'Sipariş', 'follow_up': 'Takip'}
+    outcome_labels = {'positive': 'Olumlu', 'negative': 'Olumsuz', 'postponed': 'Ertelendi', 'ordered': 'Sipariş', 'no_answer': 'Cevapsız'}
+    
+    for act in activities[:100]:  # Limit to 100 rows
+        date = act.get("created_at", "")[:10] if act.get("created_at") else "-"
+        company = lead_map.get(act.get("lead_id"), "Unknown")[:25]
+        act_type = type_labels.get(act.get("activity_type"), act.get("activity_type", "-"))
+        outcome = outcome_labels.get(act.get("outcome"), act.get("outcome", "-"))
+        notes = (act.get("notes") or "-")[:50]
+        table_data.append([date, company, act_type, outcome, notes])
+    
+    table = Table(table_data, colWidths=[2.5*cm, 5*cm, 2.5*cm, 2.5*cm, 5*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#002FA7')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), font_name),
+        ('FONTNAME', (0, 1), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 1), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 4),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(table)
+    
+    doc.build(elements)
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    
+    # If email requested, send it
+    if request.recipient_email:
+        # Store email log
+        email_log = {
+            "id": str(uuid.uuid4()),
+            "to": request.recipient_email,
+            "subject": f"Aktivite Raporu - {datetime.now().strftime('%d.%m.%Y')}",
+            "body": f"Aktivite raporu ekte bulunmaktadır.\n\nToplam {len(activities)} aktivite.",
+            "type": "activity_report",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "status": "sent",
+            "has_attachment": True
+        }
+        await db.email_log.insert_one(email_log)
+    
+    # Return PDF as base64
+    pdf_base64 = base64.b64encode(pdf_content).decode('utf-8')
+    
+    return {
+        "pdf_base64": pdf_base64,
+        "filename": f"aktivite_raporu_{datetime.now().strftime('%Y%m%d')}.pdf",
+        "total_activities": len(activities),
+        "email_sent": request.recipient_email is not None
+    }
+
+@api_router.get("/reports/activities/download")
+async def download_activity_report(lead_id: Optional[str] = None):
+    """Download activity report as PDF file"""
+    from fastapi.responses import StreamingResponse
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.units import cm
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import io
+    
+    # Register font
+    try:
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        font_name = 'DejaVu'
+    except:
+        font_name = 'Helvetica'
+    
+    # Build query
+    query = {}
+    if lead_id:
+        query["lead_id"] = lead_id
+    
+    # Fetch activities
+    activities = await db.lead_activities.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    if not activities:
+        raise HTTPException(status_code=404, detail="No activities found")
+    
+    # Get lead info
+    lead_ids = list(set(a.get("lead_id") for a in activities))
+    leads = await db.leads.find({"id": {"$in": lead_ids}}, {"_id": 0, "id": 1, "company_name": 1}).to_list(100)
+    lead_map = {l["id"]: l.get("company_name", "Unknown") for l in leads}
+    
+    # Create PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=1.5*cm, rightMargin=1.5*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Title'], fontName=font_name, fontSize=18)
+    normal_style = ParagraphStyle('Normal', parent=styles['Normal'], fontName=font_name, fontSize=10)
+    
+    elements = []
+    
+    # Title
+    if lead_id and lead_id in lead_map:
+        title_text = f"Aktivite Raporu - {lead_map[lead_id]}"
+    else:
+        title_text = f"Tüm Aktiviteler Raporu"
+    
+    title = Paragraph(f"{title_text} - {datetime.now().strftime('%d.%m.%Y')}", title_style)
+    elements.append(title)
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Summary
+    outcome_counts = {}
+    for act in activities:
+        outcome = act.get("outcome", "unknown")
+        outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
+    
+    summary_text = f"Toplam Aktivite: {len(activities)}"
+    for outcome, count in outcome_counts.items():
+        label = {'positive': 'Olumlu', 'negative': 'Olumsuz', 'postponed': 'Ertelenen', 'ordered': 'Sipariş', 'no_answer': 'Cevapsız'}.get(outcome, outcome)
+        summary_text += f" | {label}: {count}"
+    elements.append(Paragraph(summary_text, normal_style))
+    elements.append(Spacer(1, 0.5*cm))
+    
+    # Table
+    table_data = [["Tarih", "Müşteri", "Tip", "Sonuç", "Notlar", "Sonraki Aksiyon"]]
+    
+    type_labels = {'visit': 'Ziyaret', 'call': 'Telefon', 'email': 'Email', 'order': 'Sipariş', 'follow_up': 'Takip'}
+    outcome_labels = {'positive': 'Olumlu', 'negative': 'Olumsuz', 'postponed': 'Ertelendi', 'ordered': 'Sipariş', 'no_answer': 'Cevapsız'}
+    
+    for act in activities[:100]:
+        date = act.get("created_at", "")[:10] if act.get("created_at") else "-"
+        company = lead_map.get(act.get("lead_id"), "Unknown")[:20]
+        act_type = type_labels.get(act.get("activity_type"), act.get("activity_type", "-"))
+        outcome = outcome_labels.get(act.get("outcome"), act.get("outcome", "-"))
+        notes = (act.get("notes") or "-")[:40]
+        next_action = act.get("next_action_date", "-")
+        if act.get("next_action_note"):
+            next_action += f" ({act['next_action_note'][:20]})"
+        table_data.append([date, company, act_type, outcome, notes, next_action[:25]])
+    
+    table = Table(table_data, colWidths=[2*cm, 3.5*cm, 2*cm, 2*cm, 4*cm, 4*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#002FA7')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), font_name),
+        ('FONTNAME', (0, 1), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('TOPPADDING', (0, 1), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 3),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+    ]))
+    elements.append(table)
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    filename = f"aktivite_raporu_{datetime.now().strftime('%Y%m%d')}.pdf"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 # Include router after all endpoints are defined
 app.include_router(api_router)
 
