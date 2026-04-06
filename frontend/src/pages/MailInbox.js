@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +66,7 @@ const MailPage = () => {
   const editorRef = useRef(null);
   const fileInputRef = useRef(null);
   const [emails, setEmails] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('primary');
   const [activeFolder, setActiveFolder] = useState('inbox');
@@ -78,7 +78,7 @@ const MailPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [composeData, setComposeData] = useState({ to: '', cc: '', bcc: '', subject: '', body: '' });
   const [sending, setSending] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('loading');
   const [showCc, setShowCc] = useState(false);
   const [replyMode, setReplyMode] = useState(null);
   const [signature, setSignature] = useState('');
@@ -97,47 +97,61 @@ const MailPage = () => {
     { id: 'trash', icon: Trash2, label: 'Çöp Kutusu', count: 0 },
   ];
 
-  const loadSignature = async () => {
-    try {
-      const response = await axios.get(`${API}/settings/signature`);
-      if (response.data?.signature) {
-        setSignature(response.data.signature);
+  // Load emails on mount
+  useEffect(() => {
+    const loadEmails = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`${API}/mail/inbox`);
+        if (response.data && response.data.emails) {
+          setEmails(response.data.emails.map((e, i) => ({ 
+            ...e, 
+            folder: 'inbox',
+            category: ['primary', 'promotions', 'social', 'updates'][i % 4],
+            starred: Math.random() > 0.7,
+          })));
+          setConnectionStatus('connected');
+        } else {
+          setConnectionStatus('error');
+        }
+      } catch (error) {
+        console.error('Mail fetch error:', error);
+        setConnectionStatus('error');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setSignature(`<br><br>--<br><b>Gewürzberg GmbH</b><br>Premium Gewürze & Binderlösungen`);
-    }
-  };
-
-  const fetchEmails = useCallback(async (showRefreshing = false) => {
-    if (showRefreshing) setRefreshing(true);
-    else setLoading(true);
+    };
     
+    loadEmails();
+    
+    // Load signature
+    axios.get(`${API}/settings/signature`).then(res => {
+      if (res.data?.signature) setSignature(res.data.signature);
+    }).catch(() => {
+      setSignature(`<br><br>--<br><b>Gewürzberg GmbH</b><br>Premium Gewürze & Binderlösungen`);
+    });
+  }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
     try {
-      console.log('Fetching emails...');
       const response = await axios.get(`${API}/mail/inbox`);
-      console.log('API Response:', response.data);
-      if (response.data.emails) {
-        const mappedEmails = response.data.emails.map((e, i) => ({ 
+      if (response.data && response.data.emails) {
+        setEmails(response.data.emails.map((e, i) => ({ 
           ...e, 
           folder: 'inbox',
           category: ['primary', 'promotions', 'social', 'updates'][i % 4],
           starred: Math.random() > 0.7,
-          hasAttachment: Math.random() > 0.6,
-          attachmentCount: Math.floor(Math.random() * 5) + 1,
-          messageCount: Math.floor(Math.random() * 3) + 1
-        }));
-        console.log('Mapped emails count:', mappedEmails.length);
-        setEmails(mappedEmails);
+        })));
+        setConnectionStatus('connected');
+        toast.success('Mailler güncellendi');
       }
-      setConnectionStatus(response.data.status || 'connected');
     } catch (error) {
-      console.error('Fetch error:', error);
-      setConnectionStatus('error');
+      toast.error('Mailler yüklenemedi');
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  };
 
   const saveSignature = async () => {
     try {
@@ -148,15 +162,6 @@ const MailPage = () => {
       toast.error('İmza kaydedilemedi');
     }
   };
-
-  // Initial fetch on mount
-  useEffect(() => {
-    fetchEmails();
-    loadSignature();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleRefresh = () => fetchEmails(true);
 
   const handleViewEmail = async (email) => {
     setSelectedEmail(email);
