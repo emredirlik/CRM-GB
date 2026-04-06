@@ -68,6 +68,7 @@ const texts = {
     healthyCustomers: 'Sağlıklı',
     revenue: 'Gelir',
     viewDetails: 'Detayları Gör',
+    salesPerformanceByMonth: 'Aylara göre satış performansı',
     contactNow: 'Şimdi İletişime Geç',
     sendEmail: 'Mail Gönder',
     jan: 'Oca', feb: 'Şub', mar: 'Mar', apr: 'Nis', may: 'May', jun: 'Haz',
@@ -111,6 +112,7 @@ const texts = {
     viewDetails: 'View Details',
     contactNow: 'Contact Now',
     sendEmail: 'Send Email',
+    salesPerformanceByMonth: 'Sales performance by month',
     jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr', may: 'May', jun: 'Jun',
     jul: 'Jul', aug: 'Aug', sep: 'Sep', oct: 'Oct', nov: 'Nov', dec: 'Dec'
   },
@@ -152,6 +154,7 @@ const texts = {
     viewDetails: 'Details anzeigen',
     contactNow: 'Jetzt kontaktieren',
     sendEmail: 'E-Mail senden',
+    salesPerformanceByMonth: 'Verkaufsleistung nach Monat',
     jan: 'Jan', feb: 'Feb', mar: 'Mär', apr: 'Apr', may: 'Mai', jun: 'Jun',
     jul: 'Jul', aug: 'Aug', sep: 'Sep', oct: 'Okt', nov: 'Nov', dec: 'Dez'
   }
@@ -531,7 +534,7 @@ const AIAnalytics = () => {
                 {t.seasonalTrends}
               </CardTitle>
               <CardDescription>
-                {language === 'tr' ? 'Aylara göre satış performansı' : 'Sales performance by month'}
+                                {t.salesPerformanceByMonth}
               </CardDescription>
             </CardHeader>
             <CardContent>

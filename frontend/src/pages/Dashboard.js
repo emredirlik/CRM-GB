@@ -434,25 +434,25 @@ const Dashboard = () => {
             <CardHeader className="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white pb-4">
               <CardTitle className="flex items-center gap-2">
                 <Euro className="w-5 h-5" />
-                {language === 'tr' ? 'Finansal Özet' : 'Financial Summary'}
+                                {t('financialSummary')}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="grid grid-cols-2 md:grid-cols-4">
                 <div className="p-4 border-r border-b border-slate-100">
-                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Toplam Ciro' : 'Total Revenue'}</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('totalRevenue')}</p>
                   <p className="text-xl md:text-2xl font-bold text-slate-900">{formatCurrency(financeSummary.total_revenue)}</p>
                 </div>
                 <div className="p-4 border-r border-b border-slate-100 bg-emerald-50/30">
-                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Ödenen' : 'Paid'}</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('paid')}</p>
                   <p className="text-xl md:text-2xl font-bold text-emerald-600">{formatCurrency(financeSummary.total_paid)}</p>
                 </div>
                 <div className="p-4 border-r border-b border-slate-100">
-                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Bekleyen' : 'Pending'}</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('pendingPayment')}</p>
                   <p className="text-xl md:text-2xl font-bold text-amber-600">{formatCurrency(financeSummary.total_pending)}</p>
                 </div>
                 <div className="p-4 border-b border-slate-100 bg-indigo-50/30">
-                  <p className="text-xs text-slate-500 mb-1">{language === 'tr' ? 'Ödeme Oranı' : 'Payment Rate'}</p>
+                  <p className="text-xs text-slate-500 mb-1">{t('paymentRate')}</p>
                   <p className="text-xl md:text-2xl font-bold text-indigo-600">
                     {financeSummary.total_revenue > 0 
                       ? Math.round((financeSummary.total_paid / financeSummary.total_revenue) * 100) 
@@ -508,7 +508,7 @@ const Dashboard = () => {
                   <Target className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-900">{language === 'tr' ? 'Yıllık Hedef' : 'Annual Target'}</h3>
+                  <h3 className="font-semibold text-slate-900">{t('annualTarget')}</h3>
                   <p className="text-sm text-slate-500">
                     {formatCurrency(stats.total_revenue)} / {formatCurrency(stats.yearly_target)}
                   </p>
@@ -516,7 +516,7 @@ const Dashboard = () => {
               </div>
               <div className="text-right">
                 <p className="text-3xl font-bold text-indigo-600">{revenueProgress.toFixed(1)}%</p>
-                <p className="text-xs text-slate-500">{language === 'tr' ? 'tamamlandı' : 'completed'}</p>
+                <p className="text-xs text-slate-500">{t('completed')}</p>
               </div>
             </div>
             <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -544,7 +544,7 @@ const Dashboard = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white/5 rounded-xl p-4 backdrop-blur">
-                <p className="text-xs text-indigo-300 mb-1">{language === 'tr' ? 'Tahmin Edilen Gelir' : 'Predicted Revenue'}</p>
+                <p className="text-xs text-indigo-300 mb-1">{t('predictedRevenue')}</p>
                 <p className="text-2xl font-bold text-emerald-400">
                   {formatCurrency(forecast.forecast.predicted_monthly_revenue)}
                 </p>
@@ -560,7 +560,7 @@ const Dashboard = () => {
                 </p>
               </div>
               <div className="bg-white/5 rounded-xl p-4 backdrop-blur">
-                <p className="text-xs text-indigo-300 mb-1">{language === 'tr' ? 'Ana Faktör' : 'Top Factor'}</p>
+                <p className="text-xs text-indigo-300 mb-1">{t('topFactor')}</p>
                 <p className="text-lg text-white">
                   {forecast.forecast.factors?.[0] || 'Seasonal patterns'}
                 </p>
@@ -568,7 +568,7 @@ const Dashboard = () => {
             </div>
             {forecast.forecast.recommendation && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <p className="text-sm text-indigo-300">{language === 'tr' ? 'Öneri' : 'Recommendation'}</p>
+                <p className="text-sm text-indigo-300">{t('recommendation')}</p>
                 <p className="text-white/90 mt-1">{forecast.forecast.recommendation}</p>
               </div>
             )}

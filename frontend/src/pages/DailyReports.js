@@ -138,6 +138,9 @@ const texts = {
     emailSent: 'Email sent successfully',
     emailFailed: 'Failed to send email',
     emailRequired: 'Email address is required',
+    noMonthlyReports: 'No reports for this month',
+    monthlyDownloaded: 'reports downloaded as monthly PDF',
+    downloadMonthlyReport: 'Download Monthly Report',
   },
   tr: {
     title: 'Günlük Raporlar',
@@ -195,6 +198,9 @@ const texts = {
     emailSent: 'E-posta başarıyla gönderildi',
     emailFailed: 'E-posta gönderilemedi',
     emailRequired: 'E-posta adresi zorunludur',
+    noMonthlyReports: 'Bu ay için rapor yok',
+    monthlyDownloaded: 'rapor aylık PDF olarak indirildi',
+    downloadMonthlyReport: 'Aylık Rapor İndir',
   },
   de: {
     title: 'Tagesberichte',
@@ -252,6 +258,9 @@ const texts = {
     emailSent: 'E-Mail erfolgreich gesendet',
     emailFailed: 'E-Mail konnte nicht gesendet werden',
     emailRequired: 'E-Mail-Adresse ist erforderlich',
+    noMonthlyReports: 'Keine Berichte für diesen Monat',
+    monthlyDownloaded: 'Berichte als monatliches PDF heruntergeladen',
+    downloadMonthlyReport: 'Monatsbericht herunterladen',
   },
   pl: {
     title: 'Raporty dzienne',
@@ -309,6 +318,9 @@ const texts = {
     emailSent: 'E-mail wysłany pomyślnie',
     emailFailed: 'Nie udało się wysłać e-maila',
     emailRequired: 'Adres e-mail jest wymagany',
+    noMonthlyReports: 'Brak raportów za ten miesiąc',
+    monthlyDownloaded: 'raporty pobrane jako miesięczny PDF',
+    downloadMonthlyReport: 'Pobierz raport miesięczny',
   }
 };
 
@@ -540,8 +552,7 @@ const DailyReports = () => {
     const monthReports = reports.filter(r => r.date && r.date.startsWith(monthStr));
     
     if (monthReports.length === 0) {
-      const noMonthlyReports = language === 'tr' ? 'Bu ay için rapor yok' : language === 'de' ? 'Keine Berichte für diesen Monat' : 'No reports for this month';
-      toast.error(t.error, { description: noMonthlyReports });
+      toast.error(t.error, { description: t.noMonthlyReports });
       return;
     }
 
@@ -557,8 +568,7 @@ const DailyReports = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      const monthlyDownloaded = language === 'tr' ? `${monthReports.length} rapor aylık PDF olarak indirildi` : language === 'de' ? `${monthReports.length} Berichte als monatliches PDF heruntergeladen` : `${monthReports.length} reports downloaded as monthly PDF`;
-      toast.success(monthlyDownloaded);
+      toast.success(`${monthReports.length} ${t.monthlyDownloaded}`);
     } catch (error) {
       toast.error(t.error, { description: t.couldNotDownload });
     }
@@ -750,7 +760,7 @@ const DailyReports = () => {
             <CardTitle className="text-lg">{t.recentReports}</CardTitle>
             <Button variant="outline" size="sm" onClick={downloadMonthlyPdf}>
               <FileDown className="w-4 h-4 mr-2" />
-              {language === 'tr' ? 'Aylık Rapor İndir' : language === 'de' ? 'Monatsbericht herunterladen' : 'Download Monthly Report'}
+                            {t.downloadMonthlyReport}
             </Button>
           </div>
         </CardHeader>
