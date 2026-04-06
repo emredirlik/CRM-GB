@@ -217,6 +217,21 @@ code {
     .stat-value {
         @apply text-xl;
     }
+    
+    /* Better mobile card spacing */
+    .space-y-6 {
+        @apply space-y-4;
+    }
+    
+    /* Compact headers on mobile */
+    h1.text-4xl {
+        @apply text-2xl;
+    }
+    
+    /* Better button sizing on mobile */
+    .flex.gap-2 button {
+        @apply text-xs px-3;
+    }
 }
 
 /* Touch-friendly buttons */

@@ -90,19 +90,24 @@ Features:
 - [x] **User-defined search keywords** - Custom keyword input field
 - [x] **Keyword presets** - Quick buttons for common searches
 - [x] **Romania & Spain** added to quick location buttons
-- [x] DHL Official API integration (pending key activation)
+- [x] **DHL Official API integration** - Working with new key (KmQLlhNJirCHXDovLQAZ9AJt7PbR6nGK)
 - [x] Dashboard agenda layout fix (overflow issues)
 - [x] Multi-product orders support
 - [x] WhatsApp sharing format (no total price)
 - [x] PDF Turkish/Polish character support
+- [x] **Multi-Language Support** - Full TR/EN/DE/PL translation coverage
+- [x] **Gmail-like Mail Inbox** - Dark theme, categories, compose dialog, signature settings
+- [x] **Admin User Management Page** - Restricted to admin users
+- [x] **Product Videos Tab** - New section for product video management
+- [x] **Mobile Responsive Overhaul** - Card-based layout, no horizontal scroll
+- [x] **Orders/Leads Card View** - Modern card layout instead of tables
+- [x] **Mobile Header Branding** - "Gewürzberg GmbH" and username visible
 
 ### Pending
-- [ ] DHL API key activation (401 error - waiting on DHL)
-- [ ] UI Modernization (design_guidelines.json exists)
 - [ ] Monthly Reports merged single PDF
-- [ ] User Management in Settings
-- [ ] Email Signature Configuration
+- [ ] Email Signature Configuration (backend wiring)
 - [ ] Download All Customers PDF
+- [ ] Product Videos Drag & Drop + WhatsApp sharing validation
 
 ## API Endpoints
 
@@ -145,7 +150,7 @@ Features:
 
 ## Known Issues
 - Email features are MOCKED (logged to database, not sent)
-- DHL API returns 401 (key pending activation)
+- Greek Lead Finder results are hardcoded (60 factories)
 
 ## Test Credentials
 - **Username**: admin

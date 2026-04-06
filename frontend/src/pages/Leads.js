@@ -307,108 +307,135 @@ const Leads = () => {
         />
       </div>
 
-      {/* Leads Table */}
-      <Card data-testid="leads-table-card">
-        <CardContent className="p-0">
-          {filteredLeads.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground" data-testid="no-leads">
-              <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{searchTerm ? t('noResults') : t('noLeadsYet')}</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table" data-testid="leads-table">
-                <thead>
-                  <tr>
-                    <th className="w-10"></th>
-                    <th>{t('companyName')}</th>
-                    <th>{t('firstName')} {t('lastName')}</th>
-                    <th>{t('email')}</th>
-                    <th>{t('taxNumber')}</th>
-                    <th>{t('city')}</th>
-                    <th>{t('country')}</th>
-                    <th className="text-right">{t('actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLeads.map((lead) => (
-                    <tr key={lead.id} data-testid={`lead-row-${lead.id}`} className={selectedLeads.has(lead.id) ? 'bg-orange-50' : ''}>
-                      <td>
-                        <Checkbox
-                          checked={selectedLeads.has(lead.id)}
-                          onCheckedChange={() => toggleLeadSelection(lead.id)}
-                        />
-                      </td>
-                      <td className="font-medium">{lead.company_name}</td>
-                      <td>{lead.first_name} {lead.last_name}</td>
-                      <td className="text-muted-foreground">{lead.email}</td>
-                      <td className="text-muted-foreground font-mono text-xs">{lead.tax_number}</td>
-                      <td>{lead.city}</td>
-                      <td>{lead.country}</td>
-                      <td>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openGoogleMaps(lead)}
-                            title="Google Maps'te Aç"
-                            data-testid={`navigate-${lead.id}`}
-                          >
-                            <Navigation className="w-4 h-4 text-orange-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openLeadDetails(lead)}
-                            title="View Details"
-                            data-testid={`view-details-${lead.id}`}
-                          >
-                            <Eye className="w-4 h-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => downloadLeadPdf(lead.id)}
-                            title="Download PDF"
-                            data-testid={`download-pdf-${lead.id}`}
-                          >
-                            <FileDown className="w-4 h-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSendEmail(lead)}
-                            data-testid={`send-email-${lead.id}`}
-                          >
-                            <Mail className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(lead)}
-                            data-testid={`edit-lead-${lead.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(lead)}
-                            className="text-destructive hover:text-destructive"
-                            data-testid={`delete-lead-${lead.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+      {/* Leads List */}
+      <div data-testid="leads-table-card">
+        {filteredLeads.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-muted-foreground" data-testid="no-leads">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>{searchTerm ? t('noResults') : t('noLeadsYet')}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3" data-testid="leads-table">
+            {filteredLeads.map((lead) => (
+              <Card 
+                key={lead.id} 
+                className={`hover:shadow-md transition-shadow ${selectedLeads.has(lead.id) ? 'ring-2 ring-orange-400 bg-orange-50/50' : ''}`}
+                data-testid={`lead-row-${lead.id}`}
+              >
+                <CardContent className="p-4">
+                  {/* Header: Checkbox & Company */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <Checkbox
+                      checked={selectedLeads.has(lead.id)}
+                      onCheckedChange={() => toggleLeadSelection(lead.id)}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          {lead.first_name?.[0]}{lead.last_name?.[0]}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-sm truncate">{lead.company_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-3 pl-7">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t('email')}</p>
+                      <p className="truncate text-xs font-medium">{lead.email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{t('city')}</p>
+                      <p className="truncate text-xs font-medium">{lead.city}, {lead.country}</p>
+                    </div>
+                    {lead.tax_number && (
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground">{t('taxNumber')}</p>
+                        <p className="font-mono text-xs">{lead.tax_number}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50 pl-7">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openGoogleMaps(lead)}
+                        title="Google Maps"
+                        className="h-8 w-8 p-0"
+                        data-testid={`navigate-${lead.id}`}
+                      >
+                        <Navigation className="w-4 h-4 text-orange-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openLeadDetails(lead)}
+                        title="Detay"
+                        className="h-8 w-8 p-0"
+                        data-testid={`view-details-${lead.id}`}
+                      >
+                        <Eye className="w-4 h-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => downloadLeadPdf(lead.id)}
+                        title="PDF"
+                        className="h-8 w-8 p-0"
+                        data-testid={`download-pdf-${lead.id}`}
+                      >
+                        <FileDown className="w-4 h-4 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSendEmail(lead)}
+                        title="Email"
+                        className="h-8 w-8 p-0"
+                        data-testid={`send-email-${lead.id}`}
+                      >
+                        <Mail className="w-4 h-4 text-indigo-600" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(lead)}
+                        className="h-8 w-8 p-0"
+                        data-testid={`edit-lead-${lead.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(lead)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        data-testid={`delete-lead-${lead.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

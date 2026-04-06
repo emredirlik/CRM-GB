@@ -475,10 +475,10 @@ const Dashboard = () => {
               Calendar & Visit Planning
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 overflow-x-auto">
-            <div className="flex flex-col md:flex-row gap-6">
+          <CardContent className="space-y-4">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Calendar Component */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 w-full lg:w-auto">
                 <Calendar
                   mode="single"
                   selected={selectedDate}

@@ -369,128 +369,132 @@ const Orders = () => {
         />
       </div>
 
-      {/* Orders Table */}
-      <Card data-testid="orders-table-card">
-        <CardContent className="p-0">
-          {filteredOrders.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground" data-testid="no-orders">
-              <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>{searchTerm ? 'Sipariş bulunamadı' : 'Henüz sipariş yok'}</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table" data-testid="orders-table">
-                <thead>
-                  <tr>
-                    <th>Ürünler</th>
-                    <th>Müşteri</th>
-                    <th>Miktar</th>
-                    <th>Durum</th>
-                    <th className="text-right">İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} data-testid={`order-row-${order.id}`}>
-                      <td>
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <span className="font-medium">{formatOrderProducts(order)}</span>
-                            {order.products && order.products.length > 1 && (
-                              <p className="text-xs text-muted-foreground">
-                                {order.products.map(p => p.product_code).join(', ')}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div>
-                          <p className="font-medium">{order.company_name}</p>
-                          <p className="text-xs text-muted-foreground">{order.lead_name}</p>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="font-medium">{formatOrderQuantity(order)}</span>
-                      </td>
-                      <td>
-                        <Select 
-                          value={order.status} 
-                          onValueChange={(value) => handleStatusChange(order.id, value)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <Badge className={`${statusColors[order.status]} border-0`}>
-                              {statusLabels[language]?.[order.status] || order.status}
+      {/* Orders List */}
+      <div data-testid="orders-table-card">
+        {filteredOrders.length === 0 ? (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-muted-foreground" data-testid="no-orders">
+                <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>{searchTerm ? 'Sipariş bulunamadı' : 'Henüz sipariş yok'}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3" data-testid="orders-table">
+            {filteredOrders.map((order) => (
+              <Card key={order.id} className="hover:shadow-md transition-shadow" data-testid={`order-row-${order.id}`}>
+                <CardContent className="p-4">
+                  {/* Header: Product & Status */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <Package className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{formatOrderProducts(order)}</p>
+                        {order.products && order.products.length > 1 && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {order.products.map(p => p.product_code).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Select 
+                      value={order.status} 
+                      onValueChange={(value) => handleStatusChange(order.id, value)}
+                    >
+                      <SelectTrigger className="w-auto h-7 px-2">
+                        <Badge className={`${statusColors[order.status]} border-0 text-xs`}>
+                          {statusLabels[language]?.[order.status] || order.status}
+                        </Badge>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(statusColors).map(status => (
+                          <SelectItem key={status} value={status}>
+                            <Badge className={`${statusColors[status]} border-0`}>
+                              {statusLabels[language]?.[status]}
                             </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.keys(statusColors).map(status => (
-                              <SelectItem key={status} value={status}>
-                                <Badge className={`${statusColors[status]} border-0`}>
-                                  {statusLabels[language]?.[status]}
-                                </Badge>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openPreview(order)}
-                            title="Önizleme"
-                            data-testid={`preview-${order.id}`}
-                          >
-                            <Eye className="w-4 h-4 text-indigo-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => sendWhatsApp(order.id)}
-                            title="WhatsApp'tan Gönder"
-                            data-testid={`whatsapp-${order.id}`}
-                          >
-                            <MessageCircle className="w-4 h-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => downloadPdf(order.id)}
-                            title="PDF İndir"
-                            data-testid={`download-pdf-${order.id}`}
-                          >
-                            <FileDown className="w-4 h-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(order)}
-                            data-testid={`edit-order-${order.id}`}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(order)}
-                            className="text-destructive hover:text-destructive"
-                            data-testid={`delete-order-${order.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Customer & Quantity Info */}
+                  <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Müşteri</p>
+                      <p className="font-medium truncate">{order.company_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{order.lead_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Miktar</p>
+                      <p className="font-semibold text-indigo-600">{formatOrderQuantity(order)}</p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openPreview(order)}
+                        title="Önizleme"
+                        className="h-8 w-8 p-0"
+                        data-testid={`preview-${order.id}`}
+                      >
+                        <Eye className="w-4 h-4 text-indigo-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => sendWhatsApp(order.id)}
+                        title="WhatsApp"
+                        className="h-8 w-8 p-0"
+                        data-testid={`whatsapp-${order.id}`}
+                      >
+                        <MessageCircle className="w-4 h-4 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => downloadPdf(order.id)}
+                        title="PDF İndir"
+                        className="h-8 w-8 p-0"
+                        data-testid={`download-pdf-${order.id}`}
+                      >
+                        <FileDown className="w-4 h-4 text-blue-600" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(order)}
+                        className="h-8 w-8 p-0"
+                        data-testid={`edit-order-${order.id}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(order)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        data-testid={`delete-order-${order.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Add/Edit Dialog - Multi-Product */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
