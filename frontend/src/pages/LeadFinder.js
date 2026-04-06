@@ -141,7 +141,6 @@ const LeadFinder = () => {
   const { language } = useLanguage();
   const t = texts[language] || texts.en;
   
-  const [activeTab, setActiveTab] = useState('database'); // 'database' or 'ai-search'
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [country, setCountry] = useState('Germany');
@@ -150,7 +149,7 @@ const LeadFinder = () => {
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   
-  // Database tab states
+  // Database states (for Germany)
   const [dbLeads, setDbLeads] = useState([]);
   const [dbRegions, setDbRegions] = useState([]);
   const [dbLoading, setDbLoading] = useState(false);
@@ -160,12 +159,12 @@ const LeadFinder = () => {
 
   const cities = COUNTRIES[country] || [];
   
-  // Fetch database leads
+  // Fetch database leads when Germany is selected
   const fetchDatabaseLeads = async () => {
     setDbLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedRegion) params.append('region', selectedRegion);
+      if (selectedRegion && selectedRegion !== 'all') params.append('region', selectedRegion);
       if (searchQuery) params.append('search', searchQuery);
       
       const response = await axios.get(`${API}/potential-leads?${params.toString()}`);
@@ -178,17 +177,12 @@ const LeadFinder = () => {
     }
   };
   
-  // Initial load for database tab
+  // Load database when Germany is selected
   React.useEffect(() => {
-    if (activeTab === 'database') {
+    if (country === 'Germany') {
       fetchDatabaseLeads();
     }
-  }, [activeTab, selectedRegion]);
-  
-  // Search in database
-  const handleDbSearch = () => {
-    fetchDatabaseLeads();
-  };
+  }, [country, selectedRegion]);
   
   // Convert potential lead to customer
   const convertToCustomer = async (leadId) => {
@@ -378,149 +372,7 @@ const LeadFinder = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
-        <Button
-          variant={activeTab === 'database' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('database')}
-          className={activeTab === 'database' ? 'bg-indigo-600 text-white' : ''}
-        >
-          <Building2 className="w-4 h-4 mr-2" />
-          Almanya Veritabanı ({dbLeads.length})
-        </Button>
-        <Button
-          variant={activeTab === 'ai-search' ? 'default' : 'ghost'}
-          onClick={() => setActiveTab('ai-search')}
-          className={activeTab === 'ai-search' ? 'bg-purple-600 text-white' : ''}
-        >
-          <Sparkles className="w-4 h-4 mr-2" />
-          AI ile Ara
-        </Button>
-      </div>
-
-      {/* Database Tab Content */}
-      {activeTab === 'database' && (
-        <Card className="overflow-hidden border-0 shadow-xl">
-          <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-white">
-                <Building2 className="w-5 h-5" />
-                <span className="font-semibold">Almanya Döner & Et Fabrikaları Veritabanı</span>
-                <Badge className="bg-white/20 text-white border-0 ml-2">{dbLeads.length} Firma</Badge>
-              </div>
-              {selectedDbLeads.size > 0 && (
-                <Button 
-                  size="sm" 
-                  onClick={bulkConvertLeads}
-                  disabled={importing}
-                  className="bg-white text-amber-600 hover:bg-amber-50"
-                >
-                  {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
-                  {selectedDbLeads.size} Firma Ekle
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <CardContent className="p-4">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex-1 min-w-[200px]">
-                <Input
-                  placeholder="Firma adı veya şehir ara..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleDbSearch()}
-                />
-              </div>
-              <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Tüm Bölgeler" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tüm Bölgeler</SelectItem>
-                  {dbRegions.map((region) => (
-                    <SelectItem key={region} value={region}>{region}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleDbSearch} variant="outline">
-                <Search className="w-4 h-4 mr-2" />
-                Filtrele
-              </Button>
-            </div>
-            
-            {/* Results Grid */}
-            {dbLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
-                {dbLeads.map((lead) => (
-                  <div 
-                    key={lead.id} 
-                    className={`p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer ${
-                      selectedDbLeads.has(lead.id) ? 'border-amber-500 bg-amber-50' : 'border-gray-200'
-                    } ${lead.status === 'converted' ? 'opacity-60' : ''}`}
-                    onClick={() => {
-                      if (lead.status !== 'converted') {
-                        const newSelected = new Set(selectedDbLeads);
-                        if (newSelected.has(lead.id)) {
-                          newSelected.delete(lead.id);
-                        } else {
-                          newSelected.add(lead.id);
-                        }
-                        setSelectedDbLeads(newSelected);
-                      }
-                    }}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-sm line-clamp-2">{lead.company_name}</h3>
-                      {lead.status === 'converted' ? (
-                        <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
-                          <CheckCircle className="w-3 h-3 mr-1" /> Eklendi
-                        </Badge>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 w-7 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            convertToCustomer(lead.id);
-                          }}
-                        >
-                          <Plus className="w-4 h-4 text-amber-600" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="space-y-1 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{lead.city}</span>
-                        {lead.region && <span className="text-amber-600">({lead.region})</span>}
-                      </div>
-                      {lead.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          <span>{lead.phone}</span>
-                        </div>
-                      )}
-                      {lead.address && (
-                        <div className="text-xs text-gray-400 truncate">{lead.address}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* AI Search Tab Content */}
-      {activeTab === 'ai-search' && (
+      {/* Main Search Card - AI Search */}
       <Card className="overflow-hidden border-0 shadow-xl shadow-indigo-500/10">
         <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 p-4">
           <div className="flex items-center gap-2 text-white">
@@ -646,11 +498,127 @@ const LeadFinder = () => {
           </div>
         </CardContent>
       </Card>
-      )}
-      {/* End of AI Search Tab - Search Form */}
 
-      {/* Results Section - Inside AI Search Tab */}
-      {activeTab === 'ai-search' && results.length > 0 && (
+      {/* Germany Database - Show when Germany is selected */}
+      {country === 'Germany' && (
+        <Card className="overflow-hidden border-0 shadow-xl">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white">
+                <Building2 className="w-5 h-5" />
+                <span className="font-semibold">Almanya Döner & Et Fabrikaları Veritabanı</span>
+                <Badge className="bg-white/20 text-white border-0 ml-2">{dbLeads.length} Firma</Badge>
+              </div>
+              {selectedDbLeads.size > 0 && (
+                <Button 
+                  size="sm" 
+                  onClick={bulkConvertLeads}
+                  disabled={importing}
+                  className="bg-white text-amber-600 hover:bg-amber-50"
+                >
+                  {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  {selectedDbLeads.size} Firma Ekle
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <CardContent className="p-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  placeholder="Firma adı veya şehir ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchDatabaseLeads()}
+                />
+              </div>
+              <Select value={selectedRegion || "all"} onValueChange={(v) => setSelectedRegion(v === "all" ? "" : v)}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tüm Bölgeler" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Bölgeler</SelectItem>
+                  {dbRegions.map((region) => (
+                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={fetchDatabaseLeads} variant="outline">
+                <Search className="w-4 h-4 mr-2" />
+                Filtrele
+              </Button>
+            </div>
+            
+            {/* Results Grid */}
+            {dbLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
+                {dbLeads.map((lead) => (
+                  <div 
+                    key={lead.id} 
+                    className={`p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer ${
+                      selectedDbLeads.has(lead.id) ? 'border-amber-500 bg-amber-50' : 'border-gray-200'
+                    } ${lead.status === 'converted' ? 'opacity-60' : ''}`}
+                    onClick={() => {
+                      if (lead.status !== 'converted') {
+                        const newSelected = new Set(selectedDbLeads);
+                        if (newSelected.has(lead.id)) {
+                          newSelected.delete(lead.id);
+                        } else {
+                          newSelected.add(lead.id);
+                        }
+                        setSelectedDbLeads(newSelected);
+                      }
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold text-sm line-clamp-2">{lead.company_name}</h3>
+                      {lead.status === 'converted' ? (
+                        <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Eklendi
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            convertToCustomer(lead.id);
+                          }}
+                        >
+                          <Plus className="w-4 h-4 text-amber-600" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{lead.city}</span>
+                        {lead.region && <span className="text-amber-600">({lead.region})</span>}
+                      </div>
+                      {lead.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          <span>{lead.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Search Results Section */}
+      {results.length > 0 && (
         <Card className="border-0 shadow-xl shadow-gray-200/50">
           <div className="bg-gradient-to-r from-gray-50 to-white p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -758,8 +726,8 @@ const LeadFinder = () => {
         </Card>
       )}
 
-      {/* Empty State - Only for AI Search */}
-      {activeTab === 'ai-search' && !loading && results.length === 0 && (
+      {/* Empty State - When no results and not Germany */}
+      {country !== 'Germany' && !loading && results.length === 0 && (
         <Card className="border-2 border-dashed border-gray-200">
           <CardContent className="py-16 text-center">
             <div className="inline-flex p-4 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mb-4">
@@ -771,8 +739,8 @@ const LeadFinder = () => {
         </Card>
       )}
 
-      {/* Loading State - Only for AI Search */}
-      {activeTab === 'ai-search' && loading && (
+      {/* Loading State */}
+      {loading && (
         <Card className="border-0 shadow-xl">
           <CardContent className="py-16 text-center">
             <div className="inline-flex p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 animate-pulse">

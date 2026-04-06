@@ -726,13 +726,14 @@ const ProductVideos = () => {
               <div className="space-y-2">
                 <Label>Ürün</Label>
                 <Select 
-                  value={formData.product_id} 
-                  onValueChange={(val) => setFormData({ ...formData, product_id: val })}
+                  value={formData.product_id || "none"} 
+                  onValueChange={(val) => setFormData({ ...formData, product_id: val === "none" ? "" : val })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Ürün seçin" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">Ürün Yok</SelectItem>
                     {products.map(product => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}

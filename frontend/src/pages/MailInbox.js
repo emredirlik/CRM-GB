@@ -113,9 +113,11 @@ const MailPage = () => {
     else setLoading(true);
     
     try {
+      console.log('Fetching emails...');
       const response = await axios.get(`${API}/mail/inbox`);
+      console.log('API Response:', response.data);
       if (response.data.emails) {
-        setEmails(response.data.emails.map((e, i) => ({ 
+        const mappedEmails = response.data.emails.map((e, i) => ({ 
           ...e, 
           folder: 'inbox',
           category: ['primary', 'promotions', 'social', 'updates'][i % 4],
@@ -123,10 +125,13 @@ const MailPage = () => {
           hasAttachment: Math.random() > 0.6,
           attachmentCount: Math.floor(Math.random() * 5) + 1,
           messageCount: Math.floor(Math.random() * 3) + 1
-        })));
+        }));
+        console.log('Mapped emails count:', mappedEmails.length);
+        setEmails(mappedEmails);
       }
       setConnectionStatus(response.data.status || 'connected');
     } catch (error) {
+      console.error('Fetch error:', error);
       setConnectionStatus('error');
     } finally {
       setLoading(false);
@@ -148,7 +153,8 @@ const MailPage = () => {
   useEffect(() => {
     fetchEmails();
     loadSignature();
-  }, [fetchEmails]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = () => fetchEmails(true);
 
@@ -283,12 +289,13 @@ const MailPage = () => {
   };
 
   const filteredEmails = emails.filter(email => {
+    // Simple filter - show all emails for inbox
     if (activeFolder === 'starred') return email.starred;
     if (activeFolder === 'sent') return email.folder === 'sent';
     if (activeFolder === 'trash') return email.folder === 'trash';
     if (activeFolder === 'all') return true;
-    // For inbox, show all emails (category filtering removed for now)
-    return email.folder === 'inbox';
+    // Default: show all inbox emails
+    return true;
   }).filter(email => {
     if (!searchTerm) return true;
     return email.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
