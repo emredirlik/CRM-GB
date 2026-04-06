@@ -947,10 +947,10 @@ const Leads = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsBulkEmailOpen(false)}>
-              İptal
+              {t('cancel')}
             </Button>
             <Button onClick={sendBulkEmail} disabled={sendingBulkEmail}>
-              {sendingBulkEmail ? 'Gönderiliyor...' : `${selectedLeads.size} Email Gönder`}
+              {sendingBulkEmail ? t('sendingEmail') : `${selectedLeads.size} ${t('sendMail')}`}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -962,10 +962,10 @@ const Leads = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-purple-600" />
-              Aktivite Geçmişi - {activityLead?.company_name}
+              {t('activityHistory')} - {activityLead?.company_name}
             </DialogTitle>
             <DialogDescription>
-              Müşteriyle yapılan tüm görüşme ve ziyaret geçmişi
+              {t('allActivities')}
             </DialogDescription>
           </DialogHeader>
           
@@ -975,11 +975,11 @@ const Leads = () => {
               <CardContent className="p-4 space-y-3">
                 <h4 className="font-semibold text-sm flex items-center gap-2">
                   <Plus className="w-4 h-4" />
-                  Yeni Aktivite Ekle
+                  {t('newActivity')}
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Aktivite Tipi</Label>
+                    <Label className="text-xs">{t('activityType')}</Label>
                     <Select 
                       value={activityForm.activity_type} 
                       onValueChange={(val) => setActivityForm({...activityForm, activity_type: val})}
@@ -988,16 +988,16 @@ const Leads = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="visit">Ziyaret</SelectItem>
-                        <SelectItem value="call">Telefon</SelectItem>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="order">Sipariş</SelectItem>
-                        <SelectItem value="follow_up">Takip</SelectItem>
+                        <SelectItem value="visit">{t('visit')}</SelectItem>
+                        <SelectItem value="call">{t('call')}</SelectItem>
+                        <SelectItem value="email">{t('email')}</SelectItem>
+                        <SelectItem value="order">{t('order')}</SelectItem>
+                        <SelectItem value="follow_up">{t('followUp')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Sonuç</Label>
+                    <Label className="text-xs">{t('result')}</Label>
                     <Select 
                       value={activityForm.outcome} 
                       onValueChange={(val) => setActivityForm({...activityForm, outcome: val})}
@@ -1006,28 +1006,28 @@ const Leads = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="positive">Olumlu</SelectItem>
-                        <SelectItem value="negative">Olumsuz</SelectItem>
-                        <SelectItem value="postponed">Erteledi</SelectItem>
-                        <SelectItem value="ordered">Sipariş Verdi</SelectItem>
-                        <SelectItem value="no_answer">Cevap Vermedi</SelectItem>
+                        <SelectItem value="positive">{t('positive')}</SelectItem>
+                        <SelectItem value="negative">{t('negative')}</SelectItem>
+                        <SelectItem value="postponed">{t('postponed')}</SelectItem>
+                        <SelectItem value="ordered">{t('ordered')}</SelectItem>
+                        <SelectItem value="no_answer">{t('noAnswer')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Notlar</Label>
+                  <Label className="text-xs">{t('notes')}</Label>
                   <Textarea
                     value={activityForm.notes}
                     onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
-                    placeholder="Ne konuşuldu? Ne oldu?"
+                    placeholder={t('whatWasDiscussed')}
                     rows={2}
                     className="text-sm"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Sonraki Aksiyon Tarihi</Label>
+                    <Label className="text-xs">{t('nextActionDate')}</Label>
                     <Input
                       type="date"
                       value={activityForm.next_action_date}
@@ -1036,11 +1036,11 @@ const Leads = () => {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Sonraki Aksiyon Notu</Label>
+                    <Label className="text-xs">{t('nextActionNote')}</Label>
                     <Input
                       value={activityForm.next_action_note}
                       onChange={(e) => setActivityForm({...activityForm, next_action_note: e.target.value})}
-                      placeholder="Ne yapılacak?"
+                      placeholder={t('whatToDo')}
                       className="h-9"
                     />
                   </div>

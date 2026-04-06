@@ -470,7 +470,7 @@ const Dashboard = () => {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-indigo-600" />
-                {language === 'tr' ? 'En Değerli Müşteriler' : 'Top Customers'}
+                {t('topCustomers')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">

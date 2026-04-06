@@ -179,11 +179,11 @@ const AdminPage = () => {
               {t('admin') || 'Kullanıcı Yönetimi'}
             </h1>
           </div>
-          <p className="text-muted-foreground mt-1">{users.length} kullanıcı</p>
+          <p className="text-muted-foreground mt-1">{users.length} {t('users')}</p>
         </div>
         <Button onClick={openAddDialog} className="bg-indigo-600 hover:bg-indigo-700">
           <Plus className="w-4 h-4 mr-2" />
-          Kullanıcı Ekle
+          {t('addUser')}
         </Button>
       </div>
 
@@ -214,7 +214,7 @@ const AdminPage = () => {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold">{u.name}</h3>
                       <Badge variant={u.role === 'admin' ? 'default' : 'secondary'} className={u.role === 'admin' ? 'bg-amber-500' : ''}>
-                        {u.role === 'admin' ? 'Admin' : 'Kullanıcı'}
+                        {u.role === 'admin' ? 'Admin' : t('user')}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -243,8 +243,8 @@ const AdminPage = () => {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{selectedUser ? 'Kullanıcı Düzenle' : 'Yeni Kullanıcı'}</DialogTitle>
-            <DialogDescription>Kullanıcı bilgilerini girin</DialogDescription>
+            <DialogTitle>{selectedUser ? t('editUser') : t('newUser')}</DialogTitle>
+            <DialogDescription>{t('enterUserInfo')}</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
@@ -254,7 +254,7 @@ const AdminPage = () => {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Ad Soyad"
+                placeholder={t('fullName')}
               />
             </div>
             

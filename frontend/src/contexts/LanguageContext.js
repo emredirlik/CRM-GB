@@ -81,6 +81,55 @@ const translations = {
     noCustomer: 'Müşteri yok',
     additionalNotes: 'Ek notlar...',
     pleaseEnterTitle: 'Lütfen bir başlık girin',
+    recentShipments: 'Son Kargolar',
+    topCustomers: 'En Değerli Müşteriler',
+    
+    // Bulk Operations
+    bulkEmail: 'Toplu Email',
+    selected: 'Seçili',
+    sendingEmail: 'Gönderiliyor...',
+    
+    // Activity
+    activityHistory: 'Aktivite Geçmişi',
+    newActivity: 'Yeni Aktivite Ekle',
+    allActivities: 'Tüm görüşme ve ziyaret geçmişi',
+    activityType: 'Aktivite Türü',
+    
+    // Activity Types
+    call: 'Telefon',
+    visit: 'Ziyaret',
+    email: 'E-posta',
+    order: 'Sipariş',
+    note: 'Not',
+    followUp: 'Takip',
+    result: 'Sonuç',
+    positive: 'Olumlu',
+    negative: 'Olumsuz',
+    neutral: 'Nötr',
+    postponed: 'Ertelendi',
+    noAnswer: 'Cevap Vermedi',
+    whatWasDiscussed: 'Ne konuşuldu? Ne oldu?',
+    nextActionDate: 'Sonraki Aksiyon Tarihi',
+    nextActionNote: 'Sonraki Aksiyon Notu',
+    whatToDo: 'Ne yapılacak?',
+    
+    // Customer Status
+    ordered: 'Sipariş Verdi',
+    pending: 'Beklemede',
+    confirmed: 'Onaylandı',
+    
+    // Admin
+    addUser: 'Kullanıcı Ekle',
+    editUser: 'Kullanıcı Düzenle',
+    newUser: 'Yeni Kullanıcı',
+    user: 'Kullanıcı',
+    users: 'kullanıcı',
+    enterUserInfo: 'Kullanıcı bilgilerini girin',
+    fullName: 'Ad Soyad',
+    
+    // Import/Export
+    importToLeads: 'Müşterilere Aktar',
+    addToLeads: 'Seçilenleri Ekle',
     
     // Event Types
     customerVisit: 'Müşteri Ziyareti',
@@ -401,6 +450,55 @@ const translations = {
     noCustomer: 'Kein Kunde',
     additionalNotes: 'Zusätzliche Notizen...',
     pleaseEnterTitle: 'Bitte geben Sie einen Titel ein',
+    recentShipments: 'Letzte Sendungen',
+    topCustomers: 'Top-Kunden',
+    
+    // Bulk Operations
+    bulkEmail: 'Massen-E-Mail',
+    selected: 'Ausgewählt',
+    sendingEmail: 'Wird gesendet...',
+    
+    // Activity
+    activityHistory: 'Aktivitätsverlauf',
+    newActivity: 'Neue Aktivität hinzufügen',
+    allActivities: 'Alle Gespräche und Besuche',
+    activityType: 'Aktivitätstyp',
+    
+    // Activity Types
+    call: 'Anruf',
+    visit: 'Besuch',
+    email: 'E-Mail',
+    order: 'Bestellung',
+    note: 'Notiz',
+    followUp: 'Nachverfolgung',
+    result: 'Ergebnis',
+    positive: 'Positiv',
+    negative: 'Negativ',
+    neutral: 'Neutral',
+    postponed: 'Verschoben',
+    noAnswer: 'Keine Antwort',
+    whatWasDiscussed: 'Was wurde besprochen?',
+    nextActionDate: 'Nächstes Aktionsdatum',
+    nextActionNote: 'Nächste Aktionsnotiz',
+    whatToDo: 'Was zu tun?',
+    
+    // Customer Status
+    ordered: 'Bestellt',
+    pending: 'Ausstehend',
+    confirmed: 'Bestätigt',
+    
+    // Admin
+    addUser: 'Benutzer hinzufügen',
+    editUser: 'Benutzer bearbeiten',
+    newUser: 'Neuer Benutzer',
+    user: 'Benutzer',
+    users: 'Benutzer',
+    enterUserInfo: 'Benutzerinformationen eingeben',
+    fullName: 'Vollständiger Name',
+    
+    // Import/Export
+    importToLeads: 'Zu Kunden importieren',
+    addToLeads: 'Ausgewählte hinzufügen',
     
     // Event Types
     customerVisit: 'Kundenbesuch',
@@ -721,6 +819,55 @@ const translations = {
     noCustomer: 'No customer',
     additionalNotes: 'Additional notes...',
     pleaseEnterTitle: 'Please enter a title',
+    recentShipments: 'Recent Shipments',
+    topCustomers: 'Top Customers',
+    
+    // Bulk Operations
+    bulkEmail: 'Bulk Email',
+    selected: 'Selected',
+    sendingEmail: 'Sending...',
+    
+    // Activity
+    activityHistory: 'Activity History',
+    newActivity: 'Add New Activity',
+    allActivities: 'All conversations and visits',
+    activityType: 'Activity Type',
+    
+    // Activity Types
+    call: 'Call',
+    visit: 'Visit',
+    email: 'Email',
+    order: 'Order',
+    note: 'Note',
+    followUp: 'Follow Up',
+    result: 'Result',
+    positive: 'Positive',
+    negative: 'Negative',
+    neutral: 'Neutral',
+    postponed: 'Postponed',
+    noAnswer: 'No Answer',
+    whatWasDiscussed: 'What was discussed?',
+    nextActionDate: 'Next Action Date',
+    nextActionNote: 'Next Action Note',
+    whatToDo: 'What to do?',
+    
+    // Customer Status
+    ordered: 'Ordered',
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    
+    // Admin
+    addUser: 'Add User',
+    editUser: 'Edit User',
+    newUser: 'New User',
+    user: 'User',
+    users: 'users',
+    enterUserInfo: 'Enter user information',
+    fullName: 'Full Name',
+    
+    // Import/Export
+    importToLeads: 'Import to Leads',
+    addToLeads: 'Add Selected',
     
     // Event Types
     customerVisit: 'Customer Visit',
@@ -1041,6 +1188,55 @@ const translations = {
     noCustomer: 'Brak klienta',
     additionalNotes: 'Dodatkowe notatki...',
     pleaseEnterTitle: 'Proszę wprowadzić tytuł',
+    recentShipments: 'Ostatnie przesyłki',
+    topCustomers: 'Najlepsi klienci',
+    
+    // Bulk Operations
+    bulkEmail: 'Masowy e-mail',
+    selected: 'Wybrano',
+    sendingEmail: 'Wysyłanie...',
+    
+    // Activity
+    activityHistory: 'Historia aktywności',
+    newActivity: 'Dodaj nową aktywność',
+    allActivities: 'Wszystkie rozmowy i wizyty',
+    activityType: 'Typ aktywności',
+    
+    // Activity Types
+    call: 'Telefon',
+    visit: 'Wizyta',
+    email: 'E-mail',
+    order: 'Zamówienie',
+    note: 'Notatka',
+    followUp: 'Kontynuacja',
+    result: 'Wynik',
+    positive: 'Pozytywny',
+    negative: 'Negatywny',
+    neutral: 'Neutralny',
+    postponed: 'Przełożono',
+    noAnswer: 'Brak odpowiedzi',
+    whatWasDiscussed: 'Co zostało omówione?',
+    nextActionDate: 'Data następnej akcji',
+    nextActionNote: 'Notatka następnej akcji',
+    whatToDo: 'Co zrobić?',
+    
+    // Customer Status
+    ordered: 'Zamówiono',
+    pending: 'Oczekujące',
+    confirmed: 'Potwierdzone',
+    
+    // Admin
+    addUser: 'Dodaj użytkownika',
+    editUser: 'Edytuj użytkownika',
+    newUser: 'Nowy użytkownik',
+    user: 'Użytkownik',
+    users: 'użytkownicy',
+    enterUserInfo: 'Wprowadź informacje o użytkowniku',
+    fullName: 'Imię i nazwisko',
+    
+    // Import/Export
+    importToLeads: 'Importuj do klientów',
+    addToLeads: 'Dodaj wybrane',
     
     // Event Types
     customerVisit: 'Wizyta u klienta',
@@ -1287,7 +1483,21 @@ const translations = {
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('tr'); // Default to Turkish
+  // Load language from localStorage or default to Turkish
+  const [language, setLanguageState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('app_language') || 'tr';
+    }
+    return 'tr';
+  });
+  
+  // Persist language to localStorage when it changes
+  const setLanguage = useCallback((lang) => {
+    setLanguageState(lang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('app_language', lang);
+    }
+  }, []);
   
   const t = useCallback((key) => {
     return translations[language]?.[key] || translations['en']?.[key] || key;

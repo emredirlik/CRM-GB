@@ -37,9 +37,9 @@ import {
   Reply, ReplyAll, Forward, Trash2, Archive, Star,
   MoreVertical, Loader2, AlertCircle, ChevronLeft, X,
   Paperclip, Clock, Pencil, Tag, Users, Bell, ShoppingBag,
-  Bold, Italic, Underline, List, Link, AlignLeft, AlignCenter, 
-  AlignRight, Type, Palette, ChevronDown, Settings, Image,
-  MailOpen, Check, Sparkles, Minus
+  Bold, Italic, Underline, List, Link as LinkIcon, AlignLeft, AlignCenter, 
+  AlignRight, Type, Palette, ChevronDown, Settings, Image as ImageIcon,
+  MailOpen, Check, Sparkles, Minus, Upload
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -794,18 +794,107 @@ const MailPage = () => {
 
       {/* Signature Settings */}
       <Dialog open={isSignatureOpen} onOpenChange={setIsSignatureOpen}>
-        <DialogContent className="max-w-lg bg-[#2d2d2d] border-[#3c4043]">
+        <DialogContent className="max-w-2xl bg-[#2d2d2d] border-[#3c4043]">
           <DialogHeader>
             <DialogTitle className="text-[#e8eaed]">E-posta İmzası</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Signature Toolbar */}
+            <div className="flex flex-wrap gap-1 p-2 bg-[#1f1f1f] rounded-lg border border-[#3c4043]">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                onClick={() => document.execCommand('bold', false, null)}
+              >
+                <Bold className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                onClick={() => document.execCommand('italic', false, null)}
+              >
+                <Italic className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                onClick={() => document.execCommand('underline', false, null)}
+              >
+                <Underline className="w-4 h-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-6 mx-1 bg-[#3c4043]" />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                onClick={() => {
+                  const url = prompt('Resim URL\'si girin:');
+                  if (url) {
+                    document.execCommand('insertImage', false, url);
+                  }
+                }}
+              >
+                <ImageIcon className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-2 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                onClick={() => {
+                  const url = prompt('Link URL\'si girin:');
+                  if (url) {
+                    document.execCommand('createLink', false, url);
+                  }
+                }}
+              >
+                <LinkIcon className="w-4 h-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-6 mx-1 bg-[#3c4043]" />
+              <input
+                type="file"
+                accept="image/*"
+                id="signature-image-upload"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const base64 = event.target?.result;
+                      document.execCommand('insertImage', false, base64);
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-3 text-[#9aa0a6] hover:text-[#e8eaed] hover:bg-[#3c4043]"
+                onClick={() => document.getElementById('signature-image-upload')?.click()}
+              >
+                <Upload className="w-4 h-4 mr-1" />
+                <span className="text-xs">Resim Yükle</span>
+              </Button>
+            </div>
+            
+            {/* Editable Signature Area */}
             <div
               contentEditable
-              className="min-h-[120px] p-3 border border-[#3c4043] rounded-lg text-[#e8eaed] bg-[#1f1f1f] focus:outline-none focus:ring-1 focus:ring-[#8ab4f8]"
+              className="min-h-[180px] p-4 border border-[#3c4043] rounded-lg text-[#e8eaed] bg-[#1f1f1f] focus:outline-none focus:ring-1 focus:ring-[#8ab4f8] overflow-auto"
+              style={{ maxHeight: '300px' }}
               dangerouslySetInnerHTML={{ __html: signature }}
               onBlur={(e) => setSignature(e.currentTarget.innerHTML)}
+              onInput={(e) => setSignature(e.currentTarget.innerHTML)}
             />
-            <p className="text-xs text-[#9aa0a6]">HTML desteklenir. Örn: &lt;b&gt;Kalın&lt;/b&gt;, &lt;i&gt;İtalik&lt;/i&gt;</p>
+            <p className="text-xs text-[#9aa0a6]">
+              ✨ Araç çubuğunu kullanarak biçimlendirme yapabilir, resim ekleyebilirsiniz. 
+              Resim URL veya bilgisayarınızdan yükleyebilirsiniz.
+            </p>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setIsSignatureOpen(false)} className="border-[#5f6368] text-[#e8eaed] hover:bg-[#3c4043]">
