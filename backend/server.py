@@ -3998,13 +3998,33 @@ async def get_email_body(email_id: str):
             if isinstance(response_part, tuple):
                 msg = email.message_from_bytes(response_part[1])
                 
-                # Get body
+                # Get body and attachments
                 body = ''
                 html_body = ''
+                attachments = []
+                
                 if msg.is_multipart():
                     for part in msg.walk():
                         content_type = part.get_content_type()
-                        if content_type == 'text/plain' and not body:
+                        content_disposition = str(part.get('Content-Disposition', ''))
+                        
+                        # Check for attachments
+                        if 'attachment' in content_disposition or part.get_filename():
+                            filename = part.get_filename()
+                            if filename:
+                                # Decode filename if needed
+                                if '=?' in filename:
+                                    decoded = decode_header(filename)
+                                    filename = ''.join([
+                                        t[0].decode(t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0]
+                                        for t in decoded
+                                    ])
+                                attachments.append({
+                                    'filename': filename,
+                                    'content_type': content_type,
+                                    'size': len(part.get_payload(decode=True) or b'')
+                                })
+                        elif content_type == 'text/plain' and not body:
                             try:
                                 body = part.get_payload(decode=True).decode('utf-8', errors='replace')
                             except:
@@ -4021,13 +4041,101 @@ async def get_email_body(email_id: str):
                         body = str(msg.get_payload())
                 
                 mail.logout()
-                return {"body": html_body or body, "plain": body}
+                return {"body": html_body or body, "plain": body, "attachments": attachments}
         
         mail.logout()
-        return {"body": "", "plain": ""}
+        return {"body": "", "plain": "", "attachments": []}
     except Exception as e:
         logger.error(f"Get email body error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/ai/summarize-email")
+async def ai_summarize_email(data: dict):
+    """AI-powered email summarization and smart replies"""
+    try:
+        subject = data.get('subject', '')
+        body = data.get('body', '')
+        from_name = data.get('from', '')
+        
+        # Strip HTML tags from body for summarization
+        import re
+        clean_body = re.sub(r'<[^>]+>', '', body)
+        clean_body = clean_body[:2000]  # Limit length
+        
+        # Try to use AI service
+        try:
+            from emergentintegrations.llm.chat import chat, LlmModel
+            
+            prompt = f"""Aşağıdaki e-postayı Türkçe olarak özetle (maksimum 2-3 cümle):
+
+Kimden: {from_name}
+Konu: {subject}
+İçerik:
+{clean_body}
+
+Ayrıca bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt önerisi sun."""
+
+            response = await chat(
+                model=LlmModel.GEMINI_2_0_FLASH,
+                system_prompt="Sen profesyonel bir e-posta asistanısın. Türkçe yanıt ver.",
+                user_prompt=prompt
+            )
+            
+            # Parse response
+            text = response.message if hasattr(response, 'message') else str(response)
+            
+            # Extract summary and replies
+            lines = text.strip().split('\n')
+            summary = lines[0] if lines else 'Özet oluşturulamadı'
+            
+            # Find reply suggestions
+            replies = []
+            for line in lines:
+                line = line.strip()
+                if line.startswith(('1.', '2.', '3.', '-', '•', '*')):
+                    reply = line.lstrip('123.-•* ')
+                    if len(reply) > 10:
+                        replies.append(reply)
+            
+            if not replies:
+                replies = [
+                    'Teşekkür ederim, en kısa sürede inceleyeceğim.',
+                    'Bu konuda size geri dönüş yapacağım.',
+                    'Detaylı bilgi için teşekkürler, değerlendireceğim.'
+                ]
+            
+            return {"summary": summary, "replies": replies[:3]}
+            
+        except Exception as ai_error:
+            logger.error(f"AI service error: {ai_error}")
+            # Fallback: Simple summary
+            summary = f"{from_name} tarafından gönderilen '{subject}' konulu e-posta."
+            if 'sipariş' in clean_body.lower() or 'order' in clean_body.lower():
+                summary += " Sipariş ile ilgili içerik."
+            elif 'fiyat' in clean_body.lower() or 'price' in clean_body.lower():
+                summary += " Fiyat bilgisi içeriyor."
+            elif 'toplantı' in clean_body.lower() or 'meeting' in clean_body.lower():
+                summary += " Toplantı ile ilgili."
+            
+            return {
+                "summary": summary,
+                "replies": [
+                    'Teşekkür ederim, en kısa sürede inceleyeceğim.',
+                    'Bu konuda size geri dönüş yapacağım.',
+                    'Detaylı bilgi için teşekkürler.'
+                ]
+            }
+    except Exception as e:
+        logger.error(f"Email summarization error: {e}")
+        return {
+            "summary": "Özet oluşturulamadı",
+            "replies": [
+                'Teşekkür ederim, değerlendireceğim.',
+                'Bu konuda size dönüş yapacağım.',
+                'Bilgilendirme için teşekkürler.'
+            ]
+        }
 
 
 @api_router.post("/mail/mark-read/{email_id}")

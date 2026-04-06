@@ -150,35 +150,37 @@ const LeadFinder = () => {
   const [selectedLeads, setSelectedLeads] = useState(new Set());
   const [dbLeads, setDbLeads] = useState([]);
 
-  // Load database leads count on mount
+  // Load database leads on mount and when country changes
   useEffect(() => {
     const loadDbLeads = async () => {
       try {
         const response = await axios.get(`${API}/potential-leads?limit=1000`);
         const leads = response.data.leads || [];
         setDbLeads(leads);
-        
-        // If Germany is selected, auto-load results
-        if (country === 'Germany' && leads.length > 0) {
-          const formattedResults = leads.map(lead => ({
-            name: lead.company_name,
-            address: lead.address || lead.city,
-            phone: lead.phone || '',
-            website: '',
-            city: lead.city,
-            region: lead.region,
-            source: 'database',
-            id: lead.id,
-            status: lead.status
-          }));
-          setResults(formattedResults);
-        }
       } catch (error) {
         console.error('Failed to load database leads:', error);
       }
     };
     loadDbLeads();
-  }, [country]);
+  }, []);
+
+  // Auto-load Germany results when dbLeads is loaded and country is Germany
+  useEffect(() => {
+    if (country === 'Germany' && dbLeads.length > 0 && results.length === 0) {
+      const formattedResults = dbLeads.map(lead => ({
+        name: lead.company_name,
+        address: lead.address || lead.city,
+        phone: lead.phone || '',
+        website: '',
+        city: lead.city,
+        region: lead.region,
+        source: 'database',
+        id: lead.id,
+        status: lead.status
+      }));
+      setResults(formattedResults);
+    }
+  }, [country, dbLeads]);
 
   const cities = COUNTRIES[country] || [];
   
