@@ -84,6 +84,7 @@ const MailPage = () => {
   const [signature, setSignature] = useState('');
   const [isSignatureOpen, setIsSignatureOpen] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [isEmailFullscreen, setIsEmailFullscreen] = useState(false);
 
   // Gmail-style folders
   const folders = [
@@ -600,18 +601,31 @@ const MailPage = () => {
 
       {/* Email Detail View */}
       {selectedEmail && (
-        <div className="fixed inset-0 z-50 lg:relative lg:w-[500px] bg-[#1f1f1f] flex flex-col border-l border-[#3c4043]">
+        <div 
+          className={`fixed inset-0 z-50 bg-[#1f1f1f] flex flex-col border-l border-[#3c4043] transition-all duration-200
+            ${isEmailFullscreen ? 'lg:relative lg:flex-1' : 'lg:relative lg:w-[500px]'}`}
+          onDoubleClick={() => setIsEmailFullscreen(!isEmailFullscreen)}
+        >
           {/* Header */}
           <div className="flex items-center gap-2 p-3 border-b border-[#3c4043]">
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setSelectedEmail(null)}
+              onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); }}
               className="text-[#e8eaed] hover:bg-[#3c4043]"
             >
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div className="flex-1" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsEmailFullscreen(!isEmailFullscreen)}
+              className="text-[#e8eaed] hover:bg-[#3c4043]"
+              title={isEmailFullscreen ? 'Küçült' : 'Tam Ekran'}
+            >
+              {isEmailFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </Button>
             <Button variant="ghost" size="icon" className="text-[#e8eaed] hover:bg-[#3c4043]">
               <Archive className="w-5 h-5" />
             </Button>
@@ -644,9 +658,15 @@ const MailPage = () => {
           </div>
 
           {/* Body */}
-          <ScrollArea className="flex-1 p-4">
-            <div className="prose prose-invert prose-sm max-w-none text-[#e8eaed]" 
-                 dangerouslySetInnerHTML={{ __html: selectedEmail.body || selectedEmail.snippet }} />
+          <ScrollArea className="flex-1 p-4 bg-white">
+            <div 
+              className="prose prose-sm max-w-none"
+              style={{ 
+                color: '#1f2937',
+                backgroundColor: 'white',
+              }}
+              dangerouslySetInnerHTML={{ __html: selectedEmail.body || `<p style="color:#374151">${selectedEmail.snippet || 'İçerik yükleniyor...'}</p>` }} 
+            />
           </ScrollArea>
 
           {/* Actions */}

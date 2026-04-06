@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,6 +148,20 @@ const LeadFinder = () => {
   const [keywords, setKeywords] = useState('döner fabrikası, gyros üretim, kebap üretim, et işleme');
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
+  const [dbLeads, setDbLeads] = useState([]);
+
+  // Load database leads count on mount
+  useEffect(() => {
+    const loadDbLeads = async () => {
+      try {
+        const response = await axios.get(`${API}/potential-leads?limit=1000`);
+        setDbLeads(response.data.leads || []);
+      } catch (error) {
+        console.error('Failed to load database leads:', error);
+      }
+    };
+    loadDbLeads();
+  }, []);
 
   const cities = COUNTRIES[country] || [];
   
