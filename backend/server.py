@@ -5147,6 +5147,244 @@ async def download_activity_report(lead_id: Optional[str] = None):
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
+# ===================== AI CUSTOMER SEGMENTATION =====================
+
+@api_router.get("/ai/customer-segments")
+async def get_customer_segments():
+    """AI-powered customer segmentation based on behavior and purchase history"""
+    
+    # Get all leads with their orders and activities
+    leads = await db.leads.find({}, {"_id": 0}).to_list(500)
+    
+    if not leads:
+        return {"segments": [], "summary": {}}
+    
+    # Get orders for each lead
+    orders = await db.orders.find({}, {"_id": 0}).to_list(1000)
+    activities = await db.lead_activities.find({}, {"_id": 0}).to_list(2000)
+    
+    # Build lead profiles
+    lead_profiles = {}
+    for lead in leads:
+        lead_id = lead.get("id")
+        lead_orders = [o for o in orders if o.get("customer_id") == lead_id or o.get("lead_id") == lead_id]
+        lead_activities = [a for a in activities if a.get("lead_id") == lead_id]
+        
+        total_revenue = sum(o.get("total_amount", 0) for o in lead_orders)
+        order_count = len(lead_orders)
+        activity_count = len(lead_activities)
+        
+        # Calculate activity outcomes
+        positive_outcomes = len([a for a in lead_activities if a.get("outcome") == "positive"])
+        negative_outcomes = len([a for a in lead_activities if a.get("outcome") == "negative"])
+        ordered_outcomes = len([a for a in lead_activities if a.get("outcome") == "ordered"])
+        
+        # Calculate recency (days since last activity or order)
+        last_activity_date = None
+        if lead_activities:
+            dates = [a.get("created_at") for a in lead_activities if a.get("created_at")]
+            if dates:
+                last_activity_date = max(dates)
+        
+        last_order_date = None
+        if lead_orders:
+            dates = [o.get("created_at") for o in lead_orders if o.get("created_at")]
+            if dates:
+                last_order_date = max(dates)
+        
+        lead_profiles[lead_id] = {
+            "lead": lead,
+            "total_revenue": total_revenue,
+            "order_count": order_count,
+            "activity_count": activity_count,
+            "positive_outcomes": positive_outcomes,
+            "negative_outcomes": negative_outcomes,
+            "ordered_outcomes": ordered_outcomes,
+            "last_activity": last_activity_date,
+            "last_order": last_order_date
+        }
+    
+    # Segment customers
+    segments = {
+        "vip": {
+            "name": "VIP Müşteriler",
+            "name_en": "VIP Customers",
+            "description": "Yüksek gelir, düzenli sipariş",
+            "color": "bg-amber-500",
+            "icon": "crown",
+            "leads": []
+        },
+        "loyal": {
+            "name": "Sadık Müşteriler", 
+            "name_en": "Loyal Customers",
+            "description": "Düzenli alışveriş, olumlu ilişki",
+            "color": "bg-emerald-500",
+            "icon": "heart",
+            "leads": []
+        },
+        "potential": {
+            "name": "Potansiyel Müşteriler",
+            "name_en": "Potential Customers",
+            "description": "İlgi gösteriyor, henüz sipariş vermedi",
+            "color": "bg-blue-500",
+            "icon": "sparkles",
+            "leads": []
+        },
+        "at_risk": {
+            "name": "Risk Altında",
+            "name_en": "At Risk",
+            "description": "Uzun süredir iletişim yok",
+            "color": "bg-orange-500",
+            "icon": "alert-triangle",
+            "leads": []
+        },
+        "lost": {
+            "name": "Kaybedilen",
+            "name_en": "Lost",
+            "description": "Olumsuz sonuçlanmış, takip gerekiyor",
+            "color": "bg-red-500",
+            "icon": "x-circle",
+            "leads": []
+        },
+        "new": {
+            "name": "Yeni Müşteriler",
+            "name_en": "New Customers",
+            "description": "Yeni eklenen, henüz değerlendirilmemiş",
+            "color": "bg-indigo-500",
+            "icon": "user-plus",
+            "leads": []
+        }
+    }
+    
+    # Classify each lead
+    for lead_id, profile in lead_profiles.items():
+        revenue = profile["total_revenue"]
+        orders = profile["order_count"]
+        activities = profile["activity_count"]
+        positive = profile["positive_outcomes"]
+        negative = profile["negative_outcomes"]
+        ordered = profile["ordered_outcomes"]
+        
+        lead_data = {
+            **profile["lead"],
+            "total_revenue": revenue,
+            "order_count": orders,
+            "activity_count": activities,
+            "segment_score": 0
+        }
+        
+        # VIP: High revenue (>5000€) or many orders (>5)
+        if revenue > 5000 or orders > 5:
+            segments["vip"]["leads"].append(lead_data)
+        # Loyal: Regular orders and positive interactions
+        elif orders >= 2 or (positive >= 3 and ordered >= 1):
+            segments["loyal"]["leads"].append(lead_data)
+        # Potential: Activities but no orders yet
+        elif activities > 0 and orders == 0 and negative < positive:
+            segments["potential"]["leads"].append(lead_data)
+        # At Risk: Had orders but no recent activity
+        elif orders > 0 and activities == 0:
+            segments["at_risk"]["leads"].append(lead_data)
+        # Lost: More negative than positive outcomes
+        elif negative > positive and negative >= 2:
+            segments["lost"]["leads"].append(lead_data)
+        # New: No activities or orders
+        else:
+            segments["new"]["leads"].append(lead_data)
+    
+    # Calculate summary
+    summary = {
+        "total_leads": len(leads),
+        "total_revenue": sum(p["total_revenue"] for p in lead_profiles.values()),
+        "segment_counts": {k: len(v["leads"]) for k, v in segments.items()},
+        "average_revenue_per_customer": sum(p["total_revenue"] for p in lead_profiles.values()) / len(leads) if leads else 0
+    }
+    
+    return {
+        "segments": segments,
+        "summary": summary
+    }
+
+@api_router.get("/ai/segment-recommendations/{segment_key}")
+async def get_segment_recommendations(segment_key: str):
+    """Get AI recommendations for a specific segment"""
+    
+    recommendations = {
+        "vip": {
+            "title": "VIP Müşteri Stratejisi",
+            "actions": [
+                "Kişiselleştirilmiş indirimler sunun",
+                "Yeni ürünleri ilk onlara tanıtın",
+                "Düzenli check-in aramaları yapın",
+                "Özel etkinliklere davet edin"
+            ],
+            "priority": "high",
+            "contact_frequency": "Haftada 1 kez"
+        },
+        "loyal": {
+            "title": "Sadık Müşteri Stratejisi",
+            "actions": [
+                "Sadakat programı oluşturun",
+                "Referans bonusu teklif edin",
+                "Çapraz satış fırsatlarını değerlendirin",
+                "Memnuniyet anketi gönderin"
+            ],
+            "priority": "medium",
+            "contact_frequency": "2 haftada 1 kez"
+        },
+        "potential": {
+            "title": "Potansiyel Müşteri Stratejisi",
+            "actions": [
+                "Ürün demosu veya numune gönderin",
+                "Özel başlangıç indirimi sunun",
+                "İhtiyaçlarını detaylı dinleyin",
+                "Rakip analizi yapın"
+            ],
+            "priority": "high",
+            "contact_frequency": "Haftada 2 kez"
+        },
+        "at_risk": {
+            "title": "Risk Altındaki Müşteri Stratejisi",
+            "actions": [
+                "Acil iletişime geçin",
+                "Memnuniyetsizlik nedenini öğrenin",
+                "Özel geri kazanım teklifi sunun",
+                "Üst yönetici araması yapın"
+            ],
+            "priority": "urgent",
+            "contact_frequency": "Hemen - Günlük takip"
+        },
+        "lost": {
+            "title": "Kaybedilen Müşteri Stratejisi",
+            "actions": [
+                "Son durumu analiz edin",
+                "6 ay sonra tekrar deneyin",
+                "Farklı bir satış temsilcisi atayın",
+                "Fiyat/ürün değişikliği bildirin"
+            ],
+            "priority": "low",
+            "contact_frequency": "3-6 ayda 1 kez"
+        },
+        "new": {
+            "title": "Yeni Müşteri Stratejisi",
+            "actions": [
+                "Hoş geldin e-postası gönderin",
+                "Ürün kataloğu paylaşın",
+                "İlk ziyaret randevusu alın",
+                "İhtiyaç analizi yapın"
+            ],
+            "priority": "medium",
+            "contact_frequency": "Haftada 1 kez"
+        }
+    }
+    
+    return recommendations.get(segment_key, {
+        "title": "Bilinmeyen Segment",
+        "actions": ["Segment bulunamadı"],
+        "priority": "unknown",
+        "contact_frequency": "N/A"
+    })
+
 # Include router after all endpoints are defined
 app.include_router(api_router)
 
