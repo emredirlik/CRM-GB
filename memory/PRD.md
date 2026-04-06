@@ -24,34 +24,29 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - Annual revenue target progress
 - AI Sales Forecast
 - Calendar with visit planning
-- ✅ **Schedule Visit dialog fixed** (SelectItem empty value bug)
+- ✅ Schedule Visit dialog fixed (SelectItem empty value bug)
 
-### Customer Management
-- Activity History tracking (visit/call/email outcomes)
-- AI suggestions based on activity
-- Bulk email with checkbox selection (mobile + desktop)
+### Customer Management (Müşteri Bul)
+- ✅ **German Döner Factories Database** - 97 potential customers added
+- AI-powered lead finder (SerpAPI + Gemini)
+- Tab interface: "Almanya Veritabanı" + "AI ile Ara"
+- Region filter, search, bulk convert to customer
+- Activity History tracking
 - PDF/Excel export
-- Last activity and next action visible on cards
-
-### Activity PDF Reports
-- `/api/reports/activities/pdf` - Generate report
-- `/api/reports/activities/download` - Direct download
-- Filter by lead/date range
 
 ### Product Videos
 - Folder system (create/delete folders)
 - Video upload with progress
-- WhatsApp/Email sharing
-- ✅ **Upload/Move dialog fixed** (SelectItem empty value bug)
+- ✅ Upload/Move dialog fixed (SelectItem empty value bug)
 
 ### Mail Module
-- IMAP/SMTP integration
+- ✅ IMAP/SMTP integration with 1&1 IONOS
 - Gmail-style dark UI
-- ✅ **Fullscreen/Maximize toggle added** to compose dialog
+- ✅ Fullscreen/Maximize toggle added
+- 50 emails successfully fetched from API
 
 ### Other Modules
 - DHL Shipment Tracking (indigo theme)
-- Lead Finder (SerpAPI)
 - Orders with payment tracking
 - Recipes, Specifications
 - Route Planner
@@ -64,10 +59,10 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 
 ## Known Issues
 
-### ~~1&1 IONOS Mail Connection~~ ✅ RESOLVED
-- **Status**: WORKING
-- SMTP and IMAP successfully configured
-- 50 emails fetched from inbox
+### SMTP Email Sending
+- **Status**: BLOCKED (Preview IP restricted)
+- SMTP connection works, but sending blocked by IONOS policy
+- Will work after deployment to production
 
 ## Test Credentials
 - **Admin**: emre@gewuerzberg.de / 190371
@@ -77,6 +72,12 @@ B2B CRM application for Gewürzberg GmbH, a spice/binder factory based in Berlin
 - SERPAPI_KEY
 - DHL_API_KEY  
 - EMERGENT_LLM_KEY
+
+## API Endpoints
+- GET /api/potential-leads - German döner factories database
+- POST /api/potential-leads/{id}/convert - Convert to customer
+- GET /api/mail/inbox - Fetch emails via IMAP
+- POST /api/mail/send - Send email via SMTP
 
 ## Upcoming Tasks
 - WhatsApp Business API Integration (P1)

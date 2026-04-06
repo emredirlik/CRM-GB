@@ -2519,6 +2519,96 @@ async def get_search_history():
             item['created_at'] = datetime.fromisoformat(item['created_at'])
     return history
 
+@api_router.get("/potential-leads")
+async def get_potential_leads(
+    region: str = None,
+    city: str = None,
+    status: str = None,
+    search: str = None
+):
+    """Get potential leads from the German döner factories database"""
+    query = {}
+    
+    if region:
+        query["region"] = {"$regex": region, "$options": "i"}
+    if city:
+        query["city"] = {"$regex": city, "$options": "i"}
+    if status:
+        query["status"] = status
+    if search:
+        query["$or"] = [
+            {"company_name": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}},
+            {"region": {"$regex": search, "$options": "i"}}
+        ]
+    
+    leads = await db.potential_leads.find(query, {"_id": 0}).to_list(500)
+    
+    # Get unique regions for filter dropdown
+    regions = await db.potential_leads.distinct("region")
+    
+    return {
+        "total": len(leads),
+        "leads": leads,
+        "regions": sorted([r for r in regions if r])
+    }
+
+@api_router.put("/potential-leads/{lead_id}/status")
+async def update_potential_lead_status(lead_id: str, status: str):
+    """Update status of a potential lead"""
+    if status not in ["potential", "contacted", "converted", "rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    
+    result = await db.potential_leads.update_one(
+        {"id": lead_id},
+        {"$set": {"status": status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    return {"success": True, "message": f"Status updated to {status}"}
+
+@api_router.post("/potential-leads/{lead_id}/convert")
+async def convert_potential_to_customer(lead_id: str):
+    """Convert a potential lead to actual customer"""
+    # Get potential lead
+    potential = await db.potential_leads.find_one({"id": lead_id}, {"_id": 0})
+    if not potential:
+        raise HTTPException(status_code=404, detail="Potential lead not found")
+    
+    # Check if already converted
+    existing = await db.leads.find_one({"company_name": potential["company_name"]})
+    if existing:
+        raise HTTPException(status_code=400, detail="Customer already exists")
+    
+    # Create new customer
+    new_customer = {
+        "id": str(uuid.uuid4()),
+        "company_name": potential["company_name"],
+        "contact_person": "",
+        "email": "",
+        "phone": potential.get("phone", ""),
+        "address": potential.get("address", ""),
+        "city": potential.get("city", ""),
+        "country": potential.get("country", "Deutschland"),
+        "status": "new",
+        "source": "potential_database",
+        "notes": f"Bölge: {potential.get('region', '')}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.leads.insert_one(new_customer)
+    
+    # Update potential lead status
+    await db.potential_leads.update_one(
+        {"id": lead_id},
+        {"$set": {"status": "converted", "converted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True, "customer_id": new_customer["id"], "message": "Müşteri olarak eklendi"}
+
 @api_router.post("/leads/import")
 async def import_found_leads(leads: List[dict]):
     """Import found leads into the main leads database"""

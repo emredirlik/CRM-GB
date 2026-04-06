@@ -141,6 +141,7 @@ const LeadFinder = () => {
   const { language } = useLanguage();
   const t = texts[language] || texts.en;
   
+  const [activeTab, setActiveTab] = useState('database'); // 'database' or 'ai-search'
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [country, setCountry] = useState('Germany');
@@ -148,8 +149,79 @@ const LeadFinder = () => {
   const [keywords, setKeywords] = useState('döner fabrikası, gyros üretim, kebap üretim, et işleme');
   const [results, setResults] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState(new Set());
+  
+  // Database tab states
+  const [dbLeads, setDbLeads] = useState([]);
+  const [dbRegions, setDbRegions] = useState([]);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDbLeads, setSelectedDbLeads] = useState(new Set());
 
   const cities = COUNTRIES[country] || [];
+  
+  // Fetch database leads
+  const fetchDatabaseLeads = async () => {
+    setDbLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedRegion) params.append('region', selectedRegion);
+      if (searchQuery) params.append('search', searchQuery);
+      
+      const response = await axios.get(`${API}/potential-leads?${params.toString()}`);
+      setDbLeads(response.data.leads || []);
+      setDbRegions(response.data.regions || []);
+    } catch (error) {
+      toast.error('Veritabanı yüklenemedi');
+    } finally {
+      setDbLoading(false);
+    }
+  };
+  
+  // Initial load for database tab
+  React.useEffect(() => {
+    if (activeTab === 'database') {
+      fetchDatabaseLeads();
+    }
+  }, [activeTab, selectedRegion]);
+  
+  // Search in database
+  const handleDbSearch = () => {
+    fetchDatabaseLeads();
+  };
+  
+  // Convert potential lead to customer
+  const convertToCustomer = async (leadId) => {
+    try {
+      await axios.post(`${API}/potential-leads/${leadId}/convert`);
+      toast.success('Müşteri olarak eklendi!');
+      fetchDatabaseLeads();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Dönüştürme başarısız');
+    }
+  };
+  
+  // Bulk convert selected leads
+  const bulkConvertLeads = async () => {
+    if (selectedDbLeads.size === 0) return;
+    
+    setImporting(true);
+    let successCount = 0;
+    
+    for (const leadId of selectedDbLeads) {
+      try {
+        await axios.post(`${API}/potential-leads/${leadId}/convert`);
+        successCount++;
+      } catch (error) {
+        console.error('Convert failed:', error);
+      }
+    }
+    
+    setImporting(false);
+    toast.success(`${successCount} firma müşteri olarak eklendi!`);
+    setSelectedDbLeads(new Set());
+    fetchDatabaseLeads();
+  };
   
   const parseKeywords = (str) => {
     return str.split(',').map(k => k.trim()).filter(k => k.length > 0);
@@ -297,18 +369,158 @@ const LeadFinder = () => {
               <span className="text-sm font-medium text-purple-900">AI Destekli</span>
             </div>
           </div>
-          {results.length > 0 && (
-            <div className="px-4 py-2 bg-green-50 rounded-xl border border-green-100">
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-900">{results.length} Sonuç</span>
-              </div>
+          <div className="px-4 py-2 bg-amber-50 rounded-xl border border-amber-100">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-medium text-amber-900">{dbLeads.length} Fabrika</span>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Main Search Card */}
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-200 pb-2">
+        <Button
+          variant={activeTab === 'database' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('database')}
+          className={activeTab === 'database' ? 'bg-indigo-600 text-white' : ''}
+        >
+          <Building2 className="w-4 h-4 mr-2" />
+          Almanya Veritabanı ({dbLeads.length})
+        </Button>
+        <Button
+          variant={activeTab === 'ai-search' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('ai-search')}
+          className={activeTab === 'ai-search' ? 'bg-purple-600 text-white' : ''}
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          AI ile Ara
+        </Button>
+      </div>
+
+      {/* Database Tab Content */}
+      {activeTab === 'database' && (
+        <Card className="overflow-hidden border-0 shadow-xl">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white">
+                <Building2 className="w-5 h-5" />
+                <span className="font-semibold">Almanya Döner & Et Fabrikaları Veritabanı</span>
+                <Badge className="bg-white/20 text-white border-0 ml-2">{dbLeads.length} Firma</Badge>
+              </div>
+              {selectedDbLeads.size > 0 && (
+                <Button 
+                  size="sm" 
+                  onClick={bulkConvertLeads}
+                  disabled={importing}
+                  className="bg-white text-amber-600 hover:bg-amber-50"
+                >
+                  {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
+                  {selectedDbLeads.size} Firma Ekle
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <CardContent className="p-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  placeholder="Firma adı veya şehir ara..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDbSearch()}
+                />
+              </div>
+              <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Tüm Bölgeler" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tüm Bölgeler</SelectItem>
+                  {dbRegions.map((region) => (
+                    <SelectItem key={region} value={region}>{region}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={handleDbSearch} variant="outline">
+                <Search className="w-4 h-4 mr-2" />
+                Filtrele
+              </Button>
+            </div>
+            
+            {/* Results Grid */}
+            {dbLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto">
+                {dbLeads.map((lead) => (
+                  <div 
+                    key={lead.id} 
+                    className={`p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer ${
+                      selectedDbLeads.has(lead.id) ? 'border-amber-500 bg-amber-50' : 'border-gray-200'
+                    } ${lead.status === 'converted' ? 'opacity-60' : ''}`}
+                    onClick={() => {
+                      if (lead.status !== 'converted') {
+                        const newSelected = new Set(selectedDbLeads);
+                        if (newSelected.has(lead.id)) {
+                          newSelected.delete(lead.id);
+                        } else {
+                          newSelected.add(lead.id);
+                        }
+                        setSelectedDbLeads(newSelected);
+                      }
+                    }}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold text-sm line-clamp-2">{lead.company_name}</h3>
+                      {lead.status === 'converted' ? (
+                        <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Eklendi
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            convertToCustomer(lead.id);
+                          }}
+                        >
+                          <Plus className="w-4 h-4 text-amber-600" />
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{lead.city}</span>
+                        {lead.region && <span className="text-amber-600">({lead.region})</span>}
+                      </div>
+                      {lead.phone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-3 h-3" />
+                          <span>{lead.phone}</span>
+                        </div>
+                      )}
+                      {lead.address && (
+                        <div className="text-xs text-gray-400 truncate">{lead.address}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Search Tab Content */}
+      {activeTab === 'ai-search' && (
       <Card className="overflow-hidden border-0 shadow-xl shadow-indigo-500/10">
         <div className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 p-4">
           <div className="flex items-center gap-2 text-white">
@@ -434,9 +646,11 @@ const LeadFinder = () => {
           </div>
         </CardContent>
       </Card>
+      )}
+      {/* End of AI Search Tab - Search Form */}
 
-      {/* Results Section */}
-      {results.length > 0 && (
+      {/* Results Section - Inside AI Search Tab */}
+      {activeTab === 'ai-search' && results.length > 0 && (
         <Card className="border-0 shadow-xl shadow-gray-200/50">
           <div className="bg-gradient-to-r from-gray-50 to-white p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -544,8 +758,8 @@ const LeadFinder = () => {
         </Card>
       )}
 
-      {/* Empty State */}
-      {!loading && results.length === 0 && (
+      {/* Empty State - Only for AI Search */}
+      {activeTab === 'ai-search' && !loading && results.length === 0 && (
         <Card className="border-2 border-dashed border-gray-200">
           <CardContent className="py-16 text-center">
             <div className="inline-flex p-4 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl mb-4">
@@ -557,8 +771,8 @@ const LeadFinder = () => {
         </Card>
       )}
 
-      {/* Loading State */}
-      {loading && (
+      {/* Loading State - Only for AI Search */}
+      {activeTab === 'ai-search' && loading && (
         <Card className="border-0 shadow-xl">
           <CardContent className="py-16 text-center">
             <div className="inline-flex p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4 animate-pulse">

@@ -97,11 +97,6 @@ const MailPage = () => {
     { id: 'trash', icon: Trash2, label: 'Çöp Kutusu', count: 0 },
   ];
 
-  useEffect(() => {
-    fetchEmails();
-    loadSignature();
-  }, []);
-
   const loadSignature = async () => {
     try {
       const response = await axios.get(`${API}/settings/signature`);
@@ -110,16 +105,6 @@ const MailPage = () => {
       }
     } catch (error) {
       setSignature(`<br><br>--<br><b>Gewürzberg GmbH</b><br>Premium Gewürze & Binderlösungen`);
-    }
-  };
-
-  const saveSignature = async () => {
-    try {
-      await axios.post(`${API}/settings/signature`, { signature });
-      toast.success('İmza kaydedildi');
-      setIsSignatureOpen(false);
-    } catch (error) {
-      toast.error('İmza kaydedilemedi');
     }
   };
 
@@ -148,6 +133,22 @@ const MailPage = () => {
       setRefreshing(false);
     }
   }, []);
+
+  const saveSignature = async () => {
+    try {
+      await axios.post(`${API}/settings/signature`, { signature });
+      toast.success('İmza kaydedildi');
+      setIsSignatureOpen(false);
+    } catch (error) {
+      toast.error('İmza kaydedilemedi');
+    }
+  };
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchEmails();
+    loadSignature();
+  }, [fetchEmails]);
 
   const handleRefresh = () => fetchEmails(true);
 
