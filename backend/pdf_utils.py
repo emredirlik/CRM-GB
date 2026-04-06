@@ -23,17 +23,20 @@ except:
     FONT_REGULAR = 'Helvetica'
     FONT_BOLD = 'Helvetica-Bold'
 
-# Colors matching the app design
-PRIMARY_COLOR = HexColor('#1e293b')    # slate-800
-ACCENT_COLOR = HexColor('#f97316')     # orange-500
-BG_LIGHT = HexColor('#f8fafc')         # slate-50
-TEXT_MUTED = HexColor('#64748b')       # slate-500
-SUCCESS_COLOR = HexColor('#22c55e')    # green-500
-RED_COLOR = HexColor('#ef4444')
-BLUE_COLOR = HexColor('#3b82f6')
-PURPLE_COLOR = HexColor('#8b5cf6')
-GREEN_COLOR = HexColor('#22c55e')
-GRAY_COLOR = HexColor('#6b7280')
+# Colors matching the app design - INDIGO THEME
+PRIMARY_COLOR = HexColor('#4F46E5')    # indigo-600
+ACCENT_COLOR = HexColor('#4F46E5')     # indigo-600
+SECONDARY_COLOR = HexColor('#818CF8')  # indigo-400
+BG_LIGHT = HexColor('#EEF2FF')         # indigo-50
+TEXT_MUTED = HexColor('#6B7280')       # gray-500
+TEXT_DARK = HexColor('#1F2937')        # gray-800
+SUCCESS_COLOR = HexColor('#10B981')    # emerald-500
+RED_COLOR = HexColor('#EF4444')
+BLUE_COLOR = HexColor('#3B82F6')
+PURPLE_COLOR = HexColor('#8B5CF6')
+GREEN_COLOR = HexColor('#22C55E')
+GRAY_COLOR = HexColor('#6B7280')
+YELLOW_COLOR = HexColor('#F59E0B')
 
 
 def wrap_text(text: str, max_width: int, font_name: str, font_size: int, canvas_obj) -> list:
@@ -91,7 +94,7 @@ def draw_wrapped_text(c, text: str, x: float, y: float, max_width: float,
 
 
 def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = 'tr') -> bytes:
-    """Generate a professionally styled order PDF with multi-product support and multilingual support"""
+    """Generate a modern, professionally styled order PDF - NO TOTAL PRICES"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -109,8 +112,6 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'code': 'KOD',
             'quantity': 'MİKTAR',
             'unit_price': 'BİRİM FİYAT',
-            'subtotal': 'ARA TOPLAM',
-            'total_price': 'TOPLAM FİYAT',
             'notes': 'NOTLAR',
             'created': 'Oluşturulma',
             'status': {
@@ -130,8 +131,6 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'code': 'CODE',
             'quantity': 'MENGE',
             'unit_price': 'STÜCKPREIS',
-            'subtotal': 'ZWISCHENSUMME',
-            'total_price': 'GESAMTPREIS',
             'notes': 'NOTIZEN',
             'created': 'Erstellt',
             'status': {
@@ -151,8 +150,6 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'code': 'CODE',
             'quantity': 'QUANTITY',
             'unit_price': 'UNIT PRICE',
-            'subtotal': 'SUBTOTAL',
-            'total_price': 'TOTAL PRICE',
             'notes': 'NOTES',
             'created': 'Created',
             'status': {
@@ -172,8 +169,6 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             'code': 'KOD',
             'quantity': 'ILOŚĆ',
             'unit_price': 'CENA JEDN.',
-            'subtotal': 'SUMA CZĘŚCIOWA',
-            'total_price': 'CENA CAŁKOWITA',
             'notes': 'UWAGI',
             'created': 'Utworzono',
             'status': {
@@ -188,119 +183,124 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
     
     L = labels.get(lang, labels['en'])
     
-    # Header background
+    # Modern header with gradient effect (solid indigo)
     c.setFillColor(PRIMARY_COLOR)
-    c.rect(0, height - 4*cm, width, 4*cm, fill=True, stroke=False)
+    c.rect(0, height - 4.5*cm, width, 4.5*cm, fill=True, stroke=False)
+    
+    # Lighter accent stripe
+    c.setFillColor(SECONDARY_COLOR)
+    c.rect(0, height - 4.5*cm, width, 0.3*cm, fill=True, stroke=False)
     
     # Company name
     c.setFillColor(white)
-    c.setFont(FONT_BOLD, 24)
-    c.drawString(2*cm, height - 2.5*cm, company_name)
-    c.setFont(FONT_REGULAR, 10)
+    c.setFont(FONT_BOLD, 26)
+    c.drawString(2*cm, height - 2.3*cm, company_name)
+    c.setFont(FONT_REGULAR, 11)
     c.drawString(2*cm, height - 3.2*cm, L['order_form'])
     
-    # Document ID
-    c.setFont(FONT_BOLD, 12)
-    c.drawRightString(width - 2*cm, height - 2.5*cm, f"#{order['id'][:8].upper()}")
+    # Document ID badge
+    c.setFillColor(white)
+    c.setFont(FONT_BOLD, 14)
+    order_id = f"#{order['id'][:8].upper()}"
+    c.drawRightString(width - 2*cm, height - 2.3*cm, order_id)
     c.setFont(FONT_REGULAR, 10)
     c.drawRightString(width - 2*cm, height - 3.2*cm, datetime.now().strftime('%d.%m.%Y'))
     
-    y = height - 5.5*cm
+    y = height - 6*cm
     
-    # Customer info card
+    # Customer info card with rounded corners
     c.setFillColor(BG_LIGHT)
-    c.roundRect(1.5*cm, y - 3*cm, width - 3*cm, 3*cm, 5, fill=True, stroke=False)
+    c.roundRect(1.5*cm, y - 3.2*cm, width - 3*cm, 3.2*cm, 8, fill=True, stroke=False)
+    
+    # Left accent bar
+    c.setFillColor(PRIMARY_COLOR)
+    c.rect(1.5*cm, y - 3.2*cm, 0.25*cm, 3.2*cm, fill=True, stroke=False)
     
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 9)
-    c.drawString(2*cm, y - 0.7*cm, L['customer'])
-    c.setFillColor(black)
-    c.setFont(FONT_BOLD, 14)
-    c.drawString(2*cm, y - 1.4*cm, order.get('company_name', ''))
-    c.setFont(FONT_REGULAR, 10)
+    c.drawString(2.2*cm, y - 0.8*cm, L['customer'])
+    c.setFillColor(TEXT_DARK)
+    c.setFont(FONT_BOLD, 16)
+    c.drawString(2.2*cm, y - 1.6*cm, order.get('company_name', ''))
+    c.setFont(FONT_REGULAR, 11)
     c.setFillColor(TEXT_MUTED)
-    c.drawString(2*cm, y - 2.1*cm, order.get('lead_name', ''))
+    c.drawString(2.2*cm, y - 2.4*cm, order.get('lead_name', ''))
     
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 9)
-    c.drawString(10*cm, y - 0.7*cm, L['date'])
-    c.setFillColor(black)
-    c.setFont(FONT_BOLD, 11)
-    c.drawString(10*cm, y - 1.4*cm, datetime.now().strftime('%d.%m.%Y'))
+    c.drawString(11*cm, y - 0.8*cm, L['date'])
+    c.setFillColor(TEXT_DARK)
+    c.setFont(FONT_BOLD, 12)
+    c.drawString(11*cm, y - 1.6*cm, datetime.now().strftime('%d.%m.%Y'))
     
-    y -= 4*cm
+    y -= 4.5*cm
     
     # Product details header
-    c.setFillColor(ACCENT_COLOR)
-    c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
+    c.setFillColor(PRIMARY_COLOR)
+    c.roundRect(1.5*cm, y - 1.1*cm, width - 3*cm, 1.1*cm, 5, fill=True, stroke=False)
     c.setFillColor(white)
-    c.setFont(FONT_BOLD, 10)
-    c.drawString(2*cm, y - 0.7*cm, L['product_details'])
+    c.setFont(FONT_BOLD, 11)
+    c.drawString(2*cm, y - 0.75*cm, L['product_details'])
     
-    y -= 1.5*cm
+    y -= 1.6*cm
     
     # Get products list
     products = order.get('products', [])
-    total_price = order.get('total_price', 0)
     
     if products and len(products) > 0:
-        # Multi-product table header
-        c.setFillColor(BG_LIGHT)
-        c.rect(1.5*cm, y - 0.7*cm, width - 3*cm, 0.7*cm, fill=True, stroke=False)
+        # Modern table header
+        c.setFillColor(HexColor('#F3F4F6'))
+        c.roundRect(1.5*cm, y - 0.8*cm, width - 3*cm, 0.8*cm, 3, fill=True, stroke=False)
         c.setFillColor(TEXT_MUTED)
-        c.setFont(FONT_BOLD, 8)
-        c.drawString(2*cm, y - 0.5*cm, L['product_name'])
-        c.drawString(7*cm, y - 0.5*cm, L['code'])
-        c.drawString(10*cm, y - 0.5*cm, L['quantity'])
-        c.drawString(13*cm, y - 0.5*cm, L['unit_price'])
-        c.drawRightString(width - 2*cm, y - 0.5*cm, L['subtotal'])
+        c.setFont(FONT_BOLD, 9)
+        c.drawString(2*cm, y - 0.55*cm, L['product_name'])
+        c.drawString(8*cm, y - 0.55*cm, L['code'])
+        c.drawString(11*cm, y - 0.55*cm, L['quantity'])
+        c.drawRightString(width - 2*cm, y - 0.55*cm, L['unit_price'])
         
-        y -= 0.9*cm
+        y -= 1.1*cm
         
-        # Product rows
+        # Product rows with alternating backgrounds
         for i, product in enumerate(products):
             pieces = product.get('pieces', 1)
             amount = product.get('amount', 1)
             unit = product.get('unit', 'kg')
             unit_price = product.get('unit_price', 0)
-            subtotal = product.get('subtotal', pieces * amount * unit_price)
             
             # Alternate row background
             if i % 2 == 0:
-                c.setFillColor(HexColor('#fafafa'))
-                c.rect(1.5*cm, y - 0.6*cm, width - 3*cm, 0.6*cm, fill=True, stroke=False)
+                c.setFillColor(HexColor('#FAFAFA'))
+                c.rect(1.5*cm, y - 0.7*cm, width - 3*cm, 0.7*cm, fill=True, stroke=False)
             
-            c.setFillColor(black)
-            c.setFont(FONT_REGULAR, 9)
+            c.setFillColor(TEXT_DARK)
+            c.setFont(FONT_REGULAR, 10)
             
             # Product name (truncate if too long)
-            pname = product.get('product_name', '')[:25]
-            c.drawString(2*cm, y - 0.4*cm, pname)
+            pname = product.get('product_name', '')[:30]
+            c.drawString(2*cm, y - 0.48*cm, pname)
             
             # Product code
             c.setFillColor(TEXT_MUTED)
-            c.setFont(FONT_REGULAR, 8)
-            c.drawString(7*cm, y - 0.4*cm, product.get('product_code', ''))
+            c.setFont(FONT_REGULAR, 9)
+            c.drawString(8*cm, y - 0.48*cm, product.get('product_code', ''))
             
             # Quantity
-            c.setFillColor(black)
-            c.setFont(FONT_REGULAR, 9)
+            c.setFillColor(TEXT_DARK)
+            c.setFont(FONT_REGULAR, 10)
             qty_str = f"{pieces} × {amount} {unit}" if pieces > 1 else f"{amount} {unit}"
-            c.drawString(10*cm, y - 0.4*cm, qty_str)
+            c.drawString(11*cm, y - 0.48*cm, qty_str)
             
-            # Unit price
-            c.drawString(13*cm, y - 0.4*cm, f"€{unit_price:.2f}/{unit}")
+            # Unit price (informational only)
+            c.setFillColor(PRIMARY_COLOR)
+            c.setFont(FONT_BOLD, 10)
+            c.drawRightString(width - 2*cm, y - 0.48*cm, f"€{unit_price:.2f}/{unit}")
             
-            # Subtotal
-            c.setFont(FONT_BOLD, 9)
-            c.drawRightString(width - 2*cm, y - 0.4*cm, f"€{subtotal:.2f}")
+            y -= 0.8*cm
             
-            y -= 0.7*cm
-            
-            if y < 6*cm:
+            if y < 5*cm:
                 break
         
-        y -= 0.3*cm
+        y -= 0.4*cm
     else:
         # Legacy single product display
         pieces = order.get('pieces', 1)
@@ -310,7 +310,7 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
         items = [
             (L['product_name'], order.get('product_name', '')),
             (L['code'], order.get('product_code', '')),
-            (L['quantity'], f"{pieces} × {amount} {unit}"),
+            (L['quantity'], f"{pieces} × {amount} {unit}" if pieces > 1 else f"{amount} {unit}"),
             (L['unit_price'], f"€{order.get('unit_price', 0):.2f}/{unit}"),
         ]
         
@@ -318,46 +318,52 @@ def generate_order_pdf(order: dict, company_settings: dict = None, lang: str = '
             c.setFillColor(TEXT_MUTED)
             c.setFont(FONT_REGULAR, 9)
             c.drawString(2*cm, y, label)
-            c.setFillColor(black)
-            c.setFont(FONT_BOLD, 11)
+            c.setFillColor(TEXT_DARK)
+            c.setFont(FONT_BOLD, 12)
             c.drawString(6*cm, y, str(value))
-            y -= 0.8*cm
+            y -= 0.9*cm
     
     y -= 0.5*cm
     
-    # NO TOTAL PRICE - User requested to never show total price
-    # Status badge directly
+    # Status badge (modern pill shape)
     status_colors = {
-        'pending': HexColor('#eab308'),
-        'confirmed': HexColor('#3b82f6'),
-        'shipped': HexColor('#8b5cf6'),
-        'delivered': HexColor('#22c55e'),
-        'cancelled': HexColor('#ef4444')
+        'pending': YELLOW_COLOR,
+        'confirmed': BLUE_COLOR,
+        'shipped': PURPLE_COLOR,
+        'delivered': SUCCESS_COLOR,
+        'cancelled': RED_COLOR
     }
     status_labels = L['status']
     
     status = order.get('status', 'pending')
     c.setFillColor(status_colors.get(status, TEXT_MUTED))
-    c.roundRect(2*cm, y - 1*cm, 4*cm, 1*cm, 3, fill=True, stroke=False)
+    c.roundRect(2*cm, y - 1*cm, 4.5*cm, 1*cm, 5, fill=True, stroke=False)
     c.setFillColor(white)
     c.setFont(FONT_BOLD, 10)
-    c.drawCentredString(4*cm, y - 0.7*cm, status_labels.get(status, status.upper()))
+    c.drawCentredString(4.25*cm, y - 0.7*cm, status_labels.get(status, status.upper()))
     
-    # Notes
+    # Notes section
     if order.get('notes'):
         y -= 2*cm
         c.setFillColor(TEXT_MUTED)
-        c.setFont(FONT_REGULAR, 9)
+        c.setFont(FONT_BOLD, 10)
         c.drawString(2*cm, y, L['notes'])
-        c.setFillColor(black)
+        y -= 0.6*cm
+        c.setFillColor(HexColor('#F9FAFB'))
+        c.roundRect(1.5*cm, y - 1.2*cm, width - 3*cm, 1.2*cm, 5, fill=True, stroke=False)
+        c.setFillColor(TEXT_DARK)
         c.setFont(FONT_REGULAR, 10)
-        c.drawString(2*cm, y - 0.6*cm, order['notes'][:100])
+        c.drawString(2*cm, y - 0.8*cm, order['notes'][:90])
     
-    # Footer
+    # Modern footer
+    c.setFillColor(HexColor('#E5E7EB'))
+    c.rect(0, 0, width, 2*cm, fill=True, stroke=False)
     c.setFillColor(TEXT_MUTED)
-    c.setFont(FONT_REGULAR, 8)
-    c.drawString(2*cm, 1.5*cm, f"{L['created']}: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
-    c.drawRightString(width - 2*cm, 1.5*cm, company_name)
+    c.setFont(FONT_REGULAR, 9)
+    c.drawString(2*cm, 0.8*cm, f"{L['created']}: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.setFillColor(PRIMARY_COLOR)
+    c.setFont(FONT_BOLD, 9)
+    c.drawRightString(width - 2*cm, 0.8*cm, company_name)
     
     c.save()
     buffer.seek(0)

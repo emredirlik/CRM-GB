@@ -198,14 +198,6 @@ const Orders = () => {
     }
   };
 
-  const calculateItemSubtotal = (item) => {
-    return (item.pieces || 1) * (item.amount || 0) * (item.unit_price || 0);
-  };
-
-  const calculateTotal = () => {
-    return orderProducts.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
-  };
-
   const handleSave = async () => {
     // Validation
     if (!leadId) {
@@ -310,9 +302,7 @@ const Orders = () => {
     );
   });
 
-  const totalRevenue = orders.reduce((sum, order) => 
-    ['confirmed', 'shipped', 'delivered'].includes(order.status) ? sum + (order.total_price || 0) : sum, 0
-  );
+  // Total revenue calculation removed per user request - no totals shown
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount || 0);
@@ -359,7 +349,7 @@ const Orders = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Siparişler</h1>
-          <p className="text-muted-foreground mt-1">{orders.length} sipariş • Toplam Gelir: {formatCurrency(totalRevenue)}</p>
+          <p className="text-muted-foreground mt-1">{orders.length} sipariş</p>
         </div>
         <Button onClick={openAddDialog} data-testid="add-order-btn">
           <Plus className="w-4 h-4 mr-2" />
@@ -658,23 +648,8 @@ const Orders = () => {
                     </div>
                   </div>
 
-                  {/* Ara Toplam */}
-                  <div className="text-right text-sm">
-                    <span className="text-muted-foreground">Ara Toplam: </span>
-                    <span className="font-semibold text-primary">{formatCurrency(calculateItemSubtotal(item))}</span>
-                  </div>
                 </div>
               ))}
-            </div>
-
-            {/* Toplam */}
-            <div className="p-4 bg-primary/10 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-medium">Toplam ({orderProducts.length} ürün)</span>
-                <span className="text-2xl font-bold text-primary" data-testid="order-total">
-                  {formatCurrency(calculateTotal())}
-                </span>
-              </div>
             </div>
 
             {/* Durum (sadece düzenleme) */}
@@ -772,7 +747,6 @@ const Orders = () => {
                         <th className="text-left px-4 py-2 font-medium">Kod</th>
                         <th className="text-right px-4 py-2 font-medium">Miktar</th>
                         <th className="text-right px-4 py-2 font-medium">Birim Fiyat</th>
-                        <th className="text-right px-4 py-2 font-medium">Toplam</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -781,9 +755,12 @@ const Orders = () => {
                           <tr key={idx} className="border-t">
                             <td className="px-4 py-3">{product.product_name}</td>
                             <td className="px-4 py-3 text-gray-500">{product.product_code || '-'}</td>
-                            <td className="px-4 py-3 text-right">{product.amount} {product.unit}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(product.unit_price)}</td>
-                            <td className="px-4 py-3 text-right font-medium">{formatCurrency(product.amount * product.unit_price)}</td>
+                            <td className="px-4 py-3 text-right">
+                              {product.pieces > 1 ? `${product.pieces} × ` : ''}{product.amount} {product.unit}
+                            </td>
+                            <td className="px-4 py-3 text-right text-indigo-600 font-medium">
+                              {formatCurrency(product.unit_price)}/{product.unit}
+                            </td>
                           </tr>
                         ))
                       ) : (
@@ -791,17 +768,12 @@ const Orders = () => {
                           <td className="px-4 py-3">{previewOrder.product_name}</td>
                           <td className="px-4 py-3 text-gray-500">{previewOrder.product_code || '-'}</td>
                           <td className="px-4 py-3 text-right">{previewOrder.quantity || previewOrder.amount} {previewOrder.unit}</td>
-                          <td className="px-4 py-3 text-right">{formatCurrency(previewOrder.unit_price)}</td>
-                          <td className="px-4 py-3 text-right font-medium">{formatCurrency(previewOrder.total_price)}</td>
+                          <td className="px-4 py-3 text-right text-indigo-600 font-medium">
+                            {formatCurrency(previewOrder.unit_price)}/{previewOrder.unit}
+                          </td>
                         </tr>
                       )}
                     </tbody>
-                    <tfoot className="bg-indigo-50">
-                      <tr>
-                        <td colSpan="4" className="px-4 py-3 text-right font-semibold">Genel Toplam:</td>
-                        <td className="px-4 py-3 text-right font-bold text-indigo-600 text-lg">{formatCurrency(previewOrder.total_price)}</td>
-                      </tr>
-                    </tfoot>
                   </table>
                 </div>
               </div>

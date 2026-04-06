@@ -9,21 +9,26 @@ const translations = {
     orders: 'Siparişler',
     shipments: 'Kargo Takip',
     products: 'Ürünler',
+    productVideos: 'Ürün Videoları',
     specifications: 'Spesifikasyonlar',
     recipes: 'Reçeteler',
     routePlanner: 'Rota Planlayıcı',
     dailyReports: 'Günlük Raporlar',
     templates: 'Şablonlar',
+    mailInbox: 'Gelen Kutusu',
     emailComposer: 'Mail Oluştur',
     emailHistory: 'Mail Geçmişi',
     settings: 'Ayarlar',
+    language: 'Dil',
     
     // Dashboard
     totalLeads: 'Toplam Müşteri',
+    totalOrders: 'Toplam Sipariş',
     emailsSent: 'Gönderilen Mail',
     emailsFailed: 'Başarısız Mail',
     recentLeads: 'Son Eklenen Müşteriler',
     noLeadsYet: 'Henüz müşteri yok',
+    recentShipments: 'Son Kargolar',
     
     // Leads
     addLead: 'Müşteri Ekle',
@@ -35,6 +40,7 @@ const translations = {
     taxNumber: 'Vergi Numarası',
     address: 'Adres',
     email: 'E-posta',
+    phone: 'Telefon',
     city: 'Şehir',
     country: 'Ülke',
     notes: 'Notlar',
@@ -44,14 +50,38 @@ const translations = {
     delete: 'Sil',
     edit: 'Düzenle',
     sendEmail: 'Mail Gönder',
-    confirmDelete: 'Bu müşteriyi silmek istediğinize emin misiniz?',
+    confirmDelete: 'Bu öğeyi silmek istediğinize emin misiniz?',
+    
+    // Products & Videos
+    uploadVideo: 'Video Yükle',
+    dragDropVideo: 'Videoyu buraya sürükleyin veya tıklayın',
+    sendViaWhatsApp: 'WhatsApp ile Gönder',
+    sendViaEmail: 'Mail ile Gönder',
+    productVideo: 'Ürün Videosu',
+    videoTitle: 'Video Başlığı',
+    videoDescription: 'Açıklama',
+    noVideos: 'Henüz video yok',
+    
+    // Mail Inbox
+    inbox: 'Gelen Kutusu',
+    sent: 'Gönderilenler',
+    drafts: 'Taslaklar',
+    compose: 'Yeni Mail',
+    from: 'Kimden',
+    to: 'Kime',
+    subject: 'Konu',
+    date: 'Tarih',
+    noEmails: 'Henüz mail yok',
+    reply: 'Yanıtla',
+    forward: 'İlet',
+    markAsRead: 'Okundu İşaretle',
+    markAsUnread: 'Okunmadı İşaretle',
+    refresh: 'Yenile',
     
     // Templates
     addTemplate: 'Şablon Ekle',
     templateName: 'Şablon Adı',
-    subject: 'Konu',
     body: 'İçerik',
-    language: 'Dil',
     noTemplates: 'Henüz şablon yok',
     
     // Email Composer
@@ -72,21 +102,40 @@ const translations = {
     company: 'Firma',
     status: 'Durum',
     sentAt: 'Gönderim Zamanı',
-    sent: 'Gönderildi',
     failed: 'Başarısız',
     noEmailHistory: 'Henüz mail geçmişi yok',
     
     // Settings
     smtpSettings: 'SMTP Ayarları',
+    imapSettings: 'IMAP Ayarları',
     smtpHost: 'SMTP Sunucusu',
-    smtpPort: 'Port',
+    imapHost: 'IMAP Sunucusu',
+    smtpPort: 'SMTP Port',
+    imapPort: 'IMAP Port',
     smtpUsername: 'Kullanıcı Adı',
     smtpPassword: 'Şifre',
     fromEmail: 'Gönderen E-posta',
     fromName: 'Gönderen Adı',
     useTLS: 'TLS Kullan',
+    useSSL: 'SSL Kullan',
     testConnection: 'Bağlantıyı Test Et',
     saveSettings: 'Ayarları Kaydet',
+    
+    // Orders
+    order: 'Sipariş',
+    orderDate: 'Sipariş Tarihi',
+    quantity: 'Miktar',
+    unitPrice: 'Birim Fiyat',
+    pending: 'Beklemede',
+    confirmed: 'Onaylandı',
+    shipped: 'Gönderildi',
+    delivered: 'Teslim Edildi',
+    cancelled: 'İptal',
+    
+    // Shipments
+    trackingNumber: 'Takip Numarası',
+    carrier: 'Kargo Firması',
+    shipmentStatus: 'Kargo Durumu',
     
     // Messages
     leadAdded: 'Müşteri eklendi',
@@ -101,6 +150,26 @@ const translations = {
     connectionFailed: 'Bağlantı başarısız',
     error: 'Hata',
     success: 'Başarılı',
+    loading: 'Yükleniyor...',
+    search: 'Ara',
+    noResults: 'Sonuç bulunamadı',
+    
+    // Common
+    all: 'Tümü',
+    today: 'Bugün',
+    yesterday: 'Dün',
+    thisWeek: 'Bu Hafta',
+    thisMonth: 'Bu Ay',
+    download: 'İndir',
+    upload: 'Yükle',
+    share: 'Paylaş',
+    view: 'Görüntüle',
+    close: 'Kapat',
+    back: 'Geri',
+    next: 'İleri',
+    previous: 'Önceki',
+    selectAll: 'Tümünü Seç',
+    deselectAll: 'Seçimi Kaldır',
   },
   de: {
     // Navigation
@@ -110,21 +179,26 @@ const translations = {
     orders: 'Bestellungen',
     shipments: 'Sendungsverfolgung',
     products: 'Produkte',
+    productVideos: 'Produktvideos',
     specifications: 'Spezifikationen',
     recipes: 'Rezepte',
     routePlanner: 'Routenplaner',
     dailyReports: 'Tagesberichte',
     templates: 'Vorlagen',
+    mailInbox: 'Posteingang',
     emailComposer: 'E-Mail erstellen',
     emailHistory: 'E-Mail-Verlauf',
     settings: 'Einstellungen',
+    language: 'Sprache',
     
     // Dashboard
     totalLeads: 'Gesamtkunden',
+    totalOrders: 'Gesamtbestellungen',
     emailsSent: 'Gesendete E-Mails',
     emailsFailed: 'Fehlgeschlagene E-Mails',
     recentLeads: 'Neueste Kunden',
     noLeadsYet: 'Noch keine Kunden',
+    recentShipments: 'Letzte Sendungen',
     
     // Leads
     addLead: 'Kunde hinzufügen',
@@ -136,6 +210,7 @@ const translations = {
     taxNumber: 'Steuernummer',
     address: 'Adresse',
     email: 'E-Mail',
+    phone: 'Telefon',
     city: 'Stadt',
     country: 'Land',
     notes: 'Notizen',
@@ -145,14 +220,38 @@ const translations = {
     delete: 'Löschen',
     edit: 'Bearbeiten',
     sendEmail: 'E-Mail senden',
-    confirmDelete: 'Möchten Sie diesen Kunden wirklich löschen?',
+    confirmDelete: 'Möchten Sie dieses Element wirklich löschen?',
+    
+    // Products & Videos
+    uploadVideo: 'Video hochladen',
+    dragDropVideo: 'Video hierher ziehen oder klicken',
+    sendViaWhatsApp: 'Per WhatsApp senden',
+    sendViaEmail: 'Per E-Mail senden',
+    productVideo: 'Produktvideo',
+    videoTitle: 'Videotitel',
+    videoDescription: 'Beschreibung',
+    noVideos: 'Noch keine Videos',
+    
+    // Mail Inbox
+    inbox: 'Posteingang',
+    sent: 'Gesendet',
+    drafts: 'Entwürfe',
+    compose: 'Neue E-Mail',
+    from: 'Von',
+    to: 'An',
+    subject: 'Betreff',
+    date: 'Datum',
+    noEmails: 'Noch keine E-Mails',
+    reply: 'Antworten',
+    forward: 'Weiterleiten',
+    markAsRead: 'Als gelesen markieren',
+    markAsUnread: 'Als ungelesen markieren',
+    refresh: 'Aktualisieren',
     
     // Templates
     addTemplate: 'Vorlage hinzufügen',
     templateName: 'Vorlagenname',
-    subject: 'Betreff',
     body: 'Inhalt',
-    language: 'Sprache',
     noTemplates: 'Noch keine Vorlagen',
     
     // Email Composer
@@ -173,21 +272,40 @@ const translations = {
     company: 'Firma',
     status: 'Status',
     sentAt: 'Gesendet am',
-    sent: 'Gesendet',
     failed: 'Fehlgeschlagen',
     noEmailHistory: 'Noch kein E-Mail-Verlauf',
     
     // Settings
     smtpSettings: 'SMTP-Einstellungen',
+    imapSettings: 'IMAP-Einstellungen',
     smtpHost: 'SMTP-Server',
-    smtpPort: 'Port',
+    imapHost: 'IMAP-Server',
+    smtpPort: 'SMTP-Port',
+    imapPort: 'IMAP-Port',
     smtpUsername: 'Benutzername',
     smtpPassword: 'Passwort',
     fromEmail: 'Absender-E-Mail',
     fromName: 'Absendername',
     useTLS: 'TLS verwenden',
+    useSSL: 'SSL verwenden',
     testConnection: 'Verbindung testen',
     saveSettings: 'Einstellungen speichern',
+    
+    // Orders
+    order: 'Bestellung',
+    orderDate: 'Bestelldatum',
+    quantity: 'Menge',
+    unitPrice: 'Stückpreis',
+    pending: 'Ausstehend',
+    confirmed: 'Bestätigt',
+    shipped: 'Versendet',
+    delivered: 'Geliefert',
+    cancelled: 'Storniert',
+    
+    // Shipments
+    trackingNumber: 'Sendungsnummer',
+    carrier: 'Spediteur',
+    shipmentStatus: 'Sendungsstatus',
     
     // Messages
     leadAdded: 'Kunde hinzugefügt',
@@ -202,6 +320,26 @@ const translations = {
     connectionFailed: 'Verbindung fehlgeschlagen',
     error: 'Fehler',
     success: 'Erfolg',
+    loading: 'Wird geladen...',
+    search: 'Suchen',
+    noResults: 'Keine Ergebnisse',
+    
+    // Common
+    all: 'Alle',
+    today: 'Heute',
+    yesterday: 'Gestern',
+    thisWeek: 'Diese Woche',
+    thisMonth: 'Diesen Monat',
+    download: 'Herunterladen',
+    upload: 'Hochladen',
+    share: 'Teilen',
+    view: 'Ansehen',
+    close: 'Schließen',
+    back: 'Zurück',
+    next: 'Weiter',
+    previous: 'Vorherige',
+    selectAll: 'Alle auswählen',
+    deselectAll: 'Auswahl aufheben',
   },
   en: {
     // Navigation
@@ -211,21 +349,26 @@ const translations = {
     orders: 'Orders',
     shipments: 'Shipments',
     products: 'Products',
+    productVideos: 'Product Videos',
     specifications: 'Specifications',
     recipes: 'Recipes',
     routePlanner: 'Route Planner',
     dailyReports: 'Daily Reports',
     templates: 'Templates',
+    mailInbox: 'Mail Inbox',
     emailComposer: 'Compose Email',
     emailHistory: 'Email History',
     settings: 'Settings',
+    language: 'Language',
     
     // Dashboard
     totalLeads: 'Total Leads',
+    totalOrders: 'Total Orders',
     emailsSent: 'Emails Sent',
     emailsFailed: 'Failed Emails',
     recentLeads: 'Recent Leads',
     noLeadsYet: 'No leads yet',
+    recentShipments: 'Recent Shipments',
     
     // Leads
     addLead: 'Add Lead',
@@ -237,6 +380,7 @@ const translations = {
     taxNumber: 'Tax Number',
     address: 'Address',
     email: 'Email',
+    phone: 'Phone',
     city: 'City',
     country: 'Country',
     notes: 'Notes',
@@ -246,14 +390,38 @@ const translations = {
     delete: 'Delete',
     edit: 'Edit',
     sendEmail: 'Send Email',
-    confirmDelete: 'Are you sure you want to delete this lead?',
+    confirmDelete: 'Are you sure you want to delete this item?',
+    
+    // Products & Videos
+    uploadVideo: 'Upload Video',
+    dragDropVideo: 'Drag and drop video here or click',
+    sendViaWhatsApp: 'Send via WhatsApp',
+    sendViaEmail: 'Send via Email',
+    productVideo: 'Product Video',
+    videoTitle: 'Video Title',
+    videoDescription: 'Description',
+    noVideos: 'No videos yet',
+    
+    // Mail Inbox
+    inbox: 'Inbox',
+    sent: 'Sent',
+    drafts: 'Drafts',
+    compose: 'Compose',
+    from: 'From',
+    to: 'To',
+    subject: 'Subject',
+    date: 'Date',
+    noEmails: 'No emails yet',
+    reply: 'Reply',
+    forward: 'Forward',
+    markAsRead: 'Mark as Read',
+    markAsUnread: 'Mark as Unread',
+    refresh: 'Refresh',
     
     // Templates
     addTemplate: 'Add Template',
     templateName: 'Template Name',
-    subject: 'Subject',
     body: 'Body',
-    language: 'Language',
     noTemplates: 'No templates yet',
     
     // Email Composer
@@ -274,21 +442,40 @@ const translations = {
     company: 'Company',
     status: 'Status',
     sentAt: 'Sent At',
-    sent: 'Sent',
     failed: 'Failed',
     noEmailHistory: 'No email history yet',
     
     // Settings
     smtpSettings: 'SMTP Settings',
+    imapSettings: 'IMAP Settings',
     smtpHost: 'SMTP Host',
-    smtpPort: 'Port',
+    imapHost: 'IMAP Host',
+    smtpPort: 'SMTP Port',
+    imapPort: 'IMAP Port',
     smtpUsername: 'Username',
     smtpPassword: 'Password',
     fromEmail: 'From Email',
     fromName: 'From Name',
     useTLS: 'Use TLS',
+    useSSL: 'Use SSL',
     testConnection: 'Test Connection',
     saveSettings: 'Save Settings',
+    
+    // Orders
+    order: 'Order',
+    orderDate: 'Order Date',
+    quantity: 'Quantity',
+    unitPrice: 'Unit Price',
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    shipped: 'Shipped',
+    delivered: 'Delivered',
+    cancelled: 'Cancelled',
+    
+    // Shipments
+    trackingNumber: 'Tracking Number',
+    carrier: 'Carrier',
+    shipmentStatus: 'Shipment Status',
     
     // Messages
     leadAdded: 'Lead added',
@@ -303,6 +490,26 @@ const translations = {
     connectionFailed: 'Connection failed',
     error: 'Error',
     success: 'Success',
+    loading: 'Loading...',
+    search: 'Search',
+    noResults: 'No results found',
+    
+    // Common
+    all: 'All',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    thisWeek: 'This Week',
+    thisMonth: 'This Month',
+    download: 'Download',
+    upload: 'Upload',
+    share: 'Share',
+    view: 'View',
+    close: 'Close',
+    back: 'Back',
+    next: 'Next',
+    previous: 'Previous',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All',
   },
   pl: {
     // Navigation - Polish
@@ -312,21 +519,26 @@ const translations = {
     orders: 'Zamówienia',
     shipments: 'Śledzenie przesyłek',
     products: 'Produkty',
+    productVideos: 'Filmy produktowe',
     specifications: 'Specyfikacje',
     recipes: 'Receptury',
     routePlanner: 'Planowanie trasy',
     dailyReports: 'Raporty dzienne',
     templates: 'Szablony',
+    mailInbox: 'Skrzynka odbiorcza',
     emailComposer: 'Napisz e-mail',
     emailHistory: 'Historia e-mail',
     settings: 'Ustawienia',
+    language: 'Język',
     
     // Dashboard
     totalLeads: 'Łączna liczba klientów',
+    totalOrders: 'Łączna liczba zamówień',
     emailsSent: 'Wysłane e-maile',
     emailsFailed: 'Nieudane e-maile',
     recentLeads: 'Ostatnio dodani klienci',
     noLeadsYet: 'Brak klientów',
+    recentShipments: 'Ostatnie przesyłki',
     
     // Leads
     addLead: 'Dodaj klienta',
@@ -338,6 +550,7 @@ const translations = {
     taxNumber: 'NIP',
     address: 'Adres',
     email: 'E-mail',
+    phone: 'Telefon',
     city: 'Miasto',
     country: 'Kraj',
     notes: 'Notatki',
@@ -347,18 +560,133 @@ const translations = {
     delete: 'Usuń',
     edit: 'Edytuj',
     sendEmail: 'Wyślij e-mail',
-    confirmDelete: 'Czy na pewno chcesz usunąć tego klienta?',
+    confirmDelete: 'Czy na pewno chcesz usunąć ten element?',
     
-    // Common
+    // Products & Videos
+    uploadVideo: 'Prześlij wideo',
+    dragDropVideo: 'Przeciągnij i upuść wideo tutaj lub kliknij',
+    sendViaWhatsApp: 'Wyślij przez WhatsApp',
+    sendViaEmail: 'Wyślij e-mailem',
+    productVideo: 'Film produktowy',
+    videoTitle: 'Tytuł wideo',
+    videoDescription: 'Opis',
+    noVideos: 'Brak filmów',
+    
+    // Mail Inbox
+    inbox: 'Skrzynka odbiorcza',
+    sent: 'Wysłane',
+    drafts: 'Szkice',
+    compose: 'Nowy e-mail',
+    from: 'Od',
+    to: 'Do',
+    subject: 'Temat',
+    date: 'Data',
+    noEmails: 'Brak e-maili',
+    reply: 'Odpowiedz',
+    forward: 'Przekaż',
+    markAsRead: 'Oznacz jako przeczytane',
+    markAsUnread: 'Oznacz jako nieprzeczytane',
+    refresh: 'Odśwież',
+    
+    // Templates
+    addTemplate: 'Dodaj szablon',
+    templateName: 'Nazwa szablonu',
+    body: 'Treść',
+    noTemplates: 'Brak szablonów',
+    
+    // Email Composer
+    selectLead: 'Wybierz klienta',
+    generateWithAI: 'Generuj z AI',
+    generating: 'Generowanie...',
+    send: 'Wyślij',
+    preview: 'Podgląd',
+    emailSubject: 'Temat e-mail',
+    emailBody: 'Treść e-mail',
+    tone: 'Ton',
+    professional: 'Profesjonalny',
+    friendly: 'Przyjazny',
+    formal: 'Formalny',
+    
+    // Email History
+    recipient: 'Odbiorca',
+    company: 'Firma',
+    status: 'Status',
+    sentAt: 'Wysłano',
+    failed: 'Nieudane',
+    noEmailHistory: 'Brak historii e-mail',
+    
+    // Settings
+    smtpSettings: 'Ustawienia SMTP',
+    imapSettings: 'Ustawienia IMAP',
+    smtpHost: 'Serwer SMTP',
+    imapHost: 'Serwer IMAP',
+    smtpPort: 'Port SMTP',
+    imapPort: 'Port IMAP',
+    smtpUsername: 'Nazwa użytkownika',
+    smtpPassword: 'Hasło',
+    fromEmail: 'E-mail nadawcy',
+    fromName: 'Nazwa nadawcy',
+    useTLS: 'Użyj TLS',
+    useSSL: 'Użyj SSL',
+    testConnection: 'Testuj połączenie',
+    saveSettings: 'Zapisz ustawienia',
+    
+    // Orders
+    order: 'Zamówienie',
+    orderDate: 'Data zamówienia',
+    quantity: 'Ilość',
+    unitPrice: 'Cena jednostkowa',
+    pending: 'Oczekujące',
+    confirmed: 'Potwierdzone',
+    shipped: 'Wysłane',
+    delivered: 'Dostarczone',
+    cancelled: 'Anulowane',
+    
+    // Shipments
+    trackingNumber: 'Numer śledzenia',
+    carrier: 'Przewoźnik',
+    shipmentStatus: 'Status przesyłki',
+    
+    // Messages
+    leadAdded: 'Klient dodany',
+    leadUpdated: 'Klient zaktualizowany',
+    leadDeleted: 'Klient usunięty',
+    templateAdded: 'Szablon dodany',
+    templateDeleted: 'Szablon usunięty',
+    emailSent: 'E-mail wysłany',
+    emailQueued: 'E-mail w kolejce',
+    settingsSaved: 'Ustawienia zapisane',
+    connectionSuccess: 'Połączenie udane',
+    connectionFailed: 'Połączenie nieudane',
     error: 'Błąd',
     success: 'Sukces',
+    loading: 'Ładowanie...',
+    search: 'Szukaj',
+    noResults: 'Brak wyników',
+    
+    // Common
+    all: 'Wszystko',
+    today: 'Dziś',
+    yesterday: 'Wczoraj',
+    thisWeek: 'Ten tydzień',
+    thisMonth: 'Ten miesiąc',
+    download: 'Pobierz',
+    upload: 'Prześlij',
+    share: 'Udostępnij',
+    view: 'Zobacz',
+    close: 'Zamknij',
+    back: 'Wstecz',
+    next: 'Dalej',
+    previous: 'Poprzedni',
+    selectAll: 'Zaznacz wszystko',
+    deselectAll: 'Odznacz wszystko',
   }
 };
 
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState('en'); // Default to English
+  const [language, setLanguage] = useState('tr'); // Default to Turkish
   
   const t = useCallback((key) => {
     return translations[language]?.[key] || translations['en']?.[key] || key;

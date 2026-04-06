@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { Settings as SettingsIcon, Mail, TestTube, Save, Loader2, CheckCircle, XCircle, Building2, Target, Euro } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, TestTube, Save, Loader2, CheckCircle, XCircle, Building2, Target, Euro, Inbox } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -21,7 +21,7 @@ const Settings = () => {
   const [testing, setTesting] = useState(false);
   const [savingCompany, setSavingCompany] = useState(false);
   
-  // SMTP Settings
+  // SMTP/IMAP Settings
   const [formData, setFormData] = useState({
     host: '',
     port: 587,
@@ -29,7 +29,10 @@ const Settings = () => {
     password: '',
     from_email: '',
     from_name: '',
-    use_tls: true
+    use_tls: true,
+    use_ssl: false,
+    imap_host: '',
+    imap_port: 993
   });
 
   // Company Settings
@@ -55,7 +58,10 @@ const Settings = () => {
           password: response.data.password || '',
           from_email: response.data.from_email || '',
           from_name: response.data.from_name || '',
-          use_tls: response.data.use_tls !== false
+          use_tls: response.data.use_tls !== false,
+          use_ssl: response.data.use_ssl || false,
+          imap_host: response.data.imap_host || '',
+          imap_port: response.data.imap_port || 993
         });
       }
     } catch (error) {
@@ -95,7 +101,8 @@ const Settings = () => {
     try {
       await saveSMTPSettings({
         ...formData,
-        port: parseInt(formData.port, 10)
+        port: parseInt(formData.port, 10),
+        imap_port: parseInt(formData.imap_port, 10)
       });
       toast.success(t('success'), { description: t('settingsSaved') });
     } catch (error) {
@@ -271,13 +278,13 @@ const Settings = () => {
             <Mail className="w-5 h-5 text-primary" />
             <div>
               <CardTitle className="font-['Manrope']">{t('smtpSettings')}</CardTitle>
-              <CardDescription>E-posta göndermek için SMTP sunucunuzu yapılandırın (Gmail, Kurumsal, vb.)</CardDescription>
+              <CardDescription>E-posta göndermek için SMTP sunucunuzu yapılandırın</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Server Settings */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="host">{t('smtpHost')}</Label>
               <Input
@@ -285,7 +292,7 @@ const Settings = () => {
                 name="host"
                 value={formData.host}
                 onChange={handleInputChange}
-                placeholder="smtp.gmail.com veya mail.sirketiniz.com"
+                placeholder="smtp.ionos.de"
                 data-testid="input-smtp-host"
               />
             </div>
@@ -304,7 +311,7 @@ const Settings = () => {
           </div>
 
           {/* Credentials */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="username">{t('smtpUsername')}</Label>
               <Input
@@ -312,7 +319,7 @@ const Settings = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleInputChange}
-                placeholder="email@sirketiniz.com"
+                placeholder="email@sirketiniz.de"
                 data-testid="input-smtp-username"
               />
             </div>
@@ -324,14 +331,14 @@ const Settings = () => {
                 type="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Şifre veya App Password"
+                placeholder="••••••••"
                 data-testid="input-smtp-password"
               />
             </div>
           </div>
 
           {/* From Settings */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="from_email">{t('fromEmail')}</Label>
               <Input
@@ -340,7 +347,7 @@ const Settings = () => {
                 type="email"
                 value={formData.from_email}
                 onChange={handleInputChange}
-                placeholder="info@sirketiniz.com"
+                placeholder="info@gewuerzberg.de"
                 data-testid="input-from-email"
               />
             </div>
@@ -357,22 +364,36 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* TLS Switch */}
-          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-            <div>
-              <Label htmlFor="use_tls" className="text-base font-medium">{t('useTLS')}</Label>
-              <p className="text-sm text-muted-foreground">Güvenli bağlantı için TLS şifreleme kullan</p>
+          {/* TLS/SSL Switches */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg flex-1">
+              <div>
+                <Label htmlFor="use_tls" className="text-base font-medium">{t('useTLS')}</Label>
+                <p className="text-sm text-muted-foreground">Port 587 için</p>
+              </div>
+              <Switch
+                id="use_tls"
+                checked={formData.use_tls}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, use_tls: checked, use_ssl: checked ? false : prev.use_ssl }))}
+                data-testid="switch-use-tls"
+              />
             </div>
-            <Switch
-              id="use_tls"
-              checked={formData.use_tls}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, use_tls: checked }))}
-              data-testid="switch-use-tls"
-            />
+            <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg flex-1">
+              <div>
+                <Label htmlFor="use_ssl" className="text-base font-medium">{t('useSSL')}</Label>
+                <p className="text-sm text-muted-foreground">Port 465 için</p>
+              </div>
+              <Switch
+                id="use_ssl"
+                checked={formData.use_ssl}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, use_ssl: checked, use_tls: checked ? false : prev.use_tls }))}
+                data-testid="switch-use-ssl"
+              />
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 pt-4 border-t">
+          <div className="flex flex-wrap items-center gap-3 pt-4 border-t">
             <Button 
               variant="outline" 
               onClick={handleTest}
@@ -412,40 +433,80 @@ const Settings = () => {
         </CardContent>
       </Card>
 
+      {/* IMAP Settings Card */}
+      <Card data-testid="imap-settings-card">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Inbox className="w-5 h-5 text-primary" />
+            <div>
+              <CardTitle className="font-['Manrope']">{t('imapSettings')}</CardTitle>
+              <CardDescription>Gelen kutusu için IMAP sunucunuzu yapılandırın</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="imap_host">{t('imapHost')}</Label>
+              <Input
+                id="imap_host"
+                name="imap_host"
+                value={formData.imap_host}
+                onChange={handleInputChange}
+                placeholder="imap.ionos.de"
+                data-testid="input-imap-host"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imap_port">{t('imapPort')}</Label>
+              <Input
+                id="imap_port"
+                name="imap_port"
+                type="number"
+                value={formData.imap_port}
+                onChange={handleInputChange}
+                placeholder="993"
+                data-testid="input-imap-port"
+              />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            IMAP kullanıcı adı ve şifre, SMTP ayarlarıyla aynı kullanılır.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Help Card */}
       <Card data-testid="help-card">
-        <CardContent className="p-6">
+        <CardContent className="p-4 md:p-6">
           <h3 className="font-semibold font-['Manrope'] mb-3">E-posta Sunucusu Ayarları</h3>
           <div className="text-sm text-muted-foreground space-y-4">
             
+            {/* IONOS */}
+            <div>
+              <p className="font-medium text-foreground mb-2">IONOS:</p>
+              <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto">
+                <p>SMTP: smtp.ionos.de, Port: 587 (TLS)</p>
+                <p>IMAP: imap.ionos.de, Port: 993 (SSL)</p>
+              </div>
+            </div>
+
+            {/* Strato */}
+            <div>
+              <p className="font-medium text-foreground mb-2">Strato:</p>
+              <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto">
+                <p>SMTP: smtp.strato.de, Port: 465 (SSL)</p>
+                <p>IMAP: imap.strato.de, Port: 993 (SSL)</p>
+              </div>
+            </div>
+
             {/* Gmail */}
             <div>
-              <p className="font-medium text-foreground mb-2">Gmail SMTP:</p>
-              <div className="bg-muted p-3 rounded-md font-mono text-xs">
-                <p>Host: smtp.gmail.com</p>
-                <p>Port: 587</p>
-                <p>TLS: Açık</p>
+              <p className="font-medium text-foreground mb-2">Gmail:</p>
+              <div className="bg-muted p-3 rounded-md font-mono text-xs overflow-x-auto">
+                <p>SMTP: smtp.gmail.com, Port: 587 (TLS)</p>
+                <p>IMAP: imap.gmail.com, Port: 993 (SSL)</p>
                 <p className="text-orange-600 mt-2">Not: Gmail için App Password gereklidir</p>
-              </div>
-            </div>
-
-            {/* Corporate */}
-            <div>
-              <p className="font-medium text-foreground mb-2">Kurumsal E-posta (Örnek):</p>
-              <div className="bg-muted p-3 rounded-md font-mono text-xs">
-                <p>Host: mail.sirketiniz.com</p>
-                <p>Port: 587 veya 465 (SSL için)</p>
-                <p>TLS: Açık (veya SSL için 465 portu)</p>
-              </div>
-            </div>
-
-            {/* Outlook/Microsoft 365 */}
-            <div>
-              <p className="font-medium text-foreground mb-2">Outlook / Microsoft 365:</p>
-              <div className="bg-muted p-3 rounded-md font-mono text-xs">
-                <p>Host: smtp.office365.com</p>
-                <p>Port: 587</p>
-                <p>TLS: Açık</p>
               </div>
             </div>
 

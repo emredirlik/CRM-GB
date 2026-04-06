@@ -171,6 +171,65 @@ code {
     @apply bg-muted text-muted-foreground hover:bg-muted/80;
 }
 
+/* Mobile Responsive Styles */
+@media (max-width: 1023px) {
+    .sidebar {
+        min-height: 100vh;
+        height: 100%;
+    }
+    
+    .sidebar-item {
+        @apply px-3 py-2.5;
+    }
+    
+    .data-table th,
+    .data-table td {
+        @apply px-2 py-2 text-xs;
+    }
+    
+    .stat-value {
+        @apply text-2xl;
+    }
+    
+    .stat-card {
+        @apply p-4;
+    }
+}
+
+@media (max-width: 640px) {
+    .data-table {
+        @apply text-xs;
+    }
+    
+    .data-table th {
+        @apply text-[10px] px-1.5 py-2;
+    }
+    
+    .data-table td {
+        @apply px-1.5 py-2;
+    }
+    
+    /* Hide less important columns on mobile */
+    .data-table .hide-mobile {
+        @apply hidden;
+    }
+    
+    .stat-value {
+        @apply text-xl;
+    }
+}
+
+/* Touch-friendly buttons */
+@media (pointer: coarse) {
+    .btn, button {
+        min-height: 44px;
+    }
+    
+    .sidebar-item {
+        min-height: 48px;
+    }
+}
+
 @layer base {
     [data-debug-wrapper="true"] {
         display: contents !important;

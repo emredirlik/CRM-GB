@@ -169,6 +169,9 @@ class SMTPSettings(BaseModel):
     from_email: str
     from_name: str
     use_tls: bool = True
+    use_ssl: bool = False
+    imap_host: Optional[str] = None
+    imap_port: int = 993
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SMTPSettingsCreate(BaseModel):
@@ -179,6 +182,9 @@ class SMTPSettingsCreate(BaseModel):
     from_email: str
     from_name: str
     use_tls: bool = True
+    use_ssl: bool = False
+    imap_host: Optional[str] = None
+    imap_port: int = 993
 
 class EmailHistory(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -556,6 +562,25 @@ async def save_smtp_settings(settings_data: SMTPSettingsCreate):
     doc = settings.model_dump()
     doc['updated_at'] = doc['updated_at'].isoformat()
     await db.smtp_settings.insert_one(doc)
+    
+    # Also update company_settings for IMAP access
+    await db.company_settings.update_one(
+        {},
+        {"$set": {
+            "smtp_host": settings_data.host,
+            "smtp_port": settings_data.port,
+            "smtp_username": settings_data.username,
+            "smtp_password": settings_data.password,
+            "from_email": settings_data.from_email,
+            "from_name": settings_data.from_name,
+            "use_tls": settings_data.use_tls,
+            "use_ssl": settings_data.use_ssl,
+            "imap_host": settings_data.imap_host,
+            "imap_port": settings_data.imap_port
+        }},
+        upsert=True
+    )
+    
     return settings
 
 @api_router.get("/settings/smtp")
@@ -3497,6 +3522,277 @@ async def get_chat_history(session_id: str):
     ).sort("created_at", 1).to_list(100)
     
     return {"session_id": session_id, "messages": messages}
+
+# ===================== MAIL INBOX ROUTES (IMAP/SMTP) =====================
+
+import imaplib
+import email
+from email.header import decode_header
+
+class MailSendRequest(BaseModel):
+    to: str
+    subject: str
+    body: str
+
+@api_router.get("/mail/inbox")
+async def get_mail_inbox():
+    """Fetch emails from IMAP inbox"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('imap_host'):
+        return {
+            "status": "not_configured",
+            "emails": [],
+            "message": "IMAP settings not configured"
+        }
+    
+    try:
+        # Connect to IMAP server
+        imap_host = settings.get('imap_host', 'imap.ionos.de')
+        imap_port = int(settings.get('imap_port', 993))
+        imap_user = settings.get('smtp_username')
+        imap_pass = settings.get('smtp_password')
+        
+        if not imap_user or not imap_pass:
+            return {"status": "error", "emails": [], "message": "IMAP credentials not configured"}
+        
+        mail = imaplib.IMAP4_SSL(imap_host, imap_port)
+        mail.login(imap_user, imap_pass)
+        mail.select('INBOX')
+        
+        # Fetch last 50 emails
+        _, message_numbers = mail.search(None, 'ALL')
+        email_ids = message_numbers[0].split()[-50:]  # Last 50
+        
+        emails = []
+        for eid in reversed(email_ids):
+            _, msg_data = mail.fetch(eid, '(RFC822 FLAGS)')
+            for response_part in msg_data:
+                if isinstance(response_part, tuple):
+                    msg = email.message_from_bytes(response_part[1])
+                    
+                    # Decode subject
+                    subject = ''
+                    if msg['Subject']:
+                        decoded = decode_header(msg['Subject'])
+                        for part, charset in decoded:
+                            if isinstance(part, bytes):
+                                subject += part.decode(charset or 'utf-8', errors='replace')
+                            else:
+                                subject += part
+                    
+                    # Decode from
+                    from_header = msg.get('From', '')
+                    from_name = ''
+                    from_email = from_header
+                    if '<' in from_header:
+                        from_name = from_header.split('<')[0].strip().strip('"')
+                        from_email = from_header.split('<')[1].strip('>')
+                    
+                    # Get body
+                    body = ''
+                    if msg.is_multipart():
+                        for part in msg.walk():
+                            if part.get_content_type() == 'text/plain':
+                                try:
+                                    body = part.get_payload(decode=True).decode('utf-8', errors='replace')
+                                except:
+                                    body = str(part.get_payload())
+                                break
+                    else:
+                        try:
+                            body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
+                        except:
+                            body = str(msg.get_payload())
+                    
+                    # Check if read
+                    _, flags_data = mail.fetch(eid, '(FLAGS)')
+                    is_read = b'\\Seen' in flags_data[0]
+                    
+                    emails.append({
+                        "id": eid.decode(),
+                        "subject": subject,
+                        "from_name": from_name,
+                        "from_email": from_email,
+                        "date": msg.get('Date', ''),
+                        "body": body[:5000],
+                        "snippet": body[:200] if body else '',
+                        "is_read": is_read
+                    })
+        
+        mail.logout()
+        return {"status": "connected", "emails": emails}
+        
+    except Exception as e:
+        logger.error(f"IMAP error: {e}")
+        return {"status": "error", "emails": [], "message": str(e)}
+
+@api_router.post("/mail/mark-read/{email_id}")
+async def mark_email_read(email_id: str):
+    """Mark email as read"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('imap_host'):
+        raise HTTPException(status_code=400, detail="IMAP not configured")
+    
+    try:
+        mail = imaplib.IMAP4_SSL(settings['imap_host'], int(settings.get('imap_port', 993)))
+        mail.login(settings['smtp_username'], settings['smtp_password'])
+        mail.select('INBOX')
+        mail.store(email_id.encode(), '+FLAGS', '\\Seen')
+        mail.logout()
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/mail/send")
+async def send_mail(request: MailSendRequest):
+    """Send email via SMTP"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('smtp_host'):
+        raise HTTPException(status_code=400, detail="SMTP not configured")
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+        msg['To'] = request.to
+        msg['Subject'] = request.subject
+        msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
+        
+        smtp_host = settings['smtp_host']
+        smtp_port = int(settings.get('smtp_port', 587))
+        
+        if settings.get('use_ssl'):
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port)
+            if settings.get('use_tls', True):
+                server.starttls()
+        
+        server.login(settings['smtp_username'], settings['smtp_password'])
+        server.send_message(msg)
+        server.quit()
+        
+        # Log to email_log
+        await db.email_log.insert_one({
+            "id": str(uuid.uuid4()),
+            "to": request.to,
+            "subject": request.subject,
+            "body": request.body,
+            "status": "sent",
+            "sent_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {"success": True, "message": "Email sent"}
+    except Exception as e:
+        logger.error(f"SMTP error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ===================== PRODUCT VIDEOS ROUTES =====================
+
+import shutil
+
+UPLOAD_DIR = Path("/app/uploads/videos")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+class ProductVideoCreate(BaseModel):
+    title: str
+    description: Optional[str] = ''
+    product_id: Optional[str] = None
+
+@api_router.get("/product-videos")
+async def get_product_videos():
+    """Get all product videos"""
+    videos = await db.product_videos.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return videos
+
+@api_router.post("/product-videos")
+async def upload_product_video(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(''),
+    product_id: str = Form(None)
+):
+    """Upload a product video"""
+    # Validate file type
+    allowed_types = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo']
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Invalid file type. Allowed: MP4, WebM, MOV, AVI")
+    
+    # Generate unique filename
+    video_id = str(uuid.uuid4())
+    ext = file.filename.split('.')[-1] if '.' in file.filename else 'mp4'
+    filename = f"{video_id}.{ext}"
+    file_path = UPLOAD_DIR / filename
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        file_size = file_path.stat().st_size
+        
+        # Create video record
+        video_data = {
+            "id": video_id,
+            "title": title,
+            "description": description,
+            "product_id": product_id,
+            "filename": filename,
+            "url": f"/api/product-videos/stream/{video_id}",
+            "file_size": file_size,
+            "content_type": file.content_type,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.product_videos.insert_one(video_data)
+        
+        return {**video_data, "_id": None}
+    except Exception as e:
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/product-videos/stream/{video_id}")
+async def stream_video(video_id: str):
+    """Stream a video file"""
+    video = await db.product_videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    file_path = UPLOAD_DIR / video['filename']
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Video file not found")
+    
+    def iterfile():
+        with open(file_path, "rb") as f:
+            while chunk := f.read(1024 * 1024):  # 1MB chunks
+                yield chunk
+    
+    return StreamingResponse(
+        iterfile(),
+        media_type=video.get('content_type', 'video/mp4'),
+        headers={"Accept-Ranges": "bytes"}
+    )
+
+@api_router.delete("/product-videos/{video_id}")
+async def delete_product_video(video_id: str):
+    """Delete a product video"""
+    video = await db.product_videos.find_one({"id": video_id}, {"_id": 0})
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    # Delete file
+    file_path = UPLOAD_DIR / video['filename']
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Delete record
+    await db.product_videos.delete_one({"id": video_id})
+    
+    return {"message": "Video deleted"}
+
 app.include_router(api_router)
 
 # Get frontend URL for CORS
