@@ -462,7 +462,7 @@ const Leads = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           {selectedLeads.size > 0 && (
-            <Button variant="outline" onClick={openBulkEmailDialog} className="hidden sm:flex">
+            <Button variant="outline" onClick={openBulkEmailDialog} className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100">
               <Mail className="w-4 h-4 mr-2" />
               {selectedLeads.size} {t('bulkEmail')}
             </Button>
@@ -475,8 +475,9 @@ const Leads = () => {
             <FileDown className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Excel</span>
           </Button>
-          <Button variant="outline" onClick={selectAllLeads} className="hidden sm:flex">
-            {selectedLeads.size === filteredLeads.length ? t('deselectAll') : t('selectAll')}
+          <Button variant="outline" onClick={selectAllLeads}>
+            <span className="hidden sm:inline">{selectedLeads.size === filteredLeads.length ? t('deselectAll') : t('selectAll')}</span>
+            <span className="sm:hidden">{selectedLeads.size === filteredLeads.length ? '✓' : '☐'}</span>
           </Button>
           <Button onClick={openAddDialog} data-testid="add-lead-btn" className="bg-indigo-600 hover:bg-indigo-700">
             <Plus className="w-4 h-4 sm:mr-2" />
@@ -522,7 +523,7 @@ const Leads = () => {
                     <Checkbox
                       checked={selectedLeads.has(lead.id)}
                       onCheckedChange={() => toggleLeadSelection(lead.id)}
-                      className="mt-1 hidden sm:block"
+                      className="mt-2"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -538,7 +539,7 @@ const Leads = () => {
                   </div>
 
                   {/* Info Grid */}
-                  <div className="grid grid-cols-2 gap-2 text-sm mb-3 sm:pl-7">
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-3 pl-8">
                     <div>
                       <p className="text-xs text-muted-foreground">{t('email')}</p>
                       <p className="truncate text-xs font-medium">{lead.email || '-'}</p>
@@ -585,7 +586,7 @@ const Leads = () => {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50 sm:pl-7">
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50 pl-8">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
