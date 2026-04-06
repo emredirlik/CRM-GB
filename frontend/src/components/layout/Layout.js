@@ -3,9 +3,11 @@ import Sidebar from './Sidebar';
 import { Toaster } from '@/components/ui/sonner';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -49,7 +51,7 @@ const Layout = ({ children }) => {
               />
               <div className="text-center">
                 <span className="text-white font-bold text-sm tracking-tight block">Gewürzberg GmbH</span>
-                <span className="text-slate-400 text-[10px] block">Premium CRM</span>
+                <span className="text-slate-400 text-[10px] block">{user?.name || 'Emre Dirlik'}</span>
               </div>
             </div>
             

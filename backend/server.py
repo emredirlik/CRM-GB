@@ -4585,6 +4585,81 @@ async def delete_video_folder(folder_id: str):
         raise HTTPException(status_code=404, detail="Folder not found")
     return {"message": "Folder deleted"}
 
+# ===================== CUSTOMER ACTIVITY LOG =====================
+
+class ActivityCreate(BaseModel):
+    lead_id: str
+    activity_type: str  # visit, call, email, order, follow_up
+    outcome: str  # positive, negative, postponed, ordered, no_answer
+    notes: Optional[str] = ""
+    next_action_date: Optional[str] = None
+    next_action_note: Optional[str] = ""
+
+@api_router.get("/leads/{lead_id}/activities")
+async def get_lead_activities(lead_id: str):
+    """Get all activities for a specific lead"""
+    activities = await db.lead_activities.find(
+        {"lead_id": lead_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return activities
+
+@api_router.post("/leads/{lead_id}/activities")
+async def create_lead_activity(lead_id: str, activity: ActivityCreate):
+    """Create a new activity for a lead"""
+    # Verify lead exists
+    lead = await db.leads.find_one({"id": lead_id})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    activity_doc = {
+        "id": str(uuid.uuid4()),
+        "lead_id": lead_id,
+        "activity_type": activity.activity_type,
+        "outcome": activity.outcome,
+        "notes": activity.notes,
+        "next_action_date": activity.next_action_date,
+        "next_action_note": activity.next_action_note,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.lead_activities.insert_one(activity_doc)
+    
+    # Update lead's last_activity field
+    await db.leads.update_one(
+        {"id": lead_id},
+        {"$set": {
+            "last_activity": activity_doc["created_at"],
+            "last_activity_outcome": activity.outcome,
+            "next_action_date": activity.next_action_date
+        }}
+    )
+    
+    return {k: v for k, v in activity_doc.items() if k != "_id"}
+
+@api_router.delete("/activities/{activity_id}")
+async def delete_activity(activity_id: str):
+    """Delete an activity"""
+    result = await db.lead_activities.delete_one({"id": activity_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return {"message": "Activity deleted"}
+
+@api_router.get("/activities/upcoming")
+async def get_upcoming_activities():
+    """Get all leads with upcoming action dates"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Get leads with next_action_date
+    leads = await db.leads.find(
+        {"next_action_date": {"$exists": True, "$ne": None, "$ne": ""}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Sort by next_action_date
+    leads_with_dates = [l for l in leads if l.get("next_action_date")]
+    leads_with_dates.sort(key=lambda x: x.get("next_action_date", "9999"))
+    
+    return leads_with_dates
+
 # Include router after all endpoints are defined
 app.include_router(api_router)
 

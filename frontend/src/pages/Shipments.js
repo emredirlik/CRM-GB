@@ -505,7 +505,7 @@ const Shipments = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
@@ -513,20 +513,22 @@ const Shipments = () => {
   return (
     <div className="space-y-6" data-testid="shipments-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope'] flex items-center gap-3">
-            <Truck className="w-10 h-10 text-amber-600" />
+          <h1 className="text-2xl md:text-4xl font-bold tracking-tight font-['Manrope'] flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+              <Truck className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            </div>
             {t.title}
           </h1>
-          <p className="text-muted-foreground mt-1">{t.subtitle}</p>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">{t.subtitle}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefreshAll} disabled={refreshing}>
+          <Button variant="outline" onClick={handleRefreshAll} disabled={refreshing} className="border-slate-300">
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {t.refreshAll}
+            <span className="hidden sm:inline">{t.refreshAll}</span>
           </Button>
-          <Button onClick={openAddDialog} className="bg-amber-600 hover:bg-amber-700">
+          <Button onClick={openAddDialog} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md">
             <Plus className="w-4 h-4 mr-2" />
             {t.addShipment}
           </Button>
@@ -534,22 +536,22 @@ const Shipments = () => {
       </div>
 
       {/* Quick Track */}
-      <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+      <Card className="border border-slate-200 bg-gradient-to-r from-slate-50 to-indigo-50/50 shadow-sm">
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <Label className="text-sm font-medium text-amber-800">{t.quickTrack}</Label>
-              <div className="flex gap-2 mt-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+            <div className="flex-1 w-full">
+              <Label className="text-sm font-medium text-slate-700 mb-2 block">{t.quickTrack}</Label>
+              <div className="flex gap-2">
                 <Input
                   value={quickTrackNumber}
                   onChange={(e) => setQuickTrackNumber(e.target.value.toUpperCase())}
                   placeholder={t.quickTrackPlaceholder}
-                  className="bg-white font-mono"
+                  className="bg-white font-mono border-slate-300"
                   onKeyDown={(e) => e.key === 'Enter' && handleQuickTrack()}
                 />
-                <Button onClick={handleQuickTrack} disabled={quickTracking} className="bg-amber-600 hover:bg-amber-700">
+                <Button onClick={handleQuickTrack} disabled={quickTracking} className="bg-indigo-600 hover:bg-indigo-700">
                   {quickTracking ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                  <span className="ml-2">{t.track}</span>
+                  <span className="ml-2 hidden sm:inline">{t.track}</span>
                 </Button>
               </div>
             </div>
@@ -637,7 +639,7 @@ const Shipments = () => {
             variant={filter === f ? 'default' : 'outline'}
             size="sm"
             onClick={() => setFilter(f)}
-            className={filter === f ? 'bg-amber-600 hover:bg-amber-700' : ''}
+            className={filter === f ? 'bg-indigo-600 hover:bg-indigo-700' : 'border-slate-300'}
           >
             {t[f]}
             <Badge variant="secondary" className="ml-2 bg-white/20">
@@ -651,12 +653,12 @@ const Shipments = () => {
 
       {/* Shipments List */}
       {filteredShipments.length === 0 ? (
-        <Card className="border-dashed">
+        <Card className="border-dashed border-slate-300">
           <CardContent className="py-16 text-center">
-            <Package className="w-16 h-16 mx-auto mb-4 text-amber-300" />
+            <Package className="w-16 h-16 mx-auto mb-4 text-indigo-300" />
             <h3 className="text-xl font-semibold mb-2">{t.noShipments}</h3>
             <p className="text-muted-foreground mb-4">{t.addFirst}</p>
-            <Button onClick={openAddDialog} className="bg-amber-600 hover:bg-amber-700">
+            <Button onClick={openAddDialog} className="bg-indigo-600 hover:bg-indigo-700">
               <Plus className="w-4 h-4 mr-2" />
               {t.addShipment}
             </Button>
@@ -670,7 +672,7 @@ const Shipments = () => {
             const isExpanded = expandedShipment === shipment.id;
             
             return (
-              <Card key={shipment.id} className={`transition-all ${isExpanded ? 'ring-2 ring-amber-300' : ''}`}>
+              <Card key={shipment.id} className={`transition-all hover:shadow-md ${isExpanded ? 'ring-2 ring-indigo-300' : 'border-slate-200'}`}>
                 <CardContent className="p-4">
                   {/* Mobile-First Card Layout */}
                   <div className="space-y-3">
@@ -701,7 +703,7 @@ const Shipments = () => {
                     {shipment.current_location && (
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 pl-0 sm:pl-14">
                         <div className="flex items-center gap-1 text-sm">
-                          <MapPin className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <MapPin className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                           <span className="font-medium">{shipment.current_location}</span>
                         </div>
                         <span className="text-xs text-muted-foreground sm:ml-auto">
@@ -711,7 +713,7 @@ const Shipments = () => {
                     )}
                     
                     {/* Action Buttons */}
-                    <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -720,7 +722,7 @@ const Shipments = () => {
                           title={t.cargoDetails}
                           className="h-8 w-8 p-0"
                         >
-                          <Package className="w-4 h-4 text-amber-600" />
+                          <Package className="w-4 h-4 text-indigo-600" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -763,16 +765,16 @@ const Shipments = () => {
                   
                   {/* Expanded Events */}
                   {isExpanded && shipment.events && shipment.events.length > 0 && (
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mt-4 pt-4 border-t border-slate-100">
                       <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                         <Clock className="w-4 h-4" />
                         {t.events}
                       </h4>
                       <div className="space-y-2">
                         {shipment.events.map((event, idx) => (
-                          <div key={idx} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 text-sm p-2 bg-muted/30 rounded">
+                          <div key={idx} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 text-sm p-2 bg-slate-50 rounded">
                             <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                              <div className="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0" />
                               <span className="text-xs text-muted-foreground">
                                 {event.date} {event.time}
                               </span>
@@ -873,7 +875,7 @@ const Shipments = () => {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               {t.cancel}
             </Button>
-            <Button onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
+            <Button onClick={handleSave} className="bg-indigo-600 hover:bg-indigo-700">
               {t.save}
             </Button>
           </DialogFooter>
@@ -887,7 +889,7 @@ const Shipments = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
-                  <Truck className="w-6 h-6 text-amber-600" />
+                  <Truck className="w-6 h-6 text-indigo-600" />
                   {t.cargoDetails}
                 </DialogTitle>
               </DialogHeader>
@@ -917,7 +919,7 @@ const Shipments = () => {
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="text-xs text-muted-foreground mb-1">{t.currentLocation}</p>
                     <p className="font-semibold flex items-center gap-1 text-sm">
-                      <MapPin className="w-4 h-4 text-amber-600" />
+                      <MapPin className="w-4 h-4 text-indigo-600" />
                       {detailViewShipment.current_location || '-'}
                     </p>
                   </div>
@@ -947,11 +949,11 @@ const Shipments = () => {
                       <Clock className="w-4 h-4" />
                       {t.trackingHistory} ({detailViewShipment.events.length} {t.steps})
                     </h4>
-                    <div className="relative pl-4 sm:pl-6 border-l-2 border-amber-200 space-y-3">
+                    <div className="relative pl-4 sm:pl-6 border-l-2 border-indigo-200 space-y-3">
                       {detailViewShipment.events.map((event, idx) => (
                         <div key={idx} className="relative">
                           <div className={`absolute -left-[17px] sm:-left-[25px] w-3 h-3 sm:w-4 sm:h-4 rounded-full ${
-                            idx === 0 ? 'bg-amber-500' : 'bg-amber-200'
+                            idx === 0 ? 'bg-indigo-500' : 'bg-indigo-200'
                           }`} />
                           <div className="bg-muted/50 p-2 sm:p-3 rounded-lg">
                             <p className="font-medium text-xs sm:text-sm">{event.description}</p>
@@ -996,7 +998,7 @@ const Shipments = () => {
                   <ExternalLink className="w-4 h-4 mr-2" />
                   {t.viewOnDhl}
                 </Button>
-                <Button onClick={() => { handleRefresh(detailViewShipment.id); setDetailViewShipment(null); }} className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto">
+                <Button onClick={() => { handleRefresh(detailViewShipment.id); setDetailViewShipment(null); }} className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
                   <RefreshCw className="w-4 h-4 mr-2" />
                   {t.update}
                 </Button>

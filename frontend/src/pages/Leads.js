@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
@@ -25,8 +26,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -66,6 +74,20 @@ const Leads = () => {
   const [bulkEmailSubject, setBulkEmailSubject] = useState('');
   const [bulkEmailBody, setBulkEmailBody] = useState('');
   const [sendingBulkEmail, setSendingBulkEmail] = useState(false);
+
+  // Activity history state
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [activityLead, setActivityLead] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [activityForm, setActivityForm] = useState({
+    activity_type: 'visit',
+    outcome: 'positive',
+    notes: '',
+    next_action_date: '',
+    next_action_note: ''
+  });
+  const [savingActivity, setSavingActivity] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -290,6 +312,103 @@ const Leads = () => {
     }
   };
 
+  // Activity functions
+  const openActivityDialog = async (lead) => {
+    setActivityLead(lead);
+    setIsActivityOpen(true);
+    setLoadingActivities(true);
+    setActivityForm({
+      activity_type: 'visit',
+      outcome: 'positive',
+      notes: '',
+      next_action_date: '',
+      next_action_note: ''
+    });
+    
+    try {
+      const response = await axios.get(`${API}/leads/${lead.id}/activities`);
+      setActivities(response.data);
+    } catch (error) {
+      console.error('Failed to load activities:', error);
+      setActivities([]);
+    } finally {
+      setLoadingActivities(false);
+    }
+  };
+
+  const saveActivity = async () => {
+    if (!activityLead) return;
+    
+    setSavingActivity(true);
+    try {
+      await axios.post(`${API}/leads/${activityLead.id}/activities`, activityForm);
+      toast.success('Aktivite kaydedildi');
+      
+      // Refresh activities
+      const response = await axios.get(`${API}/leads/${activityLead.id}/activities`);
+      setActivities(response.data);
+      
+      // Reset form
+      setActivityForm({
+        activity_type: 'visit',
+        outcome: 'positive',
+        notes: '',
+        next_action_date: '',
+        next_action_note: ''
+      });
+      
+      // Refresh leads to update last_activity
+      fetchLeads();
+    } catch (error) {
+      toast.error('Aktivite kaydedilemedi');
+    } finally {
+      setSavingActivity(false);
+    }
+  };
+
+  const deleteActivity = async (activityId) => {
+    try {
+      await axios.delete(`${API}/activities/${activityId}`);
+      setActivities(activities.filter(a => a.id !== activityId));
+      toast.success('Aktivite silindi');
+    } catch (error) {
+      toast.error('Aktivite silinemedi');
+    }
+  };
+
+  const getOutcomeIcon = (outcome) => {
+    switch (outcome) {
+      case 'positive': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'negative': return <XCircle className="w-4 h-4 text-red-500" />;
+      case 'postponed': return <Clock className="w-4 h-4 text-amber-500" />;
+      case 'ordered': return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      case 'no_answer': return <AlertCircle className="w-4 h-4 text-gray-500" />;
+      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getOutcomeLabel = (outcome) => {
+    const labels = {
+      positive: 'Olumlu',
+      negative: 'Olumsuz',
+      postponed: 'Ertelendi',
+      ordered: 'Sipariş Verdi',
+      no_answer: 'Cevap Yok'
+    };
+    return labels[outcome] || outcome;
+  };
+
+  const getActivityTypeLabel = (type) => {
+    const labels = {
+      visit: 'Ziyaret',
+      call: 'Telefon',
+      email: 'Email',
+      order: 'Sipariş',
+      follow_up: 'Takip'
+    };
+    return labels[type] || type;
+  };
+
   const filteredLeads = leads.filter(lead => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -411,11 +530,50 @@ const Leads = () => {
                         <p className="font-mono text-xs">{lead.tax_number}</p>
                       </div>
                     )}
+                    {/* Last Activity Info */}
+                    {lead.last_activity && (
+                      <div className="col-span-2 mt-1">
+                        <div className="flex items-center gap-2 text-xs">
+                          <History className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-muted-foreground">Son:</span>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                            lead.last_activity_outcome === 'positive' ? 'border-green-300 text-green-700' :
+                            lead.last_activity_outcome === 'negative' ? 'border-red-300 text-red-700' :
+                            lead.last_activity_outcome === 'postponed' ? 'border-amber-300 text-amber-700' :
+                            lead.last_activity_outcome === 'ordered' ? 'border-blue-300 text-blue-700' :
+                            'border-gray-300 text-gray-700'
+                          }`}>
+                            {getOutcomeLabel(lead.last_activity_outcome)}
+                          </Badge>
+                          <span className="text-muted-foreground">
+                            {new Date(lead.last_activity).toLocaleDateString('tr-TR')}
+                          </span>
+                        </div>
+                        {lead.next_action_date && (
+                          <div className="flex items-center gap-2 text-xs mt-1">
+                            <CalendarPlus className="w-3 h-3 text-indigo-500" />
+                            <span className="text-indigo-600 font-medium">
+                              Sonraki: {new Date(lead.next_action_date).toLocaleDateString('tr-TR')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center justify-between pt-3 border-t border-border/50 pl-7">
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openActivityDialog(lead)}
+                        title="Aktivite Geçmişi"
+                        className="h-8 w-8 p-0"
+                        data-testid={`activity-${lead.id}`}
+                      >
+                        <History className="w-4 h-4 text-purple-600" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -769,6 +927,186 @@ const Leads = () => {
             </Button>
             <Button onClick={sendBulkEmail} disabled={sendingBulkEmail}>
               {sendingBulkEmail ? 'Gönderiliyor...' : `${selectedLeads.size} Email Gönder`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activity History Dialog */}
+      <Dialog open={isActivityOpen} onOpenChange={setIsActivityOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5 text-purple-600" />
+              Aktivite Geçmişi - {activityLead?.company_name}
+            </DialogTitle>
+            <DialogDescription>
+              Müşteriyle yapılan tüm görüşme ve ziyaret geçmişi
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
+            {/* Add New Activity Form */}
+            <Card className="bg-purple-50/50 border-purple-200">
+              <CardContent className="p-4 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Yeni Aktivite Ekle
+                </h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Aktivite Tipi</Label>
+                    <Select 
+                      value={activityForm.activity_type} 
+                      onValueChange={(val) => setActivityForm({...activityForm, activity_type: val})}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="visit">Ziyaret</SelectItem>
+                        <SelectItem value="call">Telefon</SelectItem>
+                        <SelectItem value="email">Email</SelectItem>
+                        <SelectItem value="order">Sipariş</SelectItem>
+                        <SelectItem value="follow_up">Takip</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Sonuç</Label>
+                    <Select 
+                      value={activityForm.outcome} 
+                      onValueChange={(val) => setActivityForm({...activityForm, outcome: val})}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="positive">Olumlu</SelectItem>
+                        <SelectItem value="negative">Olumsuz</SelectItem>
+                        <SelectItem value="postponed">Erteledi</SelectItem>
+                        <SelectItem value="ordered">Sipariş Verdi</SelectItem>
+                        <SelectItem value="no_answer">Cevap Vermedi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Notlar</Label>
+                  <Textarea
+                    value={activityForm.notes}
+                    onChange={(e) => setActivityForm({...activityForm, notes: e.target.value})}
+                    placeholder="Ne konuşuldu? Ne oldu?"
+                    rows={2}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Sonraki Aksiyon Tarihi</Label>
+                    <Input
+                      type="date"
+                      value={activityForm.next_action_date}
+                      onChange={(e) => setActivityForm({...activityForm, next_action_date: e.target.value})}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Sonraki Aksiyon Notu</Label>
+                    <Input
+                      value={activityForm.next_action_note}
+                      onChange={(e) => setActivityForm({...activityForm, next_action_note: e.target.value})}
+                      placeholder="Ne yapılacak?"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={saveActivity} 
+                  disabled={savingActivity}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  {savingActivity ? 'Kaydediliyor...' : 'Aktivite Kaydet'}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Activity List */}
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm text-muted-foreground">
+                Geçmiş Aktiviteler ({activities.length})
+              </h4>
+              
+              {loadingActivities ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600 mx-auto mb-2"></div>
+                  Yükleniyor...
+                </div>
+              ) : activities.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Henüz aktivite kaydı yok</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {activities.map((activity) => (
+                    <Card key={activity.id} className="hover:shadow-sm transition-shadow">
+                      <CardContent className="p-3">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5">
+                            {getOutcomeIcon(activity.outcome)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <Badge variant="secondary" className="text-xs">
+                                {getActivityTypeLabel(activity.activity_type)}
+                              </Badge>
+                              <Badge variant="outline" className={`text-xs ${
+                                activity.outcome === 'positive' ? 'border-green-300 text-green-700' :
+                                activity.outcome === 'negative' ? 'border-red-300 text-red-700' :
+                                activity.outcome === 'postponed' ? 'border-amber-300 text-amber-700' :
+                                activity.outcome === 'ordered' ? 'border-blue-300 text-blue-700' :
+                                'border-gray-300 text-gray-700'
+                              }`}>
+                                {getOutcomeLabel(activity.outcome)}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(activity.created_at).toLocaleDateString('tr-TR', {
+                                  day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                            {activity.notes && (
+                              <p className="text-sm text-foreground mb-1">{activity.notes}</p>
+                            )}
+                            {activity.next_action_date && (
+                              <div className="flex items-center gap-1 text-xs text-indigo-600">
+                                <CalendarPlus className="w-3 h-3" />
+                                Sonraki: {new Date(activity.next_action_date).toLocaleDateString('tr-TR')}
+                                {activity.next_action_note && ` - ${activity.next_action_note}`}
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteActivity(activity.id)}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <DialogFooter className="border-t pt-3">
+            <Button variant="outline" onClick={() => setIsActivityOpen(false)}>
+              Kapat
             </Button>
           </DialogFooter>
         </DialogContent>
