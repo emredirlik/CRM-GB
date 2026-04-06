@@ -85,27 +85,24 @@ Features:
 
 ## Recent Updates (April 2026)
 
-### Completed (April 6, 2026)
-- [x] **SerpAPI Integration** - Real Google Maps data for Lead Finder
-- [x] **User-defined search keywords** - Custom keyword input field
-- [x] **Keyword presets** - Quick buttons for common searches
-- [x] **Romania & Spain** added to quick location buttons
-- [x] **DHL Official API integration** - Working with new key (KmQLlhNJirCHXDovLQAZ9AJt7PbR6nGK)
-- [x] Dashboard agenda layout fix (overflow issues)
-- [x] Multi-product orders support
-- [x] WhatsApp sharing format (no total price)
-- [x] PDF Turkish/Polish character support
-- [x] **Multi-Language Support** - Full TR/EN/DE/PL translation coverage
-- [x] **Gmail-like Mail Inbox** - Dark theme, categories, compose dialog, signature settings
-- [x] **Admin User Management Page** - Restricted to admin users
-- [x] **Product Videos Tab** - New section for product video management
-- [x] **Mobile Responsive Overhaul** - Card-based layout, no horizontal scroll
-- [x] **Orders/Leads Card View** - Modern card layout instead of tables
-- [x] **Mobile Header Branding** - "Gewürzberg GmbH" and username visible
-- [x] **Specifications Page Translated** - All UI text in Turkish
+### Completed (April 6, 2026 - Latest)
+- [x] **Shipments Mobile Layout Fixed** - Card-based responsive design, no horizontal scroll
+- [x] **Shipments Full Localization** - TR/DE/EN/PL translations for all texts
+- [x] **Specifications Page Translated** - All UI text in Turkish/German/English/Polish
 - [x] **Daily Reports Card View** - Replaced table with card layout
 - [x] **Monthly Report PDF Download** - New "Aylık Rapor İndir" button
 - [x] **DHL Real Tracking Verified** - CS638795298DE tracking works
+- [x] **LanguageContext Extended** - Added admin, logout, mail, signature keys for all languages
+
+### Previously Completed
+- [x] **SerpAPI Integration** - Real Google Maps data for Lead Finder
+- [x] **DHL Official API integration** - Working with key (KmQLlhNJirCHXDovLQAZ9AJt7PbR6nGK)
+- [x] **Multi-Language Support** - Full TR/EN/DE/PL translation coverage
+- [x] **Gmail-like Mail Inbox** - Dark theme, categories, compose dialog
+- [x] **Admin User Management Page** - Restricted to admin users
+- [x] **Product Videos Tab** - New section for product video management
+- [x] **Orders/Leads Card View** - Modern card layout instead of tables
+- [x] **Mobile Header Branding** - "Gewürzberg GmbH" and username visible
 
 ### Pending
 - [ ] Email Signature Configuration (backend wiring)

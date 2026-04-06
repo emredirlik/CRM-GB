@@ -114,7 +114,38 @@ const texts = {
     track: 'Track',
     active: 'Active',
     delivered: 'Delivered',
-    all: 'All'
+    all: 'All',
+    addToList: 'Add to List',
+    cargoMovements: 'Cargo Movements',
+    selectCustomer: 'Select Customer',
+    selectCustomerPlaceholder: 'Select customer...',
+    orEnterManually: 'or enter manually',
+    customerName: 'Customer Name',
+    deliveryAddress: 'Delivery Address',
+    enterDhlTracking: 'Enter DHL tracking number and select customer',
+    cargoDetails: 'Shipment Details',
+    lastUpdateLabel: 'Last update',
+    currentLocation: 'Current Location',
+    recipientLabel: 'Recipient',
+    deliveryAddressLabel: 'Delivery Address',
+    trackingHistory: 'Tracking History',
+    steps: 'steps',
+    viewOnDhl: 'View on DHL',
+    update: 'Update',
+    error: 'Error',
+    dataLoadFailed: 'Data could not be loaded',
+    shipmentsLoadFailed: 'Shipments could not be loaded',
+    trackingInfoFailed: 'Tracking info could not be retrieved',
+    requiredFields: 'Tracking number and recipient name are required',
+    cargoAdded: 'Shipment added and tracking started',
+    cargoAddFailed: 'Shipment could not be added',
+    trackingUpdated: 'Tracking info updated',
+    updateFailed: 'Update failed',
+    shipmentsUpdated: 'shipments updated',
+    bulkUpdateFailed: 'Bulk update failed',
+    cargoDeleted: 'Shipment deleted',
+    cargoDeleteFailed: 'Shipment could not be deleted',
+    estimated: 'Estimated'
   },
   tr: {
     title: 'Kargo Takip',
@@ -143,7 +174,38 @@ const texts = {
     track: 'Takip Et',
     active: 'Aktif',
     delivered: 'Teslim Edildi',
-    all: 'Tümü'
+    all: 'Tümü',
+    addToList: 'Listeye Ekle',
+    cargoMovements: 'Kargo Hareketleri',
+    selectCustomer: 'Müşteri Seç',
+    selectCustomerPlaceholder: 'Müşteri seçin...',
+    orEnterManually: 'veya manuel girin',
+    customerName: 'Müşteri Adı',
+    deliveryAddress: 'Teslimat Adresi',
+    enterDhlTracking: 'DHL takip numarasını girin ve müşteri seçin',
+    cargoDetails: 'Kargo Detayları',
+    lastUpdateLabel: 'Son güncelleme',
+    currentLocation: 'Mevcut Konum',
+    recipientLabel: 'Alıcı',
+    deliveryAddressLabel: 'Teslimat Adresi',
+    trackingHistory: 'Takip Geçmişi',
+    steps: 'adım',
+    viewOnDhl: 'DHL\'de Görüntüle',
+    update: 'Güncelle',
+    error: 'Hata',
+    dataLoadFailed: 'Veriler yüklenemedi',
+    shipmentsLoadFailed: 'Kargolar yüklenemedi',
+    trackingInfoFailed: 'Takip bilgisi alınamadı',
+    requiredFields: 'Takip numarası ve alıcı adı gerekli',
+    cargoAdded: 'Kargo eklendi ve takip başlatıldı',
+    cargoAddFailed: 'Kargo eklenemedi',
+    trackingUpdated: 'Takip bilgisi güncellendi',
+    updateFailed: 'Güncelleme başarısız',
+    shipmentsUpdated: 'kargo güncellendi',
+    bulkUpdateFailed: 'Toplu güncelleme başarısız',
+    cargoDeleted: 'Kargo silindi',
+    cargoDeleteFailed: 'Kargo silinemedi',
+    estimated: 'Tahmini'
   },
   de: {
     title: 'Sendungsverfolgung',
@@ -172,7 +234,98 @@ const texts = {
     track: 'Verfolgen',
     active: 'Aktiv',
     delivered: 'Zugestellt',
-    all: 'Alle'
+    all: 'Alle',
+    addToList: 'Zur Liste hinzufügen',
+    cargoMovements: 'Sendungsbewegungen',
+    selectCustomer: 'Kunde auswählen',
+    selectCustomerPlaceholder: 'Kunde auswählen...',
+    orEnterManually: 'oder manuell eingeben',
+    customerName: 'Kundenname',
+    deliveryAddress: 'Lieferadresse',
+    enterDhlTracking: 'DHL-Sendungsnummer eingeben und Kunde auswählen',
+    cargoDetails: 'Sendungsdetails',
+    lastUpdateLabel: 'Letzte Aktualisierung',
+    currentLocation: 'Aktueller Standort',
+    recipientLabel: 'Empfänger',
+    deliveryAddressLabel: 'Lieferadresse',
+    trackingHistory: 'Sendungsverlauf',
+    steps: 'Schritte',
+    viewOnDhl: 'Auf DHL ansehen',
+    update: 'Aktualisieren',
+    error: 'Fehler',
+    dataLoadFailed: 'Daten konnten nicht geladen werden',
+    shipmentsLoadFailed: 'Sendungen konnten nicht geladen werden',
+    trackingInfoFailed: 'Tracking-Info konnte nicht abgerufen werden',
+    requiredFields: 'Sendungsnummer und Empfängername sind erforderlich',
+    cargoAdded: 'Sendung hinzugefügt und Verfolgung gestartet',
+    cargoAddFailed: 'Sendung konnte nicht hinzugefügt werden',
+    trackingUpdated: 'Tracking-Info aktualisiert',
+    updateFailed: 'Aktualisierung fehlgeschlagen',
+    shipmentsUpdated: 'Sendungen aktualisiert',
+    bulkUpdateFailed: 'Massenaktualisierung fehlgeschlagen',
+    cargoDeleted: 'Sendung gelöscht',
+    cargoDeleteFailed: 'Sendung konnte nicht gelöscht werden',
+    estimated: 'Geschätzt'
+  },
+  pl: {
+    title: 'Śledzenie przesyłek',
+    subtitle: 'Śledź przesyłki DHL w czasie rzeczywistym',
+    addShipment: 'Dodaj przesyłkę',
+    trackingNumber: 'Numer przesyłki',
+    recipient: 'Odbiorca',
+    address: 'Adres',
+    status: 'Status',
+    lastUpdate: 'Ostatnia aktualizacja',
+    location: 'Aktualna lokalizacja',
+    estimatedDelivery: 'Przewidywana dostawa',
+    refresh: 'Odśwież',
+    refreshAll: 'Odśwież wszystko',
+    delete: 'Usuń',
+    noShipments: 'Brak przesyłek',
+    addFirst: 'Dodaj pierwszą przesyłkę',
+    events: 'Historia śledzenia',
+    notes: 'Notatki',
+    save: 'Zapisz',
+    cancel: 'Anuluj',
+    deleteConfirm: 'Usunąć tę przesyłkę?',
+    deleteDesc: 'Tej czynności nie można cofnąć.',
+    quickTrack: 'Szybkie śledzenie',
+    quickTrackPlaceholder: 'Wprowadź numer przesyłki...',
+    track: 'Śledź',
+    active: 'Aktywne',
+    delivered: 'Dostarczone',
+    all: 'Wszystkie',
+    addToList: 'Dodaj do listy',
+    cargoMovements: 'Ruchy przesyłki',
+    selectCustomer: 'Wybierz klienta',
+    selectCustomerPlaceholder: 'Wybierz klienta...',
+    orEnterManually: 'lub wprowadź ręcznie',
+    customerName: 'Nazwa klienta',
+    deliveryAddress: 'Adres dostawy',
+    enterDhlTracking: 'Wprowadź numer DHL i wybierz klienta',
+    cargoDetails: 'Szczegóły przesyłki',
+    lastUpdateLabel: 'Ostatnia aktualizacja',
+    currentLocation: 'Aktualna lokalizacja',
+    recipientLabel: 'Odbiorca',
+    deliveryAddressLabel: 'Adres dostawy',
+    trackingHistory: 'Historia śledzenia',
+    steps: 'kroki',
+    viewOnDhl: 'Zobacz na DHL',
+    update: 'Aktualizuj',
+    error: 'Błąd',
+    dataLoadFailed: 'Nie można załadować danych',
+    shipmentsLoadFailed: 'Nie można załadować przesyłek',
+    trackingInfoFailed: 'Nie można pobrać informacji o śledzeniu',
+    requiredFields: 'Numer przesyłki i nazwa odbiorcy są wymagane',
+    cargoAdded: 'Przesyłka dodana i śledzenie rozpoczęte',
+    cargoAddFailed: 'Nie można dodać przesyłki',
+    trackingUpdated: 'Informacje o śledzeniu zaktualizowane',
+    updateFailed: 'Aktualizacja nie powiodła się',
+    shipmentsUpdated: 'przesyłek zaktualizowanych',
+    bulkUpdateFailed: 'Masowa aktualizacja nie powiodła się',
+    cargoDeleted: 'Przesyłka usunięta',
+    cargoDeleteFailed: 'Nie można usunąć przesyłki',
+    estimated: 'Szacowane'
   }
 };
 
@@ -216,7 +369,7 @@ const Shipments = () => {
       setShipments(shipmentsRes.data);
       setLeads(leadsRes.data);
     } catch (error) {
-      toast.error('Hata', { description: 'Veriler yüklenemedi' });
+      toast.error(t.error, { description: t.dataLoadFailed });
     } finally {
       setLoading(false);
     }
@@ -227,7 +380,7 @@ const Shipments = () => {
       const response = await axios.get(`${API}/shipments`);
       setShipments(response.data);
     } catch (error) {
-      toast.error('Hata', { description: 'Kargolar yüklenemedi' });
+      toast.error(t.error, { description: t.shipmentsLoadFailed });
     }
   };
 
@@ -254,7 +407,7 @@ const Shipments = () => {
       const response = await axios.get(`${API}/tracking/${quickTrackNumber.trim()}`);
       setQuickTrackResult(response.data);
     } catch (error) {
-      toast.error('Hata', { description: 'Takip bilgisi alınamadı' });
+      toast.error(t.error, { description: t.trackingInfoFailed });
     } finally {
       setQuickTracking(false);
     }
@@ -274,7 +427,7 @@ const Shipments = () => {
 
   const handleSave = async () => {
     if (!formData.tracking_number || !formData.recipient_name) {
-      toast.error('Hata', { description: 'Takip numarası ve alıcı adı gerekli' });
+      toast.error(t.error, { description: t.requiredFields });
       return;
     }
 
@@ -283,13 +436,13 @@ const Shipments = () => {
         ...formData,
         order_id: formData.lead_id || null
       });
-      toast.success('Başarılı', { description: 'Kargo eklendi ve takip başlatıldı' });
+      toast.success(t.cargoAdded);
       setIsDialogOpen(false);
       setQuickTrackNumber('');
       setQuickTrackResult(null);
       fetchShipments();
     } catch (error) {
-      toast.error('Hata', { description: 'Kargo eklenemedi' });
+      toast.error(t.error, { description: t.cargoAddFailed });
     }
   };
 
@@ -297,10 +450,10 @@ const Shipments = () => {
     setRefreshing(true);
     try {
       await axios.post(`${API}/shipments/${shipmentId}/refresh`);
-      toast.success('Başarılı', { description: 'Takip bilgisi güncellendi' });
+      toast.success(t.trackingUpdated);
       fetchShipments();
     } catch (error) {
-      toast.error('Hata', { description: 'Güncelleme başarısız' });
+      toast.error(t.error, { description: t.updateFailed });
     } finally {
       setRefreshing(false);
     }
@@ -310,10 +463,10 @@ const Shipments = () => {
     setRefreshing(true);
     try {
       const response = await axios.post(`${API}/shipments/refresh-all`);
-      toast.success('Başarılı', { description: `${response.data.updated_count} kargo güncellendi` });
+      toast.success(`${response.data.updated_count} ${t.shipmentsUpdated}`);
       fetchShipments();
     } catch (error) {
-      toast.error('Hata', { description: 'Toplu güncelleme başarısız' });
+      toast.error(t.error, { description: t.bulkUpdateFailed });
     } finally {
       setRefreshing(false);
     }
@@ -322,11 +475,11 @@ const Shipments = () => {
   const handleDelete = async () => {
     try {
       await axios.delete(`${API}/shipments/${selectedShipment.id}`);
-      toast.success('Başarılı', { description: 'Kargo silindi' });
+      toast.success(t.cargoDeleted);
       setIsDeleteDialogOpen(false);
       fetchShipments();
     } catch (error) {
-      toast.error('Hata', { description: 'Kargo silinemedi' });
+      toast.error(t.error, { description: t.cargoDeleteFailed });
     }
   };
 
@@ -405,8 +558,9 @@ const Shipments = () => {
           {/* Quick Track Result */}
           {quickTrackResult && (
             <div className="mt-4 p-4 bg-white rounded-lg border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
+              {/* Header - Mobile Responsive */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 flex-wrap">
                   {React.createElement(getStatusConfig(quickTrackResult.status).icon, { className: "w-5 h-5" })}
                   <Badge className={getStatusConfig(quickTrackResult.status).color}>
                     {getStatusConfig(quickTrackResult.status).label[language] || quickTrackResult.status_text}
@@ -422,33 +576,40 @@ const Shipments = () => {
                   )}
                   <Button size="sm" variant="outline" onClick={openAddDialog}>
                     <Plus className="w-4 h-4 mr-1" />
-                    Listeye Ekle
+                    {t.addToList}
                   </Button>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                <div><span className="text-muted-foreground">Konum:</span> <strong>{quickTrackResult.current_location || '-'}</strong></div>
-                <div><span className="text-muted-foreground">Tahmini:</span> {quickTrackResult.estimated_delivery || '-'}</div>
+              {/* Info Grid - Mobile Responsive */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-3">
+                <div className="p-2 bg-muted/50 rounded">
+                  <span className="text-muted-foreground">{t.location}:</span> 
+                  <strong className="ml-1">{quickTrackResult.current_location || '-'}</strong>
+                </div>
+                <div className="p-2 bg-muted/50 rounded">
+                  <span className="text-muted-foreground">{t.estimated}:</span> 
+                  <span className="ml-1">{quickTrackResult.estimated_delivery || '-'}</span>
+                </div>
               </div>
               
-              {/* Events Timeline */}
+              {/* Events Timeline - Mobile Responsive */}
               {quickTrackResult.events && quickTrackResult.events.length > 0 && (
                 <div className="mt-3 pt-3 border-t">
                   <p className="text-sm font-semibold mb-2 flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    Kargo Hareketleri ({quickTrackResult.events.length})
+                    {t.cargoMovements} ({quickTrackResult.events.length})
                   </p>
                   <div className="space-y-2 max-h-[200px] overflow-y-auto">
                     {quickTrackResult.events.map((event, idx) => (
-                      <div key={idx} className="flex gap-3 text-sm">
-                        <div className="text-muted-foreground whitespace-nowrap min-w-[90px]">
+                      <div key={idx} className="flex flex-col sm:flex-row gap-1 sm:gap-3 text-sm p-2 bg-muted/30 rounded">
+                        <div className="text-muted-foreground whitespace-nowrap text-xs sm:text-sm sm:min-w-[100px]">
                           {event.date} {event.time}
                         </div>
                         <div className="flex-1">
-                          <span className="font-medium">{event.description}</span>
+                          <span className="font-medium text-xs sm:text-sm">{event.description}</span>
                           {event.location && (
-                            <span className="text-muted-foreground ml-1">- {event.location}</span>
+                            <span className="text-muted-foreground ml-1 text-xs">- {event.location}</span>
                           )}
                         </div>
                       </div>
@@ -502,7 +663,7 @@ const Shipments = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredShipments.map((shipment) => {
             const config = getStatusConfig(shipment.status);
             const StatusIcon = config.icon;
@@ -511,43 +672,53 @@ const Shipments = () => {
             return (
               <Card key={shipment.id} className={`transition-all ${isExpanded ? 'ring-2 ring-amber-300' : ''}`}>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-full ${config.color}`}>
-                        <StatusIcon className="w-6 h-6" />
+                  {/* Mobile-First Card Layout */}
+                  <div className="space-y-3">
+                    {/* Header Row: Icon + Tracking Number + Status */}
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 sm:p-3 rounded-full ${config.color} flex-shrink-0`}>
+                        <StatusIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-lg">{shipment.tracking_number}</span>
-                          <Badge className={config.color}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="font-mono font-bold text-sm sm:text-lg">{shipment.tracking_number}</span>
+                          <Badge className={`${config.color} text-xs`}>
                             {config.label[language] || shipment.status_text}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {shipment.recipient_name} • {shipment.recipient_address}
+                        <p className="text-sm text-muted-foreground truncate">
+                          {shipment.recipient_name}
                         </p>
+                        {shipment.recipient_address && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {shipment.recipient_address}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-4">
-                      {shipment.current_location && (
-                        <div className="text-right hidden md:block">
-                          <p className="text-sm font-medium flex items-center gap-1">
-                            <MapPin className="w-4 h-4 text-amber-600" />
-                            {shipment.current_location}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDate(shipment.last_tracked)}
-                          </p>
+                    {/* Location & Time Info */}
+                    {shipment.current_location && (
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 pl-0 sm:pl-14">
+                        <div className="flex items-center gap-1 text-sm">
+                          <MapPin className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                          <span className="font-medium">{shipment.current_location}</span>
                         </div>
-                      )}
-                      
+                        <span className="text-xs text-muted-foreground sm:ml-auto">
+                          {formatDate(shipment.last_tracked)}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-between pt-2 border-t">
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setDetailViewShipment(shipment)}
-                          title="Detayları Görüntüle"
+                          title={t.cargoDetails}
+                          className="h-8 w-8 p-0"
                         >
                           <Package className="w-4 h-4 text-amber-600" />
                         </Button>
@@ -556,6 +727,7 @@ const Shipments = () => {
                           size="sm"
                           onClick={() => handleRefresh(shipment.id)}
                           disabled={refreshing}
+                          className="h-8 w-8 p-0"
                         >
                           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                         </Button>
@@ -563,13 +735,17 @@ const Shipments = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => setExpandedShipment(isExpanded ? null : shipment.id)}
+                          className="h-8 w-8 p-0"
                         >
                           <Clock className="w-4 h-4" />
                         </Button>
+                      </div>
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => window.open(`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${shipment.tracking_number}`, '_blank')}
+                          className="h-8 w-8 p-0"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Button>
@@ -577,7 +753,7 @@ const Shipments = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => { setSelectedShipment(shipment); setIsDeleteDialogOpen(true); }}
-                          className="text-red-600 hover:text-red-700"
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -594,13 +770,18 @@ const Shipments = () => {
                       </h4>
                       <div className="space-y-2">
                         {shipment.events.map((event, idx) => (
-                          <div key={idx} className="flex items-start gap-3 text-sm">
-                            <div className="w-2 h-2 mt-2 rounded-full bg-amber-400 flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="font-medium">{event.description}</p>
-                              <p className="text-muted-foreground text-xs">
-                                {event.date} {event.time} • {event.location}
-                              </p>
+                          <div key={idx} className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 text-sm p-2 bg-muted/30 rounded">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" />
+                              <span className="text-xs text-muted-foreground">
+                                {event.date} {event.time}
+                              </span>
+                            </div>
+                            <div className="flex-1 pl-4 sm:pl-0">
+                              <p className="font-medium text-xs sm:text-sm">{event.description}</p>
+                              {event.location && (
+                                <p className="text-xs text-muted-foreground">{event.location}</p>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -619,7 +800,7 @@ const Shipments = () => {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{t.addShipment}</DialogTitle>
-            <DialogDescription>DHL takip numarasını girin ve müşteri seçin</DialogDescription>
+            <DialogDescription>{t.enterDhlTracking}</DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
@@ -635,10 +816,10 @@ const Shipments = () => {
             
             {/* Müşteri Seçimi */}
             <div className="space-y-2">
-              <Label>Müşteri Seç (Listeden)</Label>
+              <Label>{t.selectCustomer}</Label>
               <Select value={formData.lead_id} onValueChange={handleLeadSelect}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Müşteri seçin..." />
+                  <SelectValue placeholder={t.selectCustomerPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {leads.map((lead) => (
@@ -655,7 +836,7 @@ const Shipments = () => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">veya manuel girin</span>
+                <span className="bg-background px-2 text-muted-foreground">{t.orEnterManually}</span>
               </div>
             </div>
             
@@ -664,7 +845,7 @@ const Shipments = () => {
               <Input
                 value={formData.recipient_name}
                 onChange={(e) => setFormData({ ...formData, recipient_name: e.target.value })}
-                placeholder="Müşteri Adı"
+                placeholder={t.customerName}
               />
             </div>
             
@@ -673,7 +854,7 @@ const Shipments = () => {
               <Input
                 value={formData.recipient_address}
                 onChange={(e) => setFormData({ ...formData, recipient_address: e.target.value })}
-                placeholder="Teslimat Adresi"
+                placeholder={t.deliveryAddress}
               />
             </div>
             
@@ -683,7 +864,7 @@ const Shipments = () => {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={2}
-                placeholder="Notlar..."
+                placeholder={t.notes}
               />
             </div>
           </div>
@@ -707,11 +888,11 @@ const Shipments = () => {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-3">
                   <Truck className="w-6 h-6 text-amber-600" />
-                  Kargo Detayları
+                  {t.cargoDetails}
                 </DialogTitle>
               </DialogHeader>
               
-              <div className="space-y-6 py-4">
+              <div className="space-y-4 py-4">
                 {/* Status Banner */}
                 <div className={`p-4 rounded-lg ${getStatusConfig(detailViewShipment.status).color} border`}>
                   <div className="flex items-center gap-3">
@@ -721,36 +902,36 @@ const Shipments = () => {
                         {getStatusConfig(detailViewShipment.status).label[language] || detailViewShipment.status_text}
                       </p>
                       <p className="text-sm opacity-80">
-                        Son güncelleme: {formatDate(detailViewShipment.last_tracked)}
+                        {t.lastUpdateLabel}: {formatDate(detailViewShipment.last_tracked)}
                       </p>
                     </div>
                   </div>
                 </div>
                 
-                {/* Tracking Info */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Tracking Info - Mobile Responsive */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Takip Numarası</p>
-                    <p className="font-mono font-bold">{detailViewShipment.tracking_number}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t.trackingNumber}</p>
+                    <p className="font-mono font-bold text-sm sm:text-base">{detailViewShipment.tracking_number}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Mevcut Konum</p>
-                    <p className="font-semibold flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground mb-1">{t.currentLocation}</p>
+                    <p className="font-semibold flex items-center gap-1 text-sm">
                       <MapPin className="w-4 h-4 text-amber-600" />
                       {detailViewShipment.current_location || '-'}
                     </p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Alıcı</p>
-                    <p className="font-semibold">{detailViewShipment.recipient_name}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t.recipientLabel}</p>
+                    <p className="font-semibold text-sm">{detailViewShipment.recipient_name}</p>
                   </div>
                   <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Teslimat Adresi</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t.deliveryAddressLabel}</p>
                     <p className="text-sm">{detailViewShipment.recipient_address || '-'}</p>
                   </div>
                   {detailViewShipment.estimated_delivery && (
-                    <div className="p-3 bg-green-50 rounded-lg col-span-2">
-                      <p className="text-xs text-green-700 mb-1">Tahmini Teslimat</p>
+                    <div className="p-3 bg-green-50 rounded-lg sm:col-span-2">
+                      <p className="text-xs text-green-700 mb-1">{t.estimatedDelivery}</p>
                       <p className="font-semibold text-green-800 flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
                         {detailViewShipment.estimated_delivery}
@@ -762,19 +943,19 @@ const Shipments = () => {
                 {/* Event Timeline */}
                 {detailViewShipment.events && detailViewShipment.events.length > 0 && (
                   <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
                       <Clock className="w-4 h-4" />
-                      Takip Geçmişi ({detailViewShipment.events.length} adım)
+                      {t.trackingHistory} ({detailViewShipment.events.length} {t.steps})
                     </h4>
-                    <div className="relative pl-6 border-l-2 border-amber-200 space-y-4">
+                    <div className="relative pl-4 sm:pl-6 border-l-2 border-amber-200 space-y-3">
                       {detailViewShipment.events.map((event, idx) => (
                         <div key={idx} className="relative">
-                          <div className={`absolute -left-[25px] w-4 h-4 rounded-full ${
+                          <div className={`absolute -left-[17px] sm:-left-[25px] w-3 h-3 sm:w-4 sm:h-4 rounded-full ${
                             idx === 0 ? 'bg-amber-500' : 'bg-amber-200'
                           }`} />
-                          <div className="bg-muted/50 p-3 rounded-lg">
-                            <p className="font-medium">{event.description}</p>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <div className="bg-muted/50 p-2 sm:p-3 rounded-lg">
+                            <p className="font-medium text-xs sm:text-sm">{event.description}</p>
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted-foreground mt-1">
                               <span className="flex items-center gap-1">
                                 <Calendar className="w-3 h-3" />
                                 {event.date}
@@ -800,23 +981,24 @@ const Shipments = () => {
                 {/* Notes */}
                 {detailViewShipment.notes && (
                   <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">Notlar</p>
-                    <p>{detailViewShipment.notes}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t.notes}</p>
+                    <p className="text-sm">{detailViewShipment.notes}</p>
                   </div>
                 )}
               </div>
               
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   onClick={() => window.open(`https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${detailViewShipment.tracking_number}`, '_blank')}
+                  className="w-full sm:w-auto"
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  DHL'de Görüntüle
+                  {t.viewOnDhl}
                 </Button>
-                <Button onClick={() => { handleRefresh(detailViewShipment.id); setDetailViewShipment(null); }} className="bg-amber-600 hover:bg-amber-700">
+                <Button onClick={() => { handleRefresh(detailViewShipment.id); setDetailViewShipment(null); }} className="bg-amber-600 hover:bg-amber-700 w-full sm:w-auto">
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Güncelle
+                  {t.update}
                 </Button>
               </DialogFooter>
             </>
