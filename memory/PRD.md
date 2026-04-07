@@ -70,6 +70,9 @@ Supported Languages: TR, EN, DE, PL, EL, BG
 3. ✅ **Sipariş Email Dil Seçimi** - Müşteriye mail gönderirken dil seçimi dropdown'u eklendi
 4. ✅ **Recipes Dil Senkronizasyonu** - Tüm Türkçe hardcoded metinler 4 dile çevrildi
 5. ✅ **Preview Dialog Dil Desteği** - Sipariş önizleme diyaloğu çoklu dil desteği
+6. ✅ **Müşteriler Mobil Görünüm** - Firma isimleri artık mobilde tam okunuyor, butonlar azaltıldı
+7. ✅ **Route Planner Mobil** - Sidebar z-index düzeltildi, butonlar responsive yapıldı
+8. ✅ **Layout Z-Index Düzeltmesi** - Sidebar z-60, içerik z-20 olarak ayrıldı
 
 ### Previous Session Updates
 1. ✅ **Food Fairs Page** - 18 international food exhibitions with future dates

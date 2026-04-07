@@ -677,33 +677,33 @@ const RoutePlanner = () => {
   }
 
   return (
-    <div className="space-y-6" data-testid="route-planner-page">
+    <div className="space-y-4 sm:space-y-6" data-testid="route-planner-page">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t.title}</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-4xl font-bold tracking-tight font-['Manrope']">{t.title}</h1>
+          <p className="text-muted-foreground text-sm sm:text-base mt-1">
             {t.subtitle}
             {geocoding && <span className="ml-2 text-orange-600">({t.loadingLocations})</span>}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={selectAll} disabled={Object.keys(geocodedLeads).length === 0}>
-            <List className="w-4 h-4 mr-2" />
-            {t.selectAll}
+          <Button variant="outline" size="sm" onClick={selectAll} disabled={Object.keys(geocodedLeads).length === 0}>
+            <List className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t.selectAll}</span>
           </Button>
-          <Button variant="outline" onClick={clearSelection}>
-            <RotateCcw className="w-4 h-4 mr-2" />
-            {t.clear}
+          <Button variant="outline" size="sm" onClick={clearSelection}>
+            <RotateCcw className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t.clear}</span>
           </Button>
         </div>
       </div>
 
       {/* Start Address Input */}
-      <Card className="relative z-50">
+      <Card className="relative z-20">
         <CardContent className="p-4">
-          <div className="flex gap-4 items-end flex-wrap">
-            <div className="flex-1 min-w-[300px] relative">
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
+            <div className="flex-1 min-w-0 relative">
               <Label htmlFor="start-address" className="text-sm font-medium mb-2 block">
                 {t.startAddress}
               </Label>
@@ -738,7 +738,7 @@ const RoutePlanner = () => {
               
               {/* Autocomplete Suggestions */}
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-[1000] max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-[100] max-h-60 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <button
                       key={idx}
@@ -765,48 +765,54 @@ const RoutePlanner = () => {
               )}
             </div>
             
-            {/* Use My Location Button */}
-            <Button 
-              variant="outline"
-              onClick={getUserLocation}
-              disabled={gettingLocation}
-              className="min-w-[160px]"
-            >
-              {gettingLocation ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {t.locating}
-                </>
-              ) : (
-                <>
-                  <Crosshair className="w-4 h-4 mr-2" />
-                  {t.useMyLocation}
-                </>
-              )}
-            </Button>
-            
-            {/* Auto Optimize Button */}
-            {startCoords && selectedLeads.size > 0 && (
+            {/* Buttons row - responsive */}
+            <div className="flex flex-wrap gap-2">
+              {/* Use My Location Button */}
               <Button 
                 variant="outline"
-                onClick={autoOptimizeRoute}
-                disabled={calculating}
-                className="bg-purple-50 hover:bg-purple-100 border-purple-200"
+                onClick={getUserLocation}
+                disabled={gettingLocation}
+                className="flex-1 sm:flex-none sm:min-w-[140px]"
+                size="sm"
               >
-                <Zap className="w-4 h-4 mr-2 text-purple-600" />
-                {t.autoOptimize}
+                {gettingLocation ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <span className="hidden sm:inline">{t.locating}</span>
+                  </>
+                ) : (
+                  <>
+                    <Crosshair className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t.useMyLocation}</span>
+                  </>
+                )}
               </Button>
-            )}
-            
-            {/* Create Route Button */}
-            <Button 
-              onClick={calculateOptimalRoute} 
-              disabled={calculating || selectedLeads.size < 1 || !startAddress.trim()}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              {calculating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Route className="w-4 h-4 mr-2" />}
-              {calculating ? t.calculating : t.createRoute}
-            </Button>
+              
+              {/* Auto Optimize Button */}
+              {startCoords && selectedLeads.size > 0 && (
+                <Button 
+                  variant="outline"
+                  onClick={autoOptimizeRoute}
+                  disabled={calculating}
+                  className="flex-1 sm:flex-none bg-purple-50 hover:bg-purple-100 border-purple-200"
+                  size="sm"
+                >
+                  <Zap className="w-4 h-4 sm:mr-2 text-purple-600" />
+                  <span className="hidden sm:inline">{t.autoOptimize}</span>
+                </Button>
+              )}
+              
+              {/* Create Route Button */}
+              <Button 
+                onClick={calculateOptimalRoute} 
+                disabled={calculating || selectedLeads.size < 1 || !startAddress.trim()}
+                className="flex-1 sm:flex-none bg-orange-600 hover:bg-orange-700"
+                size="sm"
+              >
+                {calculating ? <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" /> : <Route className="w-4 h-4 sm:mr-2" />}
+                <span className="hidden sm:inline">{calculating ? t.calculating : t.createRoute}</span>
+              </Button>
+            </div>
           </div>
           
           {/* Tips */}

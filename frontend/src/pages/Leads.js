@@ -532,87 +532,105 @@ const Leads = () => {
                       {lead.first_name?.[0]}{lead.last_name?.[0]}
                     </div>
                     
-                    {/* Main Info - Flexible */}
-                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-1 sm:gap-4">
-                      {/* Company & Name */}
-                      <div className="sm:col-span-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{lead.company_name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
+                    {/* Main Info - Mobile: show more of company name */}
+                    <div className="flex-1 min-w-0">
+                      {/* Mobile: Stack vertically with full company name */}
+                      <div className="sm:hidden">
+                        <p className="font-semibold text-sm leading-tight">{lead.company_name}</p>
+                        <p className="text-xs text-muted-foreground">{lead.city}, {lead.country}</p>
                       </div>
                       
-                      {/* Email */}
-                      <div className="hidden sm:block min-w-0">
-                        <p className="text-xs text-muted-foreground truncate">{lead.email || '-'}</p>
-                      </div>
-                      
-                      {/* Location */}
-                      <div className="hidden sm:block min-w-0">
-                        <p className="text-xs text-muted-foreground truncate">{lead.city}, {lead.country}</p>
-                      </div>
-                      
-                      {/* Status */}
-                      <div className="hidden sm:flex items-center gap-2">
-                        {lead.last_activity && (
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
-                            lead.last_activity_outcome === 'positive' ? 'border-green-300 text-green-700' :
-                            lead.last_activity_outcome === 'negative' ? 'border-red-300 text-red-700' :
-                            lead.last_activity_outcome === 'postponed' ? 'border-amber-300 text-amber-700' :
-                            lead.last_activity_outcome === 'ordered' ? 'border-blue-300 text-blue-700' :
-                            'border-gray-300 text-gray-700'
-                          }`}>
-                            {getOutcomeLabel(lead.last_activity_outcome)}
-                          </Badge>
-                        )}
+                      {/* Desktop: Grid layout */}
+                      <div className="hidden sm:grid sm:grid-cols-4 gap-1 sm:gap-4">
+                        {/* Company & Name */}
+                        <div className="sm:col-span-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{lead.company_name}</p>
+                          <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
+                        </div>
+                        
+                        {/* Email */}
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground truncate">{lead.email || '-'}</p>
+                        </div>
+                        
+                        {/* Location */}
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground truncate">{lead.city}, {lead.country}</p>
+                        </div>
+                        
+                        {/* Status */}
+                        <div className="flex items-center gap-2">
+                          {lead.last_activity && (
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                              lead.last_activity_outcome === 'positive' ? 'border-green-300 text-green-700' :
+                              lead.last_activity_outcome === 'negative' ? 'border-red-300 text-red-700' :
+                              lead.last_activity_outcome === 'postponed' ? 'border-amber-300 text-amber-700' :
+                              lead.last_activity_outcome === 'ordered' ? 'border-blue-300 text-blue-700' :
+                              'border-gray-300 text-gray-700'
+                            }`}>
+                              {getOutcomeLabel(lead.last_activity_outcome)}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
-                    {/* Actions - Always visible */}
+                    {/* Actions - Fewer buttons on mobile */}
                     <div className="flex items-center gap-0.5 flex-shrink-0">
+                      {/* Desktop actions */}
+                      <div className="hidden sm:flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openActivityDialog(lead)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`activity-${lead.id}`}
+                        >
+                          <History className="w-3.5 h-3.5 text-purple-600" />
+                        </Button>
+                      </div>
+                      
+                      {/* Always visible */}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openActivityDialog(lead)}
+                        onClick={() => openPreviewDialog(lead)}
                         className="h-7 w-7 p-0"
-                        data-testid={`activity-${lead.id}`}
+                        data-testid={`preview-${lead.id}`}
                       >
-                        <History className="w-3.5 h-3.5 text-purple-600" />
+                        <Eye className="w-3.5 h-3.5 text-gray-600" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openLeadDetails(lead)}
-                        className="h-7 w-7 p-0"
-                        data-testid={`view-${lead.id}`}
-                      >
-                        <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSendEmail(lead)}
-                        className="h-7 w-7 p-0"
-                        data-testid={`email-${lead.id}`}
-                      >
-                        <Mail className="w-3.5 h-3.5 text-blue-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(lead)}
-                        className="h-7 w-7 p-0"
-                        data-testid={`edit-${lead.id}`}
-                      >
-                        <Pencil className="w-3.5 h-3.5 text-slate-500" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openDeleteDialog(lead)}
-                        className="h-7 w-7 p-0"
-                        data-testid={`delete-${lead.id}`}
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                      </Button>
+                      
+                      {/* Desktop only */}
+                      <div className="hidden sm:flex items-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openMailDialog(lead)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`mail-${lead.id}`}
+                        >
+                          <Mail className="w-3.5 h-3.5 text-blue-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(lead)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`edit-${lead.id}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-amber-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDeleteDialog(lead)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`delete-${lead.id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
