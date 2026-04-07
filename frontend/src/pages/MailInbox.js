@@ -103,6 +103,17 @@ const MailPage = () => {
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   
+  // Email History (Autocomplete)
+  const [emailHistory, setEmailHistory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('email_history');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  const [showEmailSuggestions, setShowEmailSuggestions] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState([]);
+  
   // Email Settings States
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [emailSettings, setEmailSettings] = useState({
@@ -590,6 +601,14 @@ const MailPage = () => {
         });
       }
       
+      // Save email to history for autocomplete
+      const newEmail = composeData.to.toLowerCase().trim();
+      if (newEmail && !emailHistory.includes(newEmail)) {
+        const updatedHistory = [newEmail, ...emailHistory].slice(0, 50); // Keep last 50
+        setEmailHistory(updatedHistory);
+        localStorage.setItem('email_history', JSON.stringify(updatedHistory));
+      }
+      
       setSentEmails(prev => [{
         id: Date.now().toString(),
         to: composeData.to,
@@ -622,6 +641,25 @@ const MailPage = () => {
     } finally {
       setSending(false);
     }
+  };
+  
+  // Email autocomplete handler
+  const handleToInputChange = (value) => {
+    setComposeData({ ...composeData, to: value });
+    if (value.length > 0) {
+      const filtered = emailHistory.filter(email => 
+        email.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredSuggestions(filtered);
+      setShowEmailSuggestions(filtered.length > 0);
+    } else {
+      setShowEmailSuggestions(false);
+    }
+  };
+  
+  const selectEmailSuggestion = (email) => {
+    setComposeData({ ...composeData, to: email });
+    setShowEmailSuggestions(false);
   };
 
   const handleReply = (email, mode = 'reply') => {
@@ -974,19 +1012,23 @@ const MailPage = () => {
 
       {/* Email Detail View */}
       {selectedEmail && (
-        <div className={`fixed inset-0 z-50 bg-slate-900 flex flex-col overflow-hidden ${isEmailFullscreen ? '' : 'lg:relative lg:w-[600px] lg:min-w-[500px]'}`}>
-          {/* Header */}
-          <div className="flex items-center gap-2 p-3 md:p-4 border-b border-slate-700/50 bg-slate-800/80 backdrop-blur-sm flex-shrink-0">
-            <Button variant="ghost" size="icon" onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); setShowAiPanel(false); }} className="text-white hover:bg-slate-700 rounded-xl">
-              <ChevronLeft className="w-5 h-5" />
+        <div className={`fixed inset-0 z-50 bg-slate-900 flex flex-col overflow-hidden`}>
+          {/* Compact Header */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700/50 bg-slate-800/80 backdrop-blur-sm flex-shrink-0">
+            <Button variant="ghost" size="sm" onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); setShowAiPanel(false); }} className="text-white hover:bg-slate-700 rounded-lg h-8 px-2">
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              <span className="text-xs">{t('back')}</span>
             </Button>
-            <div className="flex-1" />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-semibold text-white truncate">{selectedEmail.subject || t('noSubject')}</h2>
+              <p className="text-xs text-slate-400 truncate">{selectedEmail.from_name || selectedEmail.from_email}</p>
+            </div>
             
             {/* AI Actions Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-purple-400 hover:bg-purple-500/20 rounded-xl">
-                  <Sparkles className="w-5 h-5" />
+                <Button variant="ghost" size="sm" className="text-purple-400 hover:bg-purple-500/20 rounded-lg h-8 px-2">
+                  <Sparkles className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-slate-800 border-slate-700 w-56">
@@ -1025,64 +1067,39 @@ const MailPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <Button variant="ghost" size="icon" onClick={() => setIsEmailFullscreen(!isEmailFullscreen)} className="text-white hover:bg-slate-700 rounded-xl">
-              {isEmailFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            <Button variant="ghost" size="sm" onClick={() => handleMoveToTrash(selectedEmail)} className="text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg h-8 px-2">
+              <Trash2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleMoveToTrash(selectedEmail)} className="text-white hover:bg-red-500/20 hover:text-red-400 rounded-xl">
-              <Trash2 className="w-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleToggleStar(selectedEmail)} className="text-white hover:bg-slate-700 rounded-xl">
-              <Star className={`w-5 h-5 ${selectedEmail.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+            <Button variant="ghost" size="sm" onClick={() => handleToggleStar(selectedEmail)} className="text-white hover:bg-slate-700 rounded-lg h-8 px-2">
+              <Star className={`w-4 h-4 ${selectedEmail.starred ? 'fill-yellow-400 text-yellow-400' : ''}`} />
             </Button>
           </div>
 
-          {/* Subject */}
-          <div className="px-5 py-4 border-b border-slate-700/50">
-            <h2 className="text-xl font-bold text-white">{selectedEmail.subject || t('noSubject')}</h2>
-          </div>
-
-          {/* Sender */}
-          <div className="flex items-start gap-4 p-5 border-b border-slate-700/50">
-            <div className={`w-14 h-14 rounded-2xl ${getAvatarColor(selectedEmail.from_name)} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>
-              {(selectedEmail.from_name || selectedEmail.from_email)?.[0]?.toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <span className="font-bold text-white text-lg">{selectedEmail.from_name || 'Unknown'}</span>
-              <p className="text-sm text-slate-400">&lt;{selectedEmail.from_email}&gt;</p>
-              <p className="text-xs text-slate-500 mt-1"><Clock className="w-3 h-3 inline mr-1" />{new Date(selectedEmail.date).toLocaleString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : 'tr-TR')}</p>
-            </div>
-          </div>
-
-          {/* AI Panel */}
+          {/* AI Panel - Collapsible */}
           {showAiPanel && (
-            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Brain className="w-5 h-5 text-purple-400" />
-                <span className="font-semibold text-purple-300">{t('aiAssistant')}</span>
+            <div className="mx-2 mt-2 p-3 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-lg flex-shrink-0">
+              <div className="flex items-center gap-2 mb-2">
+                <Brain className="w-4 h-4 text-purple-400" />
+                <span className="font-semibold text-purple-300 text-sm">{t('aiAssistant')}</span>
                 <button onClick={() => setShowAiPanel(false)} className="ml-auto text-slate-400 hover:text-white">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               {aiLoading ? (
-                <div className="flex items-center gap-2 text-purple-300">
+                <div className="flex items-center gap-2 text-purple-300 text-sm">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>{t('analyzing')}</span>
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-slate-300 mb-4">{aiSummary}</p>
+                  <p className="text-xs text-slate-300 mb-2">{aiSummary}</p>
                   {smartReplies.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-purple-400 font-medium flex items-center gap-1">
-                        <Zap className="w-3 h-3" /> {t('quickReplies')}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {smartReplies.map((reply, i) => (
-                          <button key={i} onClick={() => handleSmartReply(reply)} className="px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-sm rounded-lg transition-all">
-                            {reply.length > 50 ? reply.substring(0, 50) + '...' : reply}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-1">
+                      {smartReplies.map((reply, i) => (
+                        <button key={i} onClick={() => handleSmartReply(reply)} className="px-2 py-1 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-xs rounded-lg transition-all">
+                          {reply.length > 40 ? reply.substring(0, 40) + '...' : reply}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </>
@@ -1090,70 +1107,58 @@ const MailPage = () => {
             </div>
           )}
 
-          {/* Translation Panel */}
+          {/* Translation Panel - Collapsible */}
           {showTranslation && translatedBody && (
-            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/30 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <Languages className="w-5 h-5 text-blue-400" />
-                <span className="font-semibold text-blue-300">{t('translation')}</span>
+            <div className="mx-2 mt-2 p-3 bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border border-blue-500/30 rounded-lg flex-shrink-0 max-h-32 overflow-y-auto">
+              <div className="flex items-center gap-2 mb-2">
+                <Languages className="w-4 h-4 text-blue-400" />
+                <span className="font-semibold text-blue-300 text-sm">{t('translation')}</span>
                 <button onClick={() => setShowTranslation(false)} className="ml-auto text-slate-400 hover:text-white">
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              {translating ? (
-                <div className="flex items-center gap-2 text-blue-300">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{t('translating')}</span>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-300 whitespace-pre-wrap">{translatedBody}</p>
-              )}
+              <p className="text-xs text-slate-300 whitespace-pre-wrap">{translatedBody}</p>
             </div>
           )}
           
-          {/* AI Analysis Results */}
+          {/* AI Analysis Results - Compact */}
           {(spamAnalysis || customerMatch || sentimentAnalysis) && (
-            <div className="mx-4 mt-4 flex flex-wrap gap-2">
+            <div className="mx-2 mt-2 flex flex-wrap gap-1 flex-shrink-0">
               {spamAnalysis && (
-                <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${spamAnalysis.is_spam ? 'bg-red-900/40 text-red-300' : 'bg-green-900/40 text-green-300'}`}>
-                  <ShieldAlert className="w-4 h-4" />
+                <div className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 ${spamAnalysis.is_spam ? 'bg-red-900/40 text-red-300' : 'bg-green-900/40 text-green-300'}`}>
+                  <ShieldAlert className="w-3 h-3" />
                   {spamAnalysis.is_spam ? t('possibleSpam') : t('notSpam')} ({spamAnalysis.confidence}%)
                 </div>
               )}
-              {customerMatch && (
-                <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${customerMatch.found ? 'bg-green-900/40 text-green-300' : 'bg-slate-800 text-slate-400'}`}>
-                  <Users className="w-4 h-4" />
-                  {customerMatch.found ? `${t('customerFound')}: ${customerMatch.customer?.company_name}` : t('customerNotFound')}
+              {customerMatch && customerMatch.found && (
+                <div className="px-2 py-1 rounded-lg text-xs flex items-center gap-1 bg-green-900/40 text-green-300">
+                  <Users className="w-3 h-3" />
+                  {customerMatch.customer?.company_name}
                 </div>
               )}
               {sentimentAnalysis && (
-                <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+                <div className={`px-2 py-1 rounded-lg text-xs flex items-center gap-1 ${
                   sentimentAnalysis.sentiment === 'positive' ? 'bg-green-900/40 text-green-300' : 
                   sentimentAnalysis.sentiment === 'negative' ? 'bg-red-900/40 text-red-300' : 
                   'bg-slate-800 text-slate-400'
                 }`}>
-                  <Heart className="w-4 h-4" />
-                  {sentimentAnalysis.sentiment === 'positive' ? t('positive') : sentimentAnalysis.sentiment === 'negative' ? t('negative') : t('neutral')}
-                  {sentimentAnalysis.urgency === 'high' && <AlertTriangle className="w-3 h-3 text-amber-400" />}
+                  <Heart className="w-3 h-3" />
+                  {sentimentAnalysis.sentiment === 'positive' ? '😊' : sentimentAnalysis.sentiment === 'negative' ? '😟' : '😐'}
                 </div>
               )}
             </div>
           )}
 
-          {/* Attachments */}
+          {/* Attachments - Compact */}
           {selectedEmail.attachments?.length > 0 && (
-            <div className="px-5 py-3 border-b border-slate-700/50">
-              <p className="text-xs text-slate-400 mb-2 flex items-center gap-1">
-                <Paperclip className="w-3 h-3" /> {selectedEmail.attachments.length} {t('attachments')}
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <div className="px-2 py-1.5 border-b border-slate-700/50 flex-shrink-0">
+              <div className="flex flex-wrap gap-1">
                 {selectedEmail.attachments.map((att, index) => {
                   const FileIcon = getFileIcon(att.name || att.filename);
                   return (
-                    <div key={index} className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl text-sm hover:bg-slate-700/50 cursor-pointer transition-all">
-                      <FileIcon className="w-4 h-4 text-indigo-400" />
-                      <span className="max-w-[150px] truncate text-slate-300">{att.name || att.filename}</span>
-                      {att.size && <span className="text-xs text-slate-500">({formatFileSize(att.size)})</span>}
+                    <div key={index} className="flex items-center gap-1.5 px-2 py-1 bg-slate-800/50 border border-slate-700/50 rounded-lg text-xs hover:bg-slate-700/50 cursor-pointer">
+                      <FileIcon className="w-3 h-3 text-indigo-400" />
+                      <span className="max-w-[100px] truncate text-slate-300">{att.name || att.filename}</span>
                       <Download className="w-3 h-3 text-slate-500" />
                     </div>
                   );
@@ -1162,61 +1167,55 @@ const MailPage = () => {
             </div>
           )}
 
-          {/* Body - Scrollable Container */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="bg-white min-h-full rounded-t-2xl mt-2 mx-2 mb-2">
-              {loadingBody ? (
-                <div className="flex items-center justify-center py-10">
-                  <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
-                  <span className="ml-2 text-slate-600">{t('loading')}</span>
-                </div>
-              ) : selectedEmail.body ? (
-                <iframe
-                  srcDoc={`<!DOCTYPE html>
-                    <html>
-                    <head>
-                      <meta charset="utf-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1">
-                      <style>
-                        body { 
-                          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                          line-height: 1.7;
-                          color: #1f2937;
-                          padding: 16px;
-                          margin: 0;
-                          background: white;
-                          font-size: 15px;
-                        }
-                        @media (max-width: 640px) {
-                          body { font-size: 14px; padding: 12px; }
-                        }
-                        img { max-width: 100%; height: auto; border-radius: 8px; }
-                        a { color: #4f46e5; }
-                        table { max-width: 100%; }
-                        pre, code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-                        p { margin: 0 0 1em 0; }
-                      </style>
-                    </head>
-                    <body>${selectedEmail.body}</body>
-                    </html>`}
-                  className="w-full border-0"
-                  style={{ minHeight: '300px', height: isEmailFullscreen ? 'calc(100vh - 380px)' : 'calc(100vh - 500px)' }}
-                  sandbox="allow-same-origin"
-                  title="Email Content"
-                />
-              ) : (
-                <div className="p-5 text-slate-500">{selectedEmail.snippet || t('noContent')}</div>
-              )}
-            </div>
+          {/* Email Body - Full Height */}
+          <div className="flex-1 overflow-hidden">
+            {loadingBody ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                <span className="ml-2 text-slate-400">{t('loading')}</span>
+              </div>
+            ) : selectedEmail.body ? (
+              <iframe
+                srcDoc={`<!DOCTYPE html>
+                  <html>
+                  <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>
+                      body { 
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.6;
+                        color: #1f2937;
+                        padding: 12px;
+                        margin: 0;
+                        background: white;
+                        font-size: 14px;
+                      }
+                      img { max-width: 100%; height: auto; }
+                      a { color: #4f46e5; }
+                      table { max-width: 100%; }
+                      pre, code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+                      p { margin: 0 0 0.8em 0; }
+                    </style>
+                  </head>
+                  <body>${selectedEmail.body}</body>
+                  </html>`}
+                className="w-full h-full border-0 bg-white"
+                sandbox="allow-same-origin"
+                title="Email Content"
+              />
+            ) : (
+              <div className="p-4 text-slate-500 text-sm">{selectedEmail.snippet || t('noContent')}</div>
+            )}
           </div>
 
-          {/* Actions */}
-          <div className="p-3 md:p-4 border-t border-slate-700/50 bg-slate-800/80 flex gap-3 flex-shrink-0">
-            <Button onClick={() => handleReply(selectedEmail, 'reply')} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl py-4 md:py-5 text-sm md:text-base">
-              <Reply className="w-4 h-4 mr-2" />{t('reply')}
+          {/* Compact Actions */}
+          <div className="p-2 border-t border-slate-700/50 bg-slate-800/80 flex gap-2 flex-shrink-0">
+            <Button onClick={() => handleReply(selectedEmail, 'reply')} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg py-2 text-sm">
+              <Reply className="w-4 h-4 mr-1" />{t('reply')}
             </Button>
-            <Button onClick={() => handleReply(selectedEmail, 'forward')} variant="outline" className="flex-1 border-slate-600 text-white hover:bg-slate-700 rounded-xl py-4 md:py-5 text-sm md:text-base">
-              <Forward className="w-4 h-4 mr-2" />{t('forward')}
+            <Button onClick={() => handleReply(selectedEmail, 'forward')} variant="outline" className="flex-1 border-slate-600 text-white hover:bg-slate-700 rounded-lg py-2 text-sm">
+              <Forward className="w-4 h-4 mr-1" />{t('forward')}
             </Button>
           </div>
         </div>
@@ -1240,9 +1239,31 @@ const MailPage = () => {
           </div>
           
           <div className="flex-1 overflow-y-auto">
-            <div className="flex items-center border-b border-slate-200 px-5 py-3">
+            <div className="relative flex items-center border-b border-slate-200 px-5 py-3">
               <span className="w-16 text-sm text-slate-500 font-medium">{t('to')}</span>
-              <Input value={composeData.to} onChange={(e) => setComposeData({ ...composeData, to: e.target.value })} className="border-0 shadow-none focus-visible:ring-0 text-slate-800" placeholder="recipient@example.com" />
+              <div className="flex-1 relative">
+                <Input 
+                  value={composeData.to} 
+                  onChange={(e) => handleToInputChange(e.target.value)}
+                  onFocus={() => composeData.to && handleToInputChange(composeData.to)}
+                  onBlur={() => setTimeout(() => setShowEmailSuggestions(false), 200)}
+                  className="border-0 shadow-none focus-visible:ring-0 text-slate-800" 
+                  placeholder="recipient@example.com" 
+                />
+                {showEmailSuggestions && filteredSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    {filteredSuggestions.map((email, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => selectEmailSuggestion(email)}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                      >
+                        {email}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Button variant="ghost" size="sm" onClick={() => setShowCc(!showCc)} className="text-xs text-indigo-600">Cc/Bcc</Button>
             </div>
             

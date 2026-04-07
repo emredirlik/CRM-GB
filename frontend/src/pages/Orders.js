@@ -479,167 +479,83 @@ const Orders = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3" data-testid="orders-table">
+          <div className="space-y-1" data-testid="orders-table">
             {filteredOrders.map((order) => (
-              <Card key={order.id} className="hover:shadow-md transition-shadow" data-testid={`order-row-${order.id}`}>
-                <CardContent className="p-4">
-                  {/* Header: Product & Status */}
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                        <Package className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">{formatOrderProducts(order)}</p>
-                        {order.products && order.products.length > 1 && (
-                          <p className="text-xs text-muted-foreground truncate">
-                            {order.products.map(p => p.product_code).join(', ')}
-                          </p>
-                        )}
-                      </div>
+              <Card key={order.id} className="hover:shadow-sm transition-shadow" data-testid={`order-row-${order.id}`}>
+                <CardContent className="p-2 sm:p-3">
+                  {/* Compact Row Layout */}
+                  <div className="flex items-center gap-2">
+                    {/* Icon */}
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <Package className="w-4 h-4 text-indigo-600" />
                     </div>
-                    <Select 
-                      value={order.status} 
-                      onValueChange={(value) => handleStatusChange(order.id, value)}
-                    >
-                      <SelectTrigger className="w-auto h-7 px-2">
-                        <Badge className={`${statusColors[order.status]} border-0 text-xs`}>
+                    
+                    {/* Main Info - Flexible */}
+                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-5 gap-1 sm:gap-3">
+                      {/* Product */}
+                      <div className="sm:col-span-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{formatOrderProducts(order)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{order.company_name}</p>
+                      </div>
+                      
+                      {/* Quantity */}
+                      <div className="hidden sm:block min-w-0">
+                        <p className="text-xs font-semibold text-indigo-600">{formatOrderQuantity(order)}</p>
+                      </div>
+                      
+                      {/* Status */}
+                      <div className="hidden sm:block">
+                        <Badge className={`${statusColors[order.status]} border-0 text-[10px] px-1.5`}>
                           {statusLabels[language]?.[order.status] || order.status}
                         </Badge>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(statusColors).map(status => (
-                          <SelectItem key={status} value={status}>
-                            <Badge className={`${statusColors[status]} border-0`}>
-                              {statusLabels[language]?.[status]}
-                            </Badge>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Customer & Quantity Info */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Müşteri</p>
-                      <p className="font-medium truncate">{order.company_name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{order.lead_name}</p>
+                      </div>
+                      
+                      {/* Payment */}
+                      <div className="hidden sm:flex items-center gap-1">
+                        <Badge className={`${paymentStatusColors[order.payment_status || 'pending']} border text-[10px] px-1.5`}>
+                          {paymentStatusLabels[language]?.[order.payment_status || 'pending'] || 'Bekliyor'}
+                        </Badge>
+                        {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
+                          <span className="text-[10px] text-red-600">{getDaysOverdue(order)}g</span>
+                        )}
+                      </div>
+                      
+                      {/* Date */}
+                      <div className="hidden sm:block text-xs text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString('tr-TR')}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Miktar</p>
-                      <p className="font-semibold text-indigo-600">{formatOrderQuantity(order)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Ödeme</p>
+                    
+                    {/* Actions */}
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
                       <Select 
-                        value={order.payment_status || 'pending'} 
-                        onValueChange={(value) => handlePaymentStatusChange(order.id, value)}
+                        value={order.status} 
+                        onValueChange={(value) => handleStatusChange(order.id, value)}
                       >
-                        <SelectTrigger className="h-6 w-auto px-1 border-0 bg-transparent">
-                          <Badge className={`${paymentStatusColors[order.payment_status || 'pending']} border text-xs`}>
-                            <CreditCard className="w-3 h-3 mr-1" />
-                            {paymentStatusLabels[language]?.[order.payment_status || 'pending'] || 'Bekliyor'}
-                          </Badge>
+                        <SelectTrigger className="w-auto h-6 px-1.5 text-[10px]">
+                          <span className="sr-only">Status</span>
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.keys(paymentStatusColors).map(status => (
+                          {Object.keys(statusColors).map(status => (
                             <SelectItem key={status} value={status}>
-                              <Badge className={`${paymentStatusColors[status]} border`}>
-                                {paymentStatusLabels[language]?.[status]}
+                              <Badge className={`${statusColors[status]} border-0 text-xs`}>
+                                {statusLabels[language]?.[status]}
                               </Badge>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      {/* Show days overdue indicator */}
-                      {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Clock className="w-3 h-3 text-red-500" />
-                          <span className="text-xs text-red-600 font-medium">{getDaysOverdue(order)} gün gecikmiş</span>
-                        </div>
-                      )}
-                      {order.payment_due_date && order.payment_status !== 'paid' && (
-                        <p className="text-xs text-muted-foreground mt-0.5">Vade: {order.payment_due_date}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openPreview(order)}
-                        title="Önizleme"
-                        className="h-8 w-8 p-0"
-                        data-testid={`preview-${order.id}`}
-                      >
-                        <Eye className="w-4 h-4 text-indigo-600" />
+                      <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-7 w-7 p-0">
+                        <Eye className="w-3.5 h-3.5 text-indigo-600" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => sendWhatsApp(order.id)}
-                        title="WhatsApp"
-                        className="h-8 w-8 p-0"
-                        data-testid={`whatsapp-${order.id}`}
-                      >
-                        <MessageCircle className="w-4 h-4 text-green-600" />
+                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPdf(order.id)} className="h-7 w-7 p-0">
+                        <FileDown className="w-3.5 h-3.5 text-green-600" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadPdf(order.id)}
-                        title="PDF İndir"
-                        className="h-8 w-8 p-0"
-                        data-testid={`download-pdf-${order.id}`}
-                      >
-                        <FileDown className="w-4 h-4 text-blue-600" />
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-7 w-7 p-0">
+                        <Pencil className="w-3.5 h-3.5 text-slate-500" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEmailDialog(order)}
-                        title="Mail ile Gönder"
-                        className="h-8 w-8 p-0"
-                        data-testid={`email-order-${order.id}`}
-                      >
-                        <Mail className="w-4 h-4 text-purple-600" />
-                      </Button>
-                      {/* Payment reminder button - only show if payment overdue */}
-                      {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => sendPaymentReminder(order.id)}
-                          title="Ödeme Hatırlatması Gönder"
-                          className="h-8 w-8 p-0"
-                          data-testid={`payment-reminder-${order.id}`}
-                        >
-                          <Bell className="w-4 h-4 text-orange-500" />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(order)}
-                        className="h-8 w-8 p-0"
-                        data-testid={`edit-order-${order.id}`}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openDeleteDialog(order)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        data-testid={`delete-order-${order.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
+                      <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-7 w-7 p-0">
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </Button>
                     </div>
                   </div>

@@ -510,56 +510,48 @@ const Leads = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3" data-testid="leads-table">
+          <div className="space-y-1" data-testid="leads-table">
             {filteredLeads.map((lead) => (
               <Card 
                 key={lead.id} 
-                className={`hover:shadow-md transition-shadow ${selectedLeads.has(lead.id) ? 'ring-2 ring-orange-400 bg-orange-50/50' : ''}`}
+                className={`hover:shadow-sm transition-shadow ${selectedLeads.has(lead.id) ? 'ring-2 ring-orange-400 bg-orange-50/50' : ''}`}
                 data-testid={`lead-row-${lead.id}`}
               >
-                <CardContent className="p-4">
-                  {/* Header: Company */}
-                  <div className="flex items-start gap-3 mb-3">
+                <CardContent className="p-2 sm:p-3">
+                  {/* Compact Row Layout */}
+                  <div className="flex items-center gap-2">
                     <Checkbox
                       checked={selectedLeads.has(lead.id)}
                       onCheckedChange={() => toggleLeadSelection(lead.id)}
-                      className="mt-2"
+                      className="flex-shrink-0"
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                          {lead.first_name?.[0]}{lead.last_name?.[0]}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-sm truncate">{lead.company_name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
-                        </div>
+                    
+                    {/* Avatar */}
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                      {lead.first_name?.[0]}{lead.last_name?.[0]}
+                    </div>
+                    
+                    {/* Main Info - Flexible */}
+                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-4 gap-1 sm:gap-4">
+                      {/* Company & Name */}
+                      <div className="sm:col-span-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{lead.company_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Info Grid */}
-                  <div className="grid grid-cols-2 gap-2 text-sm mb-3 pl-8">
-                    <div>
-                      <p className="text-xs text-muted-foreground">{t('email')}</p>
-                      <p className="truncate text-xs font-medium">{lead.email || '-'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">{t('city')}</p>
-                      <p className="truncate text-xs font-medium">{lead.city}, {lead.country}</p>
-                    </div>
-                    {lead.tax_number && (
-                      <div className="col-span-2">
-                        <p className="text-xs text-muted-foreground">{t('taxNumber')}</p>
-                        <p className="font-mono text-xs">{lead.tax_number}</p>
+                      
+                      {/* Email */}
+                      <div className="hidden sm:block min-w-0">
+                        <p className="text-xs text-muted-foreground truncate">{lead.email || '-'}</p>
                       </div>
-                    )}
-                    {/* Last Activity Info */}
-                    {lead.last_activity && (
-                      <div className="col-span-2 mt-1">
-                        <div className="flex items-center gap-2 text-xs">
-                          <History className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-muted-foreground">Son:</span>
+                      
+                      {/* Location */}
+                      <div className="hidden sm:block min-w-0">
+                        <p className="text-xs text-muted-foreground truncate">{lead.city}, {lead.country}</p>
+                      </div>
+                      
+                      {/* Status */}
+                      <div className="hidden sm:flex items-center gap-2">
+                        {lead.last_activity && (
                           <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
                             lead.last_activity_outcome === 'positive' ? 'border-green-300 text-green-700' :
                             lead.last_activity_outcome === 'negative' ? 'border-red-300 text-red-700' :
@@ -569,94 +561,56 @@ const Leads = () => {
                           }`}>
                             {getOutcomeLabel(lead.last_activity_outcome)}
                           </Badge>
-                          <span className="text-muted-foreground">
-                            {new Date(lead.last_activity).toLocaleDateString('tr-TR')}
-                          </span>
-                        </div>
-                        {lead.next_action_date && (
-                          <div className="flex items-center gap-2 text-xs mt-1">
-                            <CalendarPlus className="w-3 h-3 text-indigo-500" />
-                            <span className="text-indigo-600 font-medium">
-                              Sonraki: {new Date(lead.next_action_date).toLocaleDateString('tr-TR')}
-                            </span>
-                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50 pl-8">
-                    <div className="flex items-center gap-1">
+                    </div>
+                    
+                    {/* Actions - Always visible */}
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openActivityDialog(lead)}
-                        title="Aktivite Geçmişi"
-                        className="h-8 w-8 p-0"
+                        className="h-7 w-7 p-0"
                         data-testid={`activity-${lead.id}`}
                       >
-                        <History className="w-4 h-4 text-purple-600" />
+                        <History className="w-3.5 h-3.5 text-purple-600" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openGoogleMaps(lead)}
-                        title="Google Maps"
-                        className="h-8 w-8 p-0"
-                        data-testid={`navigate-${lead.id}`}
+                        onClick={() => handleViewDetails(lead)}
+                        className="h-7 w-7 p-0"
+                        data-testid={`view-${lead.id}`}
                       >
-                        <Navigation className="w-4 h-4 text-orange-600" />
+                        <Eye className="w-3.5 h-3.5 text-slate-500" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openLeadDetails(lead)}
-                        title="Detay"
-                        className="h-8 w-8 p-0"
-                        data-testid={`view-details-${lead.id}`}
+                        onClick={() => handleSendMail(lead)}
+                        className="h-7 w-7 p-0"
+                        data-testid={`email-${lead.id}`}
                       >
-                        <Eye className="w-4 h-4 text-blue-600" />
+                        <Mail className="w-3.5 h-3.5 text-blue-500" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadLeadPdf(lead.id)}
-                        title="PDF"
-                        className="h-8 w-8 p-0"
-                        data-testid={`download-pdf-${lead.id}`}
-                      >
-                        <FileDown className="w-4 h-4 text-green-600" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSendEmail(lead)}
-                        title="Email"
-                        className="h-8 w-8 p-0"
-                        data-testid={`send-email-${lead.id}`}
-                      >
-                        <Mail className="w-4 h-4 text-indigo-600" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditDialog(lead)}
-                        className="h-8 w-8 p-0"
-                        data-testid={`edit-lead-${lead.id}`}
+                        className="h-7 w-7 p-0"
+                        data-testid={`edit-${lead.id}`}
                       >
-                        <Pencil className="w-4 h-4" />
+                        <Pencil className="w-3.5 h-3.5 text-slate-500" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openDeleteDialog(lead)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        data-testid={`delete-lead-${lead.id}`}
+                        className="h-7 w-7 p-0"
+                        data-testid={`delete-${lead.id}`}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </Button>
                     </div>
                   </div>
