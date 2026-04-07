@@ -18,10 +18,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email import encoders
+from email.utils import formatdate
 import bcrypt
 import jwt
 from urllib.parse import quote
 import base64
+import resend
 
 # Import PDF utilities
 from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf, generate_daily_report_pdf, generate_combined_daily_report_pdf
@@ -4665,58 +4667,72 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Send email via SMTP"""
+    """Send email via Resend API (bypasses IONOS IP block)"""
     settings = await db.company_settings.find_one({}, {"_id": 0})
     
-    if not settings or not settings.get('smtp_host'):
-        raise HTTPException(status_code=400, detail="SMTP not configured")
+    if not settings:
+        raise HTTPException(status_code=400, detail="Email ayarları yapılandırılmamış")
+    
+    from_email = settings.get('from_email', settings.get('smtp_username', 'noreply@gewuerzberg.de'))
+    from_name = settings.get('from_name', 'Gewürzberg GmbH')
+    
+    # Try Resend API first (no IP blocking issues)
+    resend_key = os.environ.get('RESEND_API_KEY')
+    if resend_key:
+        try:
+            resend.api_key = resend_key
+            params = {
+                "from": f"{from_name} <{from_email}>",
+                "to": [request.to],
+                "subject": request.subject,
+            }
+            if request.html:
+                params["html"] = request.body
+            else:
+                params["text"] = request.body
+            
+            r = resend.Emails.send(params)
+            
+            await db.sent_emails.insert_one({
+                "id": str(uuid.uuid4()),
+                "to": request.to,
+                "subject": request.subject,
+                "body": request.body,
+                "date": datetime.now(timezone.utc).isoformat()
+            })
+            return {"success": True, "message": "Email gönderildi"}
+        except Exception as e:
+            logger.error(f"Resend API error: {e}")
+    
+    # Fallback to SMTP
+    if not settings.get('smtp_host'):
+        raise HTTPException(status_code=400, detail="SMTP yapılandırılmamış")
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"{from_name} <{from_email}>"
+    msg['To'] = request.to
+    msg['Subject'] = request.subject
+    msg['Date'] = formatdate(localtime=True)
+    
+    if request.html:
+        msg.attach(MIMEText(request.body, 'html', 'utf-8'))
+    else:
+        msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
+    
+    smtp_host = settings['smtp_host']
+    smtp_port = int(settings.get('smtp_port', 587))
     
     try:
-        msg = MIMEMultipart()
-        msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
-        msg['To'] = request.to
-        msg['Subject'] = request.subject
-        
-        # Use HTML content if html flag is set
-        if request.html:
-            msg.attach(MIMEText(request.body, 'html', 'utf-8'))
+        if settings.get('use_ssl') or smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, 465, timeout=30)
         else:
-            msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
-        
-        smtp_host = settings['smtp_host']
-        smtp_port = int(settings.get('smtp_port', 587))
-        
-        # Try SSL first (port 465), then TLS (port 587)
-        server = None
-        last_error = None
-        
-        # Method 1: Try configured settings
-        try:
-            if settings.get('use_ssl') or smtp_port == 465:
-                server = smtplib.SMTP_SSL(smtp_host, 465, timeout=30)
-            else:
-                server = smtplib.SMTP(smtp_host, smtp_port, timeout=30)
-                if settings.get('use_tls', True):
-                    server.starttls()
-            server.login(settings['smtp_username'], settings['smtp_password'])
-        except Exception as e1:
-            last_error = e1
-            # Method 2: Try alternative port
-            try:
-                if smtp_port != 465:
-                    server = smtplib.SMTP_SSL(smtp_host, 465, timeout=30)
-                    server.login(settings['smtp_username'], settings['smtp_password'])
-                    last_error = None
-            except Exception as e2:
-                last_error = e2
-        
-        if last_error:
-            raise last_error
-            
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=30)
+            if settings.get('use_tls', True):
+                server.starttls()
+        server.login(settings['smtp_username'], settings['smtp_password'])
         server.send_message(msg)
         server.quit()
         
-        # Save to sent_emails
         await db.sent_emails.insert_one({
             "id": str(uuid.uuid4()),
             "to": request.to,
@@ -4724,27 +4740,24 @@ async def send_mail(request: MailSendRequest):
             "body": request.body,
             "date": datetime.now(timezone.utc).isoformat()
         })
+        return {"success": True, "message": "Email gönderildi"}
         
-        # Log to email_log
-        await db.email_log.insert_one({
-            "id": str(uuid.uuid4()),
-            "to": request.to,
-            "subject": request.subject,
-            "body": request.body,
-            "status": "sent",
-            "sent_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        return {"success": True, "message": "Email sent"}
-    except smtplib.SMTPAuthenticationError as e:
-        logger.error(f"SMTP Auth error: {e}")
-        raise HTTPException(status_code=401, detail="E-posta şifresi hatalı")
-    except smtplib.SMTPDataError as e:
+    except (smtplib.SMTPDataError, smtplib.SMTPRecipientsRefused) as e:
         error_msg = str(e)
-        logger.error(f"SMTP Data error: {e}")
+        if "policy" in error_msg.lower() or "554" in error_msg:
+            # Save to IMAP Drafts
+            try:
+                imap_host = settings.get('imap_host', smtp_host.replace('smtp.', 'imap.'))
+                import imaplib
+                imap = imaplib.IMAP4_SSL(imap_host, 993)
+                imap.login(settings['smtp_username'], settings['smtp_password'])
+                imap.append('Drafts', '', imaplib.Time2Internaldate(datetime.now()), msg.as_bytes())
+                imap.logout()
+                return {"success": True, "message": "Mail 'Taslaklar' klasörüne kaydedildi. Web mail'den gönderin.", "saved_to_drafts": True}
+            except:
+                pass
         raise HTTPException(status_code=500, detail=f"Mail gönderilemedi: {error_msg}")
     except Exception as e:
-        logger.error(f"SMTP error: {e}")
         raise HTTPException(status_code=500, detail=f"Mail hatası: {str(e)}")
 
 @api_router.post("/mail/send-with-attachments")
