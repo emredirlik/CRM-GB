@@ -4082,13 +4082,94 @@ async def get_email_body(email_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Multi-language support for AI features
+AI_LANGUAGE_CONFIG = {
+    'tr': {
+        'name': 'Türkçe',
+        'system_message': 'Sen profesyonel bir e-posta asistanısın. Türkçe yanıt ver. Kısa ve öz ol.',
+        'summary_prompt': 'Aşağıdaki e-postayı Türkçe olarak özetle (maksimum 2 cümle)',
+        'replies_prompt': 'Bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt önerisi ver',
+        'default_replies': [
+            'Teşekkür ederim, en kısa sürede inceleyeceğim.',
+            'Bu konuda size geri dönüş yapacağım.',
+            'Detaylı bilgi için teşekkürler.'
+        ],
+        'fallback_summary': 'tarafından gönderilen e-posta'
+    },
+    'en': {
+        'name': 'English',
+        'system_message': 'You are a professional email assistant. Respond in English. Be concise.',
+        'summary_prompt': 'Summarize the following email in English (maximum 2 sentences)',
+        'replies_prompt': 'Provide 3 short and professional English reply suggestions for this email',
+        'default_replies': [
+            'Thank you, I will review this shortly.',
+            'I will get back to you on this matter.',
+            'Thanks for the detailed information.'
+        ],
+        'fallback_summary': 'Email from'
+    },
+    'de': {
+        'name': 'Deutsch',
+        'system_message': 'Sie sind ein professioneller E-Mail-Assistent. Antworten Sie auf Deutsch. Seien Sie präzise.',
+        'summary_prompt': 'Fassen Sie die folgende E-Mail auf Deutsch zusammen (maximal 2 Sätze)',
+        'replies_prompt': 'Geben Sie 3 kurze und professionelle deutsche Antwortvorschläge für diese E-Mail',
+        'default_replies': [
+            'Vielen Dank, ich werde das schnellstmöglich prüfen.',
+            'Ich werde mich in dieser Angelegenheit bei Ihnen melden.',
+            'Danke für die ausführlichen Informationen.'
+        ],
+        'fallback_summary': 'E-Mail von'
+    },
+    'pl': {
+        'name': 'Polski',
+        'system_message': 'Jesteś profesjonalnym asystentem e-mail. Odpowiadaj po polsku. Bądź zwięzły.',
+        'summary_prompt': 'Podsumuj następującą wiadomość e-mail po polsku (maksymalnie 2 zdania)',
+        'replies_prompt': 'Podaj 3 krótkie i profesjonalne polskie propozycje odpowiedzi na tę wiadomość',
+        'default_replies': [
+            'Dziękuję, wkrótce to przejrzę.',
+            'Wrócę do Państwa w tej sprawie.',
+            'Dziękuję za szczegółowe informacje.'
+        ],
+        'fallback_summary': 'E-mail od'
+    },
+    'el': {
+        'name': 'Ελληνικά',
+        'system_message': 'Είστε επαγγελματίας βοηθός email. Απαντήστε στα ελληνικά. Να είστε σύντομοι.',
+        'summary_prompt': 'Συνοψίστε το παρακάτω email στα ελληνικά (μέγιστο 2 προτάσεις)',
+        'replies_prompt': 'Δώστε 3 σύντομες και επαγγελματικές ελληνικές προτάσεις απάντησης για αυτό το email',
+        'default_replies': [
+            'Ευχαριστώ, θα το εξετάσω σύντομα.',
+            'Θα επικοινωνήσω μαζί σας σχετικά με αυτό το θέμα.',
+            'Ευχαριστώ για τις λεπτομερείς πληροφορίες.'
+        ],
+        'fallback_summary': 'Email από'
+    },
+    'bg': {
+        'name': 'Български',
+        'system_message': 'Вие сте професионален имейл асистент. Отговаряйте на български. Бъдете кратки.',
+        'summary_prompt': 'Обобщете следния имейл на български (максимум 2 изречения)',
+        'replies_prompt': 'Дайте 3 кратки и професионални български предложения за отговор на този имейл',
+        'default_replies': [
+            'Благодаря, ще го прегледам скоро.',
+            'Ще се свържа с вас по този въпрос.',
+            'Благодаря за подробната информация.'
+        ],
+        'fallback_summary': 'Имейл от'
+    }
+}
+
+
 @api_router.post("/ai/summarize-email")
 async def ai_summarize_email(data: dict):
-    """AI-powered email summarization and smart replies"""
+    """AI-powered email summarization and smart replies with multi-language support"""
     try:
         subject = data.get('subject', '')
         body = data.get('body', '')
         from_name = data.get('from', '')
+        lang = data.get('language', 'tr')  # Default to Turkish
+        
+        # Get language config
+        lang_config = AI_LANGUAGE_CONFIG.get(lang, AI_LANGUAGE_CONFIG['tr'])
         
         # Strip HTML tags from body for summarization
         import re
@@ -4104,17 +4185,17 @@ async def ai_summarize_email(data: dict):
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"email-summary-{uuid.uuid4()}",
-                system_message="Sen profesyonel bir e-posta asistanısın. Türkçe yanıt ver. Kısa ve öz ol."
+                system_message=lang_config['system_message']
             ).with_model("gemini", "gemini-2.5-flash")
             
-            prompt = f"""Aşağıdaki e-postayı Türkçe olarak özetle (maksimum 2 cümle):
+            prompt = f"""{lang_config['summary_prompt']}:
 
-Kimden: {from_name}
-Konu: {subject}
-İçerik:
+From: {from_name}
+Subject: {subject}
+Content:
 {clean_body}
 
-Sonra bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt önerisi ver. Her öneriyi yeni satırda numaralı olarak yaz."""
+{lang_config['replies_prompt']}. Number each suggestion on a new line."""
 
             user_message = UserMessage(text=prompt)
             response = await chat.send_message(user_message)
@@ -4134,43 +4215,33 @@ Sonra bu e-postaya verilebilecek 3 adet kısa ve profesyonel Türkçe yanıt ön
                 elif not replies:
                     summary_lines.append(line)
             
-            summary = ' '.join(summary_lines[:2]) if summary_lines else f"{from_name} tarafından gönderilen e-posta."
+            summary = ' '.join(summary_lines[:2]) if summary_lines else f"{lang_config['fallback_summary']} {from_name}"
             
             if not replies:
-                replies = [
-                    'Teşekkür ederim, en kısa sürede inceleyeceğim.',
-                    'Bu konuda size geri dönüş yapacağım.',
-                    'Detaylı bilgi için teşekkürler.'
-                ]
+                replies = lang_config['default_replies']
             
-            return {"summary": summary, "replies": replies[:3]}
+            return {"summary": summary, "replies": replies[:3], "language": lang}
             
         except Exception as ai_error:
             logger.error(f"AI service error: {ai_error}")
-            summary = f"{from_name} tarafından gönderilen '{subject}' konulu e-posta."
             return {
-                "summary": summary,
-                "replies": [
-                    'Teşekkür ederim, en kısa sürede inceleyeceğim.',
-                    'Bu konuda size geri dönüş yapacağım.',
-                    'Detaylı bilgi için teşekkürler.'
-                ]
+                "summary": f"{lang_config['fallback_summary']} {from_name}: '{subject}'",
+                "replies": lang_config['default_replies'],
+                "language": lang
             }
     except Exception as e:
         logger.error(f"Email summarization error: {e}")
+        lang_config = AI_LANGUAGE_CONFIG.get('tr')
         return {
-            "summary": "Özet oluşturulamadı",
-            "replies": [
-                'Teşekkür ederim, değerlendireceğim.',
-                'Bu konuda size dönüş yapacağım.',
-                'Bilgilendirme için teşekkürler.'
-            ]
+            "summary": lang_config['fallback_summary'],
+            "replies": lang_config['default_replies'],
+            "language": 'tr'
         }
 
 
 @api_router.post("/ai/translate-email")
 async def ai_translate_email(data: dict):
-    """Translate email content"""
+    """Translate email content to multiple languages"""
     try:
         body = data.get('body', '')
         target_lang = data.get('target_lang', 'tr')
@@ -4178,7 +4249,14 @@ async def ai_translate_email(data: dict):
         import re
         clean_body = re.sub(r'<[^>]+>', '', body)[:3000]
         
-        lang_map = {'tr': 'Türkçe', 'en': 'İngilizce', 'de': 'Almanca'}
+        lang_map = {
+            'tr': 'Türkçe',
+            'en': 'English', 
+            'de': 'Deutsch',
+            'pl': 'Polski',
+            'el': 'Ελληνικά (Greek)',
+            'bg': 'Български (Bulgarian)'
+        }
         target = lang_map.get(target_lang, 'Türkçe')
         
         try:
@@ -4189,60 +4267,109 @@ async def ai_translate_email(data: dict):
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"translate-{uuid.uuid4()}",
-                system_message=f"Sen profesyonel bir çevirmensin. Metni {target} diline çevir. Sadece çeviriyi yaz, başka bir şey yazma."
+                system_message=f"You are a professional translator. Translate the text to {target}. Only write the translation, nothing else."
             ).with_model("gemini", "gemini-2.5-flash")
             
             user_message = UserMessage(text=clean_body)
             response = await chat.send_message(user_message)
             
-            return {"translated": str(response)}
+            return {"translated": str(response), "language": target_lang}
         except Exception as e:
             logger.error(f"Translation error: {e}")
-            return {"translated": clean_body, "error": "Çeviri yapılamadı"}
+            return {"translated": clean_body, "error": "Translation failed", "language": target_lang}
     except Exception as e:
         return {"translated": "", "error": str(e)}
 
 
+# Multi-language tone configurations for email composition
+AI_TONE_CONFIG = {
+    'tr': {
+        'professional': 'profesyonel ve resmi',
+        'friendly': 'samimi ve sıcak',
+        'formal': 'çok resmi ve kurumsal',
+        'system': 'Sen profesyonel bir e-posta yazarısın. {tone} bir üslupla Türkçe e-posta yaz.',
+        'prompt': 'Aşağıdaki bilgilere göre bir e-posta yaz:\n\nİstek: {prompt}\n{context}\n\nE-postayı {tone} bir üslupla yaz.',
+        'error': 'E-posta oluşturulamadı'
+    },
+    'en': {
+        'professional': 'professional and business-like',
+        'friendly': 'friendly and warm',
+        'formal': 'very formal and corporate',
+        'system': 'You are a professional email writer. Write an English email in a {tone} style.',
+        'prompt': 'Write an email based on the following:\n\nRequest: {prompt}\n{context}\n\nWrite the email in a {tone} style.',
+        'error': 'Could not generate email'
+    },
+    'de': {
+        'professional': 'professionell und geschäftsmäßig',
+        'friendly': 'freundlich und warm',
+        'formal': 'sehr formell und geschäftlich',
+        'system': 'Sie sind ein professioneller E-Mail-Schreiber. Schreiben Sie eine deutsche E-Mail in einem {tone} Stil.',
+        'prompt': 'Schreiben Sie eine E-Mail basierend auf Folgendem:\n\nAnfrage: {prompt}\n{context}\n\nSchreiben Sie die E-Mail in einem {tone} Stil.',
+        'error': 'E-Mail konnte nicht erstellt werden'
+    },
+    'pl': {
+        'professional': 'profesjonalny i biznesowy',
+        'friendly': 'przyjazny i ciepły',
+        'formal': 'bardzo formalny i korporacyjny',
+        'system': 'Jesteś profesjonalnym pisarzem e-maili. Napisz e-mail po polsku w stylu {tone}.',
+        'prompt': 'Napisz e-mail na podstawie:\n\nProśba: {prompt}\n{context}\n\nNapisz e-mail w stylu {tone}.',
+        'error': 'Nie można wygenerować e-maila'
+    },
+    'el': {
+        'professional': 'επαγγελματικός και επιχειρηματικός',
+        'friendly': 'φιλικός και ζεστός',
+        'formal': 'πολύ επίσημος και εταιρικός',
+        'system': 'Είστε επαγγελματίας συγγραφέας email. Γράψτε ένα ελληνικό email σε {tone} στυλ.',
+        'prompt': 'Γράψτε ένα email βάσει των παρακάτω:\n\nΑίτημα: {prompt}\n{context}\n\nΓράψτε το email σε {tone} στυλ.',
+        'error': 'Δεν ήταν δυνατή η δημιουργία email'
+    },
+    'bg': {
+        'professional': 'професионален и делови',
+        'friendly': 'приятелски и топъл',
+        'formal': 'много официален и корпоративен',
+        'system': 'Вие сте професионален писател на имейли. Напишете български имейл в {tone} стил.',
+        'prompt': 'Напишете имейл въз основа на следното:\n\nЗаявка: {prompt}\n{context}\n\nНапишете имейла в {tone} стил.',
+        'error': 'Имейлът не можа да бъде генериран'
+    }
+}
+
+
 @api_router.post("/ai/compose-email")
 async def ai_compose_email(data: dict):
-    """AI-assisted email composition"""
+    """AI-assisted email composition with multi-language support"""
     try:
         prompt = data.get('prompt', '')
         context = data.get('context', '')
-        tone = data.get('tone', 'professional')  # professional, friendly, formal
+        tone = data.get('tone', 'professional')
+        lang = data.get('language', 'tr')
         
-        tone_map = {
-            'professional': 'profesyonel ve resmi',
-            'friendly': 'samimi ve sıcak',
-            'formal': 'çok resmi ve kurumsal'
-        }
-        tone_desc = tone_map.get(tone, 'profesyonel')
+        # Get language config
+        lang_config = AI_TONE_CONFIG.get(lang, AI_TONE_CONFIG['tr'])
+        tone_desc = lang_config.get(tone, lang_config['professional'])
         
         try:
             from emergentintegrations.llm.chat import LlmChat, UserMessage
             import os
             
             api_key = os.environ.get('EMERGENT_LLM_KEY')
+            system_msg = lang_config['system'].format(tone=tone_desc)
+            
             chat = LlmChat(
                 api_key=api_key,
                 session_id=f"compose-{uuid.uuid4()}",
-                system_message=f"Sen profesyonel bir e-posta yazarısın. {tone_desc} bir üslupla Türkçe e-posta yaz. Sadece e-posta metnini yaz, başka bir şey yazma."
+                system_message=system_msg
             ).with_model("gemini", "gemini-2.5-flash")
             
-            full_prompt = f"""Aşağıdaki bilgilere göre bir e-posta yaz:
-
-İstek: {prompt}
-{f'Bağlam: {context}' if context else ''}
-
-E-postayı {tone_desc} bir üslupla yaz."""
+            context_text = f"Context: {context}" if context else ""
+            full_prompt = lang_config['prompt'].format(prompt=prompt, context=context_text, tone=tone_desc)
 
             user_message = UserMessage(text=full_prompt)
             response = await chat.send_message(user_message)
             
-            return {"email": str(response)}
+            return {"email": str(response), "language": lang}
         except Exception as e:
             logger.error(f"Compose error: {e}")
-            return {"email": "", "error": "E-posta oluşturulamadı"}
+            return {"email": "", "error": lang_config['error'], "language": lang}
     except Exception as e:
         return {"email": "", "error": str(e)}
 

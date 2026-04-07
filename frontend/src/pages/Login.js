@@ -21,7 +21,9 @@ const Login = () => {
     { code: 'tr', label: 'Türkçe', flag: '🇹🇷' },
     { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
     { code: 'en', label: 'English', flag: '🇬🇧' },
-    { code: 'pl', label: 'Polski', flag: '🇵🇱' }
+    { code: 'pl', label: 'Polski', flag: '🇵🇱' },
+    { code: 'el', label: 'Ελληνικά', flag: '🇬🇷' },
+    { code: 'bg', label: 'Български', flag: '🇧🇬' }
   ];
   
   const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];

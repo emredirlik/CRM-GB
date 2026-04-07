@@ -366,23 +366,20 @@ const MailPage = () => {
       const response = await axios.post(`${API}/ai/summarize-email`, {
         subject: selectedEmail.subject,
         body: selectedEmail.body,
-        from: selectedEmail.from_name || selectedEmail.from_email
+        from: selectedEmail.from_name || selectedEmail.from_email,
+        language: language // Pass current UI language
       });
       setAiSummary(response.data.summary || t('couldNotGenerate'));
       setSmartReplies(response.data.replies || []);
     } catch (error) {
-      setAiSummary('AI servisi şu an kullanılamıyor');
-      setSmartReplies([
-        'Teşekkür ederim, en kısa sürede inceleyeceğim.',
-        'Bu konuda size geri dönüş yapacağım.',
-        'Detaylı bilgi için teşekkürler.'
-      ]);
+      setAiSummary(t('aiServiceUnavailable') || 'AI service unavailable');
+      setSmartReplies([]);
     } finally {
       setAiLoading(false);
     }
   };
 
-  // AI: Translate Email
+  // AI: Translate Email - now supports 6 languages
   const handleTranslate = async (targetLang = 'tr') => {
     if (!selectedEmail?.body) return;
     setTranslating(true);
@@ -464,7 +461,8 @@ const MailPage = () => {
       const response = await axios.post(`${API}/ai/compose-email`, {
         prompt: aiComposePrompt,
         tone: aiTone,
-        context: composeData.subject ? `Konu: ${composeData.subject}` : ''
+        context: composeData.subject ? `Subject: ${composeData.subject}` : '',
+        language: language // Pass current UI language
       });
       if (response.data.email) {
         if (editorRef.current) {
@@ -996,13 +994,22 @@ const MailPage = () => {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-700" />
                 <DropdownMenuItem onClick={() => handleTranslate('tr')} className="text-white hover:bg-slate-700">
-                  <Languages className="w-4 h-4 mr-2 text-blue-400" /> {t('translateToTr')}
+                  <span className="mr-2">🇹🇷</span> Türkçe'ye Çevir
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleTranslate('en')} className="text-white hover:bg-slate-700">
-                  <Languages className="w-4 h-4 mr-2 text-blue-400" /> {t('translateToEn')}
+                  <span className="mr-2">🇬🇧</span> Translate to English
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleTranslate('de')} className="text-white hover:bg-slate-700">
-                  <Languages className="w-4 h-4 mr-2 text-blue-400" /> {t('translateToDe')}
+                  <span className="mr-2">🇩🇪</span> Auf Deutsch übersetzen
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate('pl')} className="text-white hover:bg-slate-700">
+                  <span className="mr-2">🇵🇱</span> Przetłumacz na polski
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate('el')} className="text-white hover:bg-slate-700">
+                  <span className="mr-2">🇬🇷</span> Μετάφραση στα ελληνικά
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleTranslate('bg')} className="text-white hover:bg-slate-700">
+                  <span className="mr-2">🇧🇬</span> Превод на български
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-slate-700" />
                 <DropdownMenuItem onClick={handleSpamAnalysis} className="text-white hover:bg-slate-700">

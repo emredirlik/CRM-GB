@@ -1872,6 +1872,120 @@ const translations = {
     somethingWentWrong: 'Coś poszło nie tak',
     tryAgain: 'Spróbuj ponownie',
     goBack: 'Wróć',
+  },
+  
+  // Greek translations
+  el: {
+    // Login
+    welcome: 'Καλώς ήρθατε',
+    signInDescription: 'Συνδεθείτε για πρόσβαση στο CRM',
+    username: 'Όνομα χρήστη',
+    password: 'Κωδικός',
+    enterUsername: 'Εισάγετε το όνομα χρήστη',
+    enterPassword: 'Εισάγετε τον κωδικό',
+    signIn: 'Σύνδεση',
+    signingIn: 'Σύνδεση...',
+    
+    // Navigation
+    dashboard: 'Πίνακας ελέγχου',
+    leads: 'Πελάτες',
+    mail: 'Email',
+    settings: 'Ρυθμίσεις',
+    logout: 'Αποσύνδεση',
+    
+    // Mail
+    inbox: 'Εισερχόμενα',
+    sent: 'Απεσταλμένα',
+    drafts: 'Πρόχειρα',
+    starred: 'Με αστέρι',
+    trash: 'Κάδος',
+    compose: 'Νέο μήνυμα',
+    from: 'Από',
+    to: 'Προς',
+    subject: 'Θέμα',
+    send: 'Αποστολή',
+    reply: 'Απάντηση',
+    forward: 'Προώθηση',
+    attachments: 'Συνημμένα',
+    noEmails: 'Δεν υπάρχουν email',
+    loading: 'Φόρτωση...',
+    page: 'Σελίδα',
+    previous: 'Προηγούμενη',
+    next: 'Επόμενη',
+    
+    // AI Features
+    aiAssistant: 'AI Βοηθός',
+    aiSummaryAndReply: 'AI Σύνοψη & Απάντηση',
+    spamAnalysis: 'Ανάλυση Spam',
+    customerRecognition: 'Αναγνώριση Πελάτη',
+    sentimentAnalysis: 'Ανάλυση Συναισθημάτων',
+    analyzing: 'Ανάλυση...',
+    
+    // Common
+    save: 'Αποθήκευση',
+    cancel: 'Ακύρωση',
+    delete: 'Διαγραφή',
+    edit: 'Επεξεργασία',
+    search: 'Αναζήτηση',
+    error: 'Σφάλμα',
+    success: 'Επιτυχία',
+  },
+  
+  // Bulgarian translations
+  bg: {
+    // Login
+    welcome: 'Добре дошли',
+    signInDescription: 'Влезте за достъп до CRM',
+    username: 'Потребителско име',
+    password: 'Парола',
+    enterUsername: 'Въведете потребителско име',
+    enterPassword: 'Въведете парола',
+    signIn: 'Вход',
+    signingIn: 'Влизане...',
+    
+    // Navigation
+    dashboard: 'Табло',
+    leads: 'Клиенти',
+    mail: 'Имейл',
+    settings: 'Настройки',
+    logout: 'Изход',
+    
+    // Mail
+    inbox: 'Входящи',
+    sent: 'Изпратени',
+    drafts: 'Чернови',
+    starred: 'Със звезда',
+    trash: 'Кошче',
+    compose: 'Ново съобщение',
+    from: 'От',
+    to: 'До',
+    subject: 'Тема',
+    send: 'Изпрати',
+    reply: 'Отговор',
+    forward: 'Препрати',
+    attachments: 'Прикачени',
+    noEmails: 'Няма имейли',
+    loading: 'Зареждане...',
+    page: 'Страница',
+    previous: 'Предишна',
+    next: 'Следваща',
+    
+    // AI Features
+    aiAssistant: 'AI Асистент',
+    aiSummaryAndReply: 'AI Резюме & Отговор',
+    spamAnalysis: 'Анализ на спам',
+    customerRecognition: 'Разпознаване на клиент',
+    sentimentAnalysis: 'Анализ на настроения',
+    analyzing: 'Анализиране...',
+    
+    // Common
+    save: 'Запази',
+    cancel: 'Отказ',
+    delete: 'Изтрий',
+    edit: 'Редактирай',
+    search: 'Търсене',
+    error: 'Грешка',
+    success: 'Успех',
   }
 };
 
