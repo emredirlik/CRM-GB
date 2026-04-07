@@ -483,7 +483,7 @@ async def download_all_leads_pdf(lang: str = 'tr'):
     return await export_leads_pdf(lang)
 
 @api_router.get("/leads/{lead_id}/pdf")
-async def get_lead_pdf(lead_id: str):
+async def get_lead_pdf(lead_id: str, lang: str = 'tr'):
     """Generate PDF for a single lead with their orders and recipes"""
     lead = await db.leads.find_one({"id": lead_id}, {"_id": 0})
     if not lead:
@@ -494,12 +494,12 @@ async def get_lead_pdf(lead_id: str):
     recipes = await db.recipes.find({"lead_id": lead_id}, {"_id": 0}).to_list(100)
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
     
-    pdf_content = generate_lead_pdf(lead, orders, recipes, settings)
+    pdf_content = generate_lead_pdf(lead, orders, recipes, settings, lang)
     
     return Response(
         content=pdf_content,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=musteri_{lead_id[:8]}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=customer_{lead_id[:8]}.pdf"}
     )
 
 @api_router.get("/leads/{lead_id}/details")

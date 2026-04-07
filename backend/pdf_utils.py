@@ -20,13 +20,13 @@ try:
     pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/freefont/FreeSansBold.ttf'))
     FONT_REGULAR = 'FreeSans'
     FONT_BOLD = 'FreeSans-Bold'
-except:
+except Exception:
     try:
         pdfmetrics.registerFont(TTFont('FreeSans', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
         pdfmetrics.registerFont(TTFont('FreeSans-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
         FONT_REGULAR = 'FreeSans'
         FONT_BOLD = 'FreeSans-Bold'
-    except:
+    except Exception:
         FONT_REGULAR = 'Helvetica'
         FONT_BOLD = 'Helvetica-Bold'
 
@@ -675,13 +675,47 @@ def generate_recipe_pdf(recipe: dict, company_settings: dict = None, lang: str =
     return buffer.getvalue()
 
 
-def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, company_settings: dict = None) -> bytes:
+def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, company_settings: dict = None, lang: str = 'tr') -> bytes:
     """Generate a professionally styled lead/customer PDF"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
     company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Multilingual labels
+    labels = {
+        'tr': {
+            'customer_info': 'Müşteri Bilgileri',
+            'address': 'ADRES',
+            'tax_number': 'VERGİ NUMARASI',
+            'orders': 'SİPARİŞLER',
+            'recipes': 'REÇETELER'
+        },
+        'de': {
+            'customer_info': 'Kundeninformationen',
+            'address': 'ADRESSE',
+            'tax_number': 'STEUERNUMMER',
+            'orders': 'BESTELLUNGEN',
+            'recipes': 'REZEPTE'
+        },
+        'en': {
+            'customer_info': 'Customer Information',
+            'address': 'ADDRESS',
+            'tax_number': 'TAX NUMBER',
+            'orders': 'ORDERS',
+            'recipes': 'RECIPES'
+        },
+        'pl': {
+            'customer_info': 'Informacje o kliencie',
+            'address': 'ADRES',
+            'tax_number': 'NUMER PODATKOWY',
+            'orders': 'ZAMÓWIENIA',
+            'recipes': 'PRZEPISY'
+        }
+    }
+    
+    L = labels.get(lang, labels['en'])
     
     # Header
     c.setFillColor(PRIMARY_COLOR)
@@ -691,7 +725,7 @@ def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, com
     c.setFont(FONT_BOLD, 24)
     c.drawString(2*cm, height - 2.5*cm, company_name)
     c.setFont(FONT_REGULAR, 10)
-    c.drawString(2*cm, height - 3.2*cm, "Müşteri Bilgileri")
+    c.drawString(2*cm, height - 3.2*cm, L['customer_info'])
     
     c.setFont(FONT_BOLD, 12)
     c.drawRightString(width - 2*cm, height - 2.5*cm, datetime.now().strftime('%d.%m.%Y'))
@@ -729,7 +763,7 @@ def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, com
     if lead.get('address'):
         c.setFillColor(TEXT_MUTED)
         c.setFont(FONT_BOLD, 10)
-        c.drawString(2*cm, y, "ADRES")
+        c.drawString(2*cm, y, L['address'])
         c.setFillColor(black)
         c.setFont(FONT_REGULAR, 10)
         c.drawString(2*cm, y - 0.6*cm, lead['address'][:80])
@@ -739,7 +773,7 @@ def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, com
     if lead.get('tax_number'):
         c.setFillColor(TEXT_MUTED)
         c.setFont(FONT_BOLD, 10)
-        c.drawString(2*cm, y, "VERGİ NUMARASI")
+        c.drawString(2*cm, y, L['tax_number'])
         c.setFillColor(black)
         c.setFont(FONT_REGULAR, 10)
         c.drawString(2*cm, y - 0.6*cm, lead['tax_number'])
@@ -751,7 +785,7 @@ def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, com
         c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
         c.setFillColor(white)
         c.setFont(FONT_BOLD, 10)
-        c.drawString(2*cm, y - 0.7*cm, f"SİPARİŞLER ({len(orders)})")
+        c.drawString(2*cm, y - 0.7*cm, f"{L['orders']} ({len(orders)})")
         
         y -= 1.5*cm
         
@@ -771,7 +805,7 @@ def generate_lead_pdf(lead: dict, orders: list = None, recipes: list = None, com
         c.rect(1.5*cm, y - 1*cm, width - 3*cm, 1*cm, fill=True, stroke=False)
         c.setFillColor(white)
         c.setFont(FONT_BOLD, 10)
-        c.drawString(2*cm, y - 0.7*cm, f"REÇETELER ({len(recipes)})")
+        c.drawString(2*cm, y - 0.7*cm, f"{L['recipes']} ({len(recipes)})")
         
         y -= 1.5*cm
         
@@ -1416,6 +1450,7 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             # Draw route as connected points
             num_stops = min(len(route_locations), 8)
             spacing = (width - 6*cm) / (num_stops - 1) if num_stops > 1 else 0
+            prev_x_point = 3*cm
             
             for i in range(num_stops):
                 x_point = 3*cm + (i * spacing)
@@ -1424,7 +1459,7 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
                 if i > 0:
                     c.setStrokeColor(HexColor('#4f46e5'))
                     c.setLineWidth(2)
-                    c.line(prev_x, map_y - map_height/2, x_point, map_y - map_height/2)
+                    c.line(prev_x_point, map_y - map_height/2, x_point, map_y - map_height/2)
                 
                 # Draw point
                 c.setFillColor(HexColor('#4f46e5'))
@@ -1435,7 +1470,7 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
                 c.setFont(FONT_BOLD, 7)
                 c.drawCentredString(x_point, map_y - map_height/2 - 0.1*cm, str(i + 1))
                 
-                prev_x = x_point
+                prev_x_point = x_point
     
     # Footer - clean
     c.setFillColor(HexColor('#9ca3af'))

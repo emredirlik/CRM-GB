@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getLeads, createLead, updateLead, deleteLead } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +54,7 @@ const initialFormData = {
 };
 
 const Leads = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -174,13 +174,13 @@ const Leads = () => {
 
   const downloadLeadPdf = async (leadId) => {
     try {
-      const response = await axios.get(`${API}/leads/${leadId}/pdf`, {
+      const response = await axios.get(`${API}/leads/${leadId}/pdf?lang=${language}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `musteri_${leadId.slice(0,8)}.pdf`);
+      link.setAttribute('download', `customer_${leadId.slice(0,8)}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -432,17 +432,18 @@ const Leads = () => {
     return labels[type] || type;
   };
 
-  const filteredLeads = leads.filter(lead => {
+  const filteredLeads = useMemo(() => {
+    if (!searchTerm) return leads;
     const searchLower = searchTerm.toLowerCase();
-    return (
-      lead.company_name.toLowerCase().includes(searchLower) ||
-      lead.first_name.toLowerCase().includes(searchLower) ||
-      lead.last_name.toLowerCase().includes(searchLower) ||
-      lead.email.toLowerCase().includes(searchLower) ||
-      lead.city.toLowerCase().includes(searchLower) ||
-      lead.country.toLowerCase().includes(searchLower)
-    );
-  });
+    return leads.filter(lead => (
+      lead.company_name?.toLowerCase().includes(searchLower) ||
+      lead.first_name?.toLowerCase().includes(searchLower) ||
+      lead.last_name?.toLowerCase().includes(searchLower) ||
+      lead.email?.toLowerCase().includes(searchLower) ||
+      lead.city?.toLowerCase().includes(searchLower) ||
+      lead.country?.toLowerCase().includes(searchLower)
+    ));
+  }, [leads, searchTerm]);
 
   if (loading) {
     return (
@@ -579,7 +580,7 @@ const Leads = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleViewDetails(lead)}
+                        onClick={() => openLeadDetails(lead)}
                         className="h-7 w-7 p-0"
                         data-testid={`view-${lead.id}`}
                       >
@@ -588,7 +589,7 @@ const Leads = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleSendMail(lead)}
+                        onClick={() => handleSendEmail(lead)}
                         className="h-7 w-7 p-0"
                         data-testid={`email-${lead.id}`}
                       >

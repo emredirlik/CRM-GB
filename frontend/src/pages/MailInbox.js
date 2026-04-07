@@ -848,39 +848,36 @@ const MailPage = () => {
       <div
         onClick={() => handleViewEmail(email)}
         data-testid={`email-item-${email.id}`}
-        className={`group flex items-center gap-4 px-5 py-4 cursor-pointer border-b border-slate-700/30 transition-all
-          ${selectedEmail?.id === email.id ? 'bg-indigo-900/40 border-l-4 border-l-indigo-500' : 'hover:bg-slate-800/50 border-l-4 border-l-transparent'}
+        className={`group flex items-center gap-2 px-3 py-2 cursor-pointer border-b border-slate-700/30 transition-all
+          ${selectedEmail?.id === email.id ? 'bg-indigo-900/40 border-l-2 border-l-indigo-500' : 'hover:bg-slate-800/50 border-l-2 border-l-transparent'}
           ${!email.is_read && !isSent ? 'bg-slate-800/30' : ''}`}
       >
-        <div className={`w-11 h-11 rounded-full ${getAvatarColor(email.from_name || email.to)} flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 shadow-lg`}>
+        <div className={`w-8 h-8 rounded-full ${getAvatarColor(email.from_name || email.to)} flex items-center justify-center text-white font-semibold text-xs flex-shrink-0`}>
           {(isSent ? email.to : (email.from_name || email.from_email))?.[0]?.toUpperCase() || '?'}
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className={`text-sm truncate ${!email.is_read && !isSent ? 'font-bold text-white' : 'font-medium text-slate-200'}`}>
-              {isSent ? `${t('to')}: ${email.to}` : (email.from_name || email.from_email?.split('@')[0])}
+          <div className="flex items-center gap-1">
+            <span className={`text-xs truncate ${!email.is_read && !isSent ? 'font-bold text-white' : 'font-medium text-slate-200'}`}>
+              {isSent ? `→ ${email.to}` : (email.from_name || email.from_email?.split('@')[0])}
             </span>
-            {hasAttachments && <Paperclip className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />}
+            {hasAttachments && <Paperclip className="w-3 h-3 text-slate-400 flex-shrink-0" />}
           </div>
-          <p className={`text-sm truncate ${!email.is_read && !isSent ? 'text-white font-medium' : 'text-slate-300'}`}>
+          <p className={`text-xs truncate ${!email.is_read && !isSent ? 'text-white font-medium' : 'text-slate-300'}`}>
             {email.subject || t('noSubject')}
-          </p>
-          <p className="text-xs text-slate-500 truncate mt-0.5">
-            {email.snippet?.substring(0, 80) || email.body?.replace(/<[^>]*>/g, '').substring(0, 80)}...
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-2 flex-shrink-0">
-          <span className={`text-xs ${!email.is_read && !isSent ? 'text-indigo-400 font-bold' : 'text-slate-500'}`}>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className={`text-[10px] ${!email.is_read && !isSent ? 'text-indigo-400 font-bold' : 'text-slate-500'}`}>
             {formatDate(email.date)}
           </span>
           {!isSent && (
             <button 
               onClick={(e) => handleToggleStar(email, e)}
-              className="p-1.5 hover:bg-slate-700/50 rounded-full transition-colors"
+              className="p-1 hover:bg-slate-700/50 rounded-full transition-colors"
             >
-              <Star className={`w-4 h-4 transition-all ${email.starred ? 'fill-yellow-400 text-yellow-400 scale-110' : 'text-slate-600 group-hover:text-slate-400'}`} />
+              <Star className={`w-3 h-3 ${email.starred ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'}`} />
             </button>
           )}
         </div>
@@ -889,7 +886,7 @@ const MailPage = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-80px)] flex bg-slate-950 rounded-2xl overflow-hidden shadow-2xl" data-testid="mail-page">
+    <div className="h-screen flex bg-slate-950 overflow-hidden" data-testid="mail-page" style={{margin: '-24px', width: 'calc(100% + 48px)', height: 'calc(100vh)'}}>
       {/* Desktop Sidebar */}
       <div className="hidden lg:block border-r border-slate-800/50">
         <Sidebar />

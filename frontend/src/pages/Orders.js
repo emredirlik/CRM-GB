@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -391,14 +391,15 @@ const Orders = () => {
     return diffDays > 0 ? diffDays : 0;
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = useMemo(() => {
+    if (!searchTerm) return orders;
     const searchLower = searchTerm.toLowerCase();
-    return (
+    return orders.filter(order => (
       order.company_name?.toLowerCase().includes(searchLower) ||
       order.product_name?.toLowerCase().includes(searchLower) ||
       order.product_code?.toLowerCase().includes(searchLower)
-    );
-  });
+    ));
+  }, [orders, searchTerm]);
 
   // Total revenue calculation removed per user request - no totals shown
 
@@ -545,16 +546,24 @@ const Orders = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-7 w-7 p-0">
+                      <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-7 w-7 p-0" title="Önizle">
                         <Eye className="w-3.5 h-3.5 text-indigo-600" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDownloadPdf(order.id)} className="h-7 w-7 p-0">
+                      <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-7 w-7 p-0" title="PDF İndir">
                         <FileDown className="w-3.5 h-3.5 text-green-600" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-7 w-7 p-0">
+                      <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-7 w-7 p-0" title="Email Gönder">
+                        <Mail className="w-3.5 h-3.5 text-purple-600" />
+                      </Button>
+                      {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
+                        <Button variant="ghost" size="sm" onClick={() => sendPaymentReminder(order.id)} className="h-7 w-7 p-0" title="Ödeme Hatırlatma">
+                          <Bell className="w-3.5 h-3.5 text-orange-500" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-7 w-7 p-0" title="Düzenle">
                         <Pencil className="w-3.5 h-3.5 text-slate-500" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-7 w-7 p-0">
+                      <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-7 w-7 p-0" title="Sil">
                         <Trash2 className="w-3.5 h-3.5 text-red-500" />
                       </Button>
                     </div>

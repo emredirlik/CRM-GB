@@ -130,13 +130,13 @@ const Sidebar = ({ onClose }) => {
       {/* Language Selector */}
       <div className="p-3 border-t border-slate-700">
         <p className="text-[10px] text-slate-500 mb-2 uppercase tracking-wider font-medium">{t('language')}</p>
-        <div className="flex flex-wrap gap-1">
-          {['en', 'tr', 'de', 'pl', 'el', 'bg'].map((lang) => (
+        <div className="flex gap-1">
+          {['tr', 'en', 'de', 'pl'].map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}
               data-testid={`lang-${lang}`}
-              className={`lang-btn flex-1 min-w-[40px] ${language === lang ? 'active' : ''}`}
+              className={`lang-btn flex-1 ${language === lang ? 'active' : ''}`}
             >
               {lang.toUpperCase()}
             </button>
