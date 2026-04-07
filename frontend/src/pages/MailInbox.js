@@ -600,9 +600,9 @@ const MailPage = () => {
           html: true
         });
         
-        // If backend returns mailto link, open user's email client
-        if (response.data.mailto_link) {
-          window.location.href = response.data.mailto_link;
+        // Open user's email client with mailto link
+        if (response.data.mailto) {
+          window.open(response.data.mailto, '_blank');
         }
       }
       

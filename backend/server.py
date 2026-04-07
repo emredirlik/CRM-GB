@@ -4670,20 +4670,19 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Generate mailto link for user to send from their own email client"""
+    """Prepare email and return mailto link to use user's own email client"""
     import urllib.parse
-    
-    # Create mailto link - opens user's email client
-    subject_encoded = urllib.parse.quote(request.subject)
-    body_text = request.body.replace('<p>', '').replace('</p>', '\n').replace('<br>', '\n').replace('<br/>', '\n')
-    body_text = body_text.replace('&nbsp;', ' ').strip()
-    # Remove other HTML tags
     import re
-    body_text = re.sub('<[^<]+?>', '', body_text)
-    body_encoded = urllib.parse.quote(body_text)
     
-    mailto_link = f"mailto:{request.to}?subject={subject_encoded}&body={body_encoded}"
+    # Strip HTML tags for mailto body
+    body_text = request.body
+    body_text = re.sub(r'<br\s*/?>', '\n', body_text)
+    body_text = re.sub(r'<p[^>]*>', '', body_text)
+    body_text = re.sub(r'</p>', '\n', body_text)
+    body_text = re.sub(r'<[^>]+>', '', body_text)
+    body_text = body_text.replace('&nbsp;', ' ').strip()
     
+    # Save to database
     await db.sent_emails.insert_one({
         "id": str(uuid.uuid4()),
         "to": request.to,
@@ -4692,7 +4691,10 @@ async def send_mail(request: MailSendRequest):
         "date": datetime.now(timezone.utc).isoformat()
     })
     
-    return {"success": True, "message": "Mail hazırlandı", "mailto_link": mailto_link, "open_client": True}
+    # Return mailto link
+    mailto = f"mailto:{request.to}?subject={urllib.parse.quote(request.subject)}&body={urllib.parse.quote(body_text)}"
+    
+    return {"success": True, "mailto": mailto}
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
