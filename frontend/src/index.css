@@ -250,3 +250,17 @@ code {
         display: contents !important;
     }
 }
+
+/* Leaflet map z-index fix for mobile sidebar */
+.leaflet-container {
+    z-index: 0 !important;
+}
+
+.leaflet-pane,
+.leaflet-control-container {
+    z-index: 1 !important;
+}
+
+.leaflet-control-zoom {
+    z-index: 10 !important;
+}

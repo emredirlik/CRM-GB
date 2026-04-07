@@ -834,13 +834,13 @@ const RoutePlanner = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map */}
-        <div className="lg:col-span-2">
-          <Card className="h-[600px]">
+        <div className="lg:col-span-2 relative z-0">
+          <Card className="h-[400px] sm:h-[600px] overflow-hidden">
             <CardContent className="p-0 h-full">
               <MapContainer
                 center={defaultCenter}
                 zoom={5}
-                style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
+                style={{ height: '100%', width: '100%', borderRadius: '0.5rem', zIndex: 0 }}
                 ref={mapRef}
               >
                 <TileLayer

@@ -646,11 +646,12 @@ const Orders = () => {
                         <Eye className="w-3.5 h-3.5 text-indigo-600" />
                       </Button>
                       
+                      <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-7 w-7 p-0" title="WhatsApp">
+                        <MessageCircle className="w-3.5 h-3.5 text-green-600" />
+                      </Button>
+                      
                       {/* Desktop only buttons */}
                       <div className="hidden sm:flex items-center gap-0.5">
-                        <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-7 w-7 p-0" title="WhatsApp">
-                          <MessageCircle className="w-3.5 h-3.5 text-green-600" />
-                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-7 w-7 p-0" title="PDF İndir">
                           <FileDown className="w-3.5 h-3.5 text-blue-600" />
                         </Button>

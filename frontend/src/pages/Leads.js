@@ -580,7 +580,16 @@ const Leads = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openPreviewDialog(lead)}
+                        onClick={() => openActivityDialog(lead)}
+                        className="h-7 w-7 p-0"
+                        data-testid={`activity-${lead.id}`}
+                      >
+                        <History className="w-3.5 h-3.5 text-purple-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openLeadDetails(lead)}
                         className="h-7 w-7 p-0"
                         data-testid={`preview-${lead.id}`}
                       >
@@ -589,7 +598,7 @@ const Leads = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => openMailDialog(lead)}
+                        onClick={() => handleSendEmail(lead)}
                         className="h-7 w-7 p-0"
                         data-testid={`mail-${lead.id}`}
                       >
