@@ -4673,7 +4673,6 @@ async def send_mail(request: MailSendRequest):
     """Send email via Brevo (Sendinblue) API - free 300 emails/day"""
     settings = await db.company_settings.find_one({}, {"_id": 0})
     
-    from_email = settings.get('from_email', settings.get('smtp_username', 'emre@gewuerzberg.de')) if settings else 'emre@gewuerzberg.de'
     from_name = settings.get('from_name', 'Gewürzberg GmbH') if settings else 'Gewürzberg GmbH'
     
     brevo_key = os.environ.get('BREVO_API_KEY')
@@ -4686,9 +4685,11 @@ async def send_mail(request: MailSendRequest):
         
         api_instance = TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
         
+        # Use verified sender email from Brevo
         send_smtp_email = SendSmtpEmail(
             to=[{"email": request.to}],
-            sender={"name": from_name, "email": from_email},
+            sender={"name": from_name, "email": "edirlik12@gmail.com"},
+            reply_to={"email": settings.get('from_email', 'emre@gewuerzberg.de')} if settings else None,
             subject=request.subject,
             html_content=request.body if request.html else f"<p>{request.body}</p>"
         )
