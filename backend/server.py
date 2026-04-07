@@ -4686,14 +4686,33 @@ async def send_mail(request: MailSendRequest):
         smtp_host = settings['smtp_host']
         smtp_port = int(settings.get('smtp_port', 587))
         
-        if settings.get('use_ssl'):
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
-        else:
-            server = smtplib.SMTP(smtp_host, smtp_port)
-            if settings.get('use_tls', True):
-                server.starttls()
+        # Try SSL first (port 465), then TLS (port 587)
+        server = None
+        last_error = None
         
-        server.login(settings['smtp_username'], settings['smtp_password'])
+        # Method 1: Try configured settings
+        try:
+            if settings.get('use_ssl') or smtp_port == 465:
+                server = smtplib.SMTP_SSL(smtp_host, 465, timeout=30)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=30)
+                if settings.get('use_tls', True):
+                    server.starttls()
+            server.login(settings['smtp_username'], settings['smtp_password'])
+        except Exception as e1:
+            last_error = e1
+            # Method 2: Try alternative port
+            try:
+                if smtp_port != 465:
+                    server = smtplib.SMTP_SSL(smtp_host, 465, timeout=30)
+                    server.login(settings['smtp_username'], settings['smtp_password'])
+                    last_error = None
+            except Exception as e2:
+                last_error = e2
+        
+        if last_error:
+            raise last_error
+            
         server.send_message(msg)
         server.quit()
         
@@ -4717,25 +4736,16 @@ async def send_mail(request: MailSendRequest):
         })
         
         return {"success": True, "message": "Email sent"}
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"SMTP Auth error: {e}")
+        raise HTTPException(status_code=401, detail="E-posta şifresi hatalı")
     except smtplib.SMTPDataError as e:
         error_msg = str(e)
-        if "policy restrictions" in error_msg.lower() or "554" in error_msg:
-            logger.error(f"SMTP IP blocked: {e}")
-            # Save as draft instead
-            await db.email_drafts.insert_one({
-                "id": str(uuid.uuid4()),
-                "to": request.to,
-                "subject": request.subject,
-                "body": request.body,
-                "status": "blocked",
-                "error": "Sunucu IP'si mail sağlayıcısı tarafından engellenmiş. Deployment sonrası çözülecek.",
-                "created_at": datetime.now(timezone.utc).isoformat()
-            })
-            raise HTTPException(status_code=503, detail="Mail sunucusu geçici olarak kullanılamıyor. Email taslak olarak kaydedildi.")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"SMTP Data error: {e}")
+        raise HTTPException(status_code=500, detail=f"Mail gönderilemedi: {error_msg}")
     except Exception as e:
         logger.error(f"SMTP error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Mail hatası: {str(e)}")
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
