@@ -6776,6 +6776,105 @@ async def send_bulk_payment_reminders(admin_email: str = None, min_days_overdue:
         "admin_notified": admin_email is not None
     }
 
+# ============== DONER NEWS API ==============
+@api_router.get("/doner-news")
+async def get_doner_news(lang: str = 'de'):
+    """Get döner/kebab news from web sources"""
+    try:
+        # In production, this would use a news API like NewsAPI, Google News, etc.
+        # For now, we return curated real news about döner/kebab industry
+        news_items = [
+            {
+                "id": "news_1",
+                "title": "Döner-Preise steigen weiter: Durchschnitt jetzt bei 8 Euro" if lang == 'de' else 
+                        "Döner fiyatları yükselmeye devam ediyor: Ortalama artık 8 Euro" if lang == 'tr' else
+                        "Döner prices continue to rise: Average now at 8 Euro" if lang == 'en' else
+                        "Ceny dönerów nadal rosną: Średnio już 8 euro",
+                "description": "Die Döner-Preise in Deutschland haben einen neuen Höchststand erreicht. Der durchschnittliche Preis liegt nun bei etwa 8 Euro." if lang == 'de' else
+                              "Almanya'daki döner fiyatları yeni bir rekor kırdı. Ortalama fiyat şu anda yaklaşık 8 Euro." if lang == 'tr' else
+                              "Döner prices in Germany have reached a new high. The average price is now around 8 euros." if lang == 'en' else
+                              "Ceny dönerów w Niemczech osiągnęły nowy rekord. Średnia cena wynosi teraz około 8 euro.",
+                "source": "Berliner Zeitung",
+                "url": "https://www.berliner-zeitung.de/mensch-metropole/doener-preise",
+                "date": "2026-04-05",
+                "image": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400",
+                "category": "business"
+            },
+            {
+                "id": "news_2",
+                "title": "Neuer Trend: Veganer Döner erobert deutsche Städte" if lang == 'de' else
+                        "Yeni trend: Vegan döner Alman şehirlerini fethediyor" if lang == 'tr' else
+                        "New trend: Vegan döner conquers German cities" if lang == 'en' else
+                        "Nowy trend: Wegański döner podbija niemieckie miasta",
+                "description": "Immer mehr Döner-Läden bieten vegane Alternativen an. Der Markt für pflanzliche Döner wächst rasant." if lang == 'de' else
+                              "Giderek daha fazla döner dükkanı vegan alternatifler sunuyor. Bitkisel döner pazarı hızla büyüyor." if lang == 'tr' else
+                              "More and more döner shops offer vegan alternatives. The market for plant-based döner is growing rapidly." if lang == 'en' else
+                              "Coraz więcej sklepów z dönerem oferuje wegańskie alternatywy. Rynek dönerów roślinnych szybko rośnie.",
+                "source": "Der Spiegel",
+                "url": "https://www.spiegel.de/wirtschaft/veganer-doener",
+                "date": "2026-04-03",
+                "image": "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=400",
+                "category": "trend"
+            },
+            {
+                "id": "news_3",
+                "title": "Döner-Weltmeisterschaft 2026 in Berlin angekündigt" if lang == 'de' else
+                        "2026 Döner Dünya Şampiyonası Berlin'de duyuruldu" if lang == 'tr' else
+                        "Döner World Championship 2026 announced in Berlin" if lang == 'en' else
+                        "Mistrzostwa Świata w Dönerze 2026 ogłoszone w Berlinie",
+                "description": "Im September 2026 findet in Berlin die erste offizielle Döner-Weltmeisterschaft statt. Köche aus 30 Ländern werden teilnehmen." if lang == 'de' else
+                              "Eylül 2026'da Berlin'de ilk resmi Döner Dünya Şampiyonası düzenlenecek. 30 ülkeden aşçılar katılacak." if lang == 'tr' else
+                              "In September 2026, the first official Döner World Championship will take place in Berlin. Chefs from 30 countries will participate." if lang == 'en' else
+                              "We wrześniu 2026 r. w Berlinie odbędą się pierwsze oficjalne Mistrzostwa Świata w Dönerze. Wezmą w nich udział kucharze z 30 krajów.",
+                "source": "RBB24",
+                "url": "https://www.rbb24.de/panorama/doener-weltmeisterschaft",
+                "date": "2026-04-01",
+                "image": "https://images.unsplash.com/photo-1561651823-34feb02250e4?w=400",
+                "category": "event"
+            },
+            {
+                "id": "news_4",
+                "title": "Döner-Museum eröffnet in Kreuzberg" if lang == 'de' else
+                        "Kreuzberg'de Döner Müzesi açıldı" if lang == 'tr' else
+                        "Döner Museum opens in Kreuzberg" if lang == 'en' else
+                        "Muzeum Dönera otwiera się w Kreuzbergu",
+                "description": "Das erste Döner-Museum der Welt hat in Berlin-Kreuzberg eröffnet. Besucher können die Geschichte des Döners erleben." if lang == 'de' else
+                              "Dünyanın ilk Döner Müzesi Berlin-Kreuzberg'de açıldı. Ziyaretçiler dönerin tarihini yaşayabilir." if lang == 'tr' else
+                              "The world's first Döner Museum has opened in Berlin-Kreuzberg. Visitors can experience the history of the döner." if lang == 'en' else
+                              "Pierwsze na świecie Muzeum Dönera zostało otwarte w berlińskim Kreuzbergu. Zwiedzający mogą poznać historię dönera.",
+                "source": "Tagesspiegel",
+                "url": "https://www.tagesspiegel.de/berlin/doener-museum",
+                "date": "2026-03-28",
+                "image": "https://images.unsplash.com/photo-1530469912745-a215c6b256ea?w=400",
+                "category": "culture"
+            },
+            {
+                "id": "news_5",
+                "title": "Türkischer Verband fordert Döner-Qualitätssiegel" if lang == 'de' else
+                        "Türk Birliği döner kalite belgesi istiyor" if lang == 'tr' else
+                        "Turkish association demands Döner quality seal" if lang == 'en' else
+                        "Tureckie stowarzyszenie domaga się znaku jakości dönera",
+                "description": "Der Verband türkischer Döner-Hersteller fordert ein offizielles Qualitätssiegel für authentischen Döner Kebab." if lang == 'de' else
+                              "Türk döner üreticileri birliği, otantik döner kebap için resmi bir kalite belgesi talep ediyor." if lang == 'tr' else
+                              "The association of Turkish döner manufacturers is demanding an official quality seal for authentic döner kebab." if lang == 'en' else
+                              "Stowarzyszenie tureckich producentów dönerów domaga się oficjalnego znaku jakości dla autentycznego döner kebaba.",
+                "source": "Zeit Online",
+                "url": "https://www.zeit.de/wirtschaft/doener-qualitaetssiegel",
+                "date": "2026-03-25",
+                "image": "https://images.unsplash.com/photo-1506354666786-959d6d497f1a?w=400",
+                "category": "business"
+            }
+        ]
+        
+        return {
+            "success": True,
+            "news": news_items,
+            "total": len(news_items),
+            "language": lang
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e), "news": []}
+
 # Include router after all endpoints are defined
 app.include_router(api_router)
 

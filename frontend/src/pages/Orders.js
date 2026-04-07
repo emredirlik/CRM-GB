@@ -928,40 +928,40 @@ const Orders = () => {
       <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Siparişi Mail ile Gönder</DialogTitle>
+            <DialogTitle>{t('sendOrderByEmail')}</DialogTitle>
             <DialogDescription>
-              Sipariş PDF'ini istediğiniz e-posta adresine gönderin
+              {t('sendOrderEmailDescription')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>E-posta Adresi</Label>
+              <Label>{t('email')}</Label>
               <Input
                 type="email"
                 value={emailTo}
                 onChange={(e) => setEmailTo(e.target.value)}
-                placeholder="ornek@email.com"
+                placeholder="example@email.com"
               />
             </div>
             <div className="space-y-2">
-              <Label>Konu</Label>
+              <Label>{t('subject')}</Label>
               <Input
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder="Mail konusu"
+                placeholder={t('emailSubjectPlaceholder')}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
-              İptal
+              {t('cancel')}
             </Button>
             <Button 
               onClick={sendOrderByEmail} 
               disabled={sendingEmail || !emailTo}
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              {sendingEmail ? 'Gönderiliyor...' : 'Gönder'}
+              {sendingEmail ? t('sendingEmail') : t('send')}
             </Button>
           </DialogFooter>
         </DialogContent>

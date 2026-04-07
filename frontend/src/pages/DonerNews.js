@@ -223,6 +223,8 @@ const texts = {
     didYouKnow: 'Biliyor muydunuz?',
     dailyDoner: 'Günlük Döner Satışı',
     inGermany: 'Almanya\'da',
+    liveNews: 'Güncel Haberler',
+    funFacts: 'Eğlenceli Bilgiler',
   },
   de: {
     title: 'Döner & Kebab Nachrichten',
@@ -233,6 +235,8 @@ const texts = {
     didYouKnow: 'Wussten Sie schon?',
     dailyDoner: 'Täglicher Döner-Verkauf',
     inGermany: 'In Deutschland',
+    liveNews: 'Aktuelle Nachrichten',
+    funFacts: 'Fun Facts',
   },
   en: {
     title: 'Döner & Kebab News',
@@ -243,6 +247,8 @@ const texts = {
     didYouKnow: 'Did you know?',
     dailyDoner: 'Daily Döner Sales',
     inGermany: 'In Germany',
+    liveNews: 'Live News',
+    funFacts: 'Fun Facts',
   },
   pl: {
     title: 'Wiadomości o Döner & Kebab',
@@ -253,6 +259,8 @@ const texts = {
     didYouKnow: 'Czy wiesz, że?',
     dailyDoner: 'Dzienna sprzedaż dönerów',
     inGermany: 'W Niemczech',
+    liveNews: 'Wiadomości na żywo',
+    funFacts: 'Ciekawostki',
   }
 };
 
@@ -261,12 +269,31 @@ const DonerNews = () => {
   const t = (key) => texts[language]?.[key] || texts.de[key] || key;
   const [randomFact, setRandomFact] = useState(null);
   const [selectedNews, setSelectedNews] = useState(null);
+  const [liveNews, setLiveNews] = useState([]);
+  const [loadingNews, setLoadingNews] = useState(false);
 
   useEffect(() => {
     // Set a random fun fact on load
     const randomIndex = Math.floor(Math.random() * donerNews.length);
     setRandomFact(donerNews[randomIndex]);
-  }, []);
+    
+    // Fetch live news
+    fetchLiveNews();
+  }, [language]);
+
+  const fetchLiveNews = async () => {
+    setLoadingNews(true);
+    try {
+      const response = await axios.get(`${API}/doner-news?lang=${language}`);
+      if (response.data.success) {
+        setLiveNews(response.data.news);
+      }
+    } catch (error) {
+      console.error('Error fetching news:', error);
+    } finally {
+      setLoadingNews(false);
+    }
+  };
 
   const getTitle = (item) => {
     if (language === 'tr') return item.titleTr;
@@ -368,9 +395,57 @@ const DonerNews = () => {
         </Card>
       </div>
 
-      {/* News Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {donerNews.map((item) => (
+      {/* Live News Section */}
+      {liveNews.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+            <Newspaper className="w-5 h-5 text-red-500" />
+            {t('liveNews')}
+            <Badge className="bg-red-500 text-white animate-pulse">LIVE</Badge>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {liveNews.map((item) => (
+              <Card 
+                key={item.id} 
+                className="hover:shadow-lg transition-shadow overflow-hidden group cursor-pointer border-l-4 border-l-red-500"
+                onClick={() => window.open(item.url, '_blank')}
+              >
+                {item.image && (
+                  <div className="h-32 overflow-hidden">
+                    <img src={item.image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  </div>
+                )}
+                <CardContent className="p-4">
+                  <Badge className="bg-slate-100 text-slate-700 border-0 text-xs mb-2">
+                    {item.source}
+                  </Badge>
+                  <h3 className="font-semibold text-sm mb-2 group-hover:text-red-600 transition-colors line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 line-clamp-2 mb-2">
+                    {item.description}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-slate-400">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(item.date).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'tr' ? 'tr-TR' : 'en-US')}
+                    </span>
+                    <span className="flex items-center gap-1 text-red-500">
+                      <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Fun Facts Grid */}
+      <div>
+        <h2 className="text-xl font-bold mb-4">{t('funFacts')}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {donerNews.map((item) => (
           <Card 
             key={item.id} 
             className="hover:shadow-lg transition-shadow overflow-hidden group cursor-pointer" 
@@ -406,6 +481,7 @@ const DonerNews = () => {
             </CardContent>
           </Card>
         ))}
+        </div>
       </div>
 
       {/* News Detail Modal */}

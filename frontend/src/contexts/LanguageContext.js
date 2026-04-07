@@ -116,6 +116,11 @@ const translations = {
     selectCustomer: 'Müşteri seçin',
     orderNotes: 'Sipariş notları...',
     donerNews: 'Döner & Kebab Haberleri',
+    sendOrderByEmail: 'Siparişi Mail ile Gönder',
+    sendOrderEmailDescription: 'Sipariş PDF\'ini istediğiniz e-posta adresine gönderin',
+    emailSubjectPlaceholder: 'Mail konusu',
+    send: 'Gönder',
+    cancel: 'İptal',
     
     // Activity
     activityHistory: 'Aktivite Geçmişi',
@@ -618,6 +623,11 @@ const translations = {
     selectCustomer: 'Kunde auswählen',
     orderNotes: 'Bestellnotizen...',
     donerNews: 'Döner & Kebab Nachrichten',
+    sendOrderByEmail: 'Bestellung per E-Mail senden',
+    sendOrderEmailDescription: 'Senden Sie die Bestell-PDF an die gewünschte E-Mail-Adresse',
+    emailSubjectPlaceholder: 'E-Mail Betreff',
+    send: 'Senden',
+    cancel: 'Abbrechen',
     
     // Activity
     activityHistory: 'Aktivitätsverlauf',
@@ -1120,6 +1130,11 @@ const translations = {
     selectCustomer: 'Select customer',
     orderNotes: 'Order notes...',
     donerNews: 'Döner & Kebab News',
+    sendOrderByEmail: 'Send Order by Email',
+    sendOrderEmailDescription: 'Send the order PDF to the desired email address',
+    emailSubjectPlaceholder: 'Email subject',
+    send: 'Send',
+    cancel: 'Cancel',
     
     // Activity
     activityHistory: 'Activity History',
@@ -1622,6 +1637,11 @@ const translations = {
     selectCustomer: 'Wybierz klienta',
     orderNotes: 'Notatki do zamówienia...',
     donerNews: 'Wiadomości o Döner & Kebab',
+    sendOrderByEmail: 'Wyślij zamówienie e-mailem',
+    sendOrderEmailDescription: 'Wyślij PDF zamówienia na podany adres e-mail',
+    emailSubjectPlaceholder: 'Temat e-maila',
+    send: 'Wyślij',
+    cancel: 'Anuluj',
     
     // Activity
     activityHistory: 'Historia aktywności',

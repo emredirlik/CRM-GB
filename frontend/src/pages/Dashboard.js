@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles, AlertTriangle, Trophy } from 'lucide-react';
+import { Users, Mail, TrendingUp, ShoppingCart, Euro, Target, Calendar as CalendarIcon, Clock, Plus, CheckCircle, ArrowRight, X, MapPin, Phone, Truck, Briefcase, TrendingDown, BarChart3, Sparkles, AlertTriangle, Trophy, GripVertical, Settings2 } from 'lucide-react';
 import { format, isSameDay } from 'date-fns';
 import { tr, de, enUS, pl } from 'date-fns/locale';
 import axios from 'axios';
@@ -90,6 +90,44 @@ const Dashboard = () => {
   // Recent Emails
   const [recentEmails, setRecentEmails] = useState([]);
   const [loadingEmails, setLoadingEmails] = useState(false);
+
+  // Widget Order & Drag
+  const [widgetOrder, setWidgetOrder] = useState(() => {
+    const saved = localStorage.getItem('dashboard_widget_order');
+    return saved ? JSON.parse(saved) : ['stats', 'calendar', 'shipments', 'customers', 'finance', 'forecast'];
+  });
+  const [draggedWidget, setDraggedWidget] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+
+  const handleDragStart = (e, widgetId) => {
+    setDraggedWidget(widgetId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e, targetWidgetId) => {
+    e.preventDefault();
+    if (!draggedWidget || draggedWidget === targetWidgetId) return;
+    
+    const newOrder = [...widgetOrder];
+    const dragIndex = newOrder.indexOf(draggedWidget);
+    const targetIndex = newOrder.indexOf(targetWidgetId);
+    
+    newOrder.splice(dragIndex, 1);
+    newOrder.splice(targetIndex, 0, draggedWidget);
+    
+    setWidgetOrder(newOrder);
+    localStorage.setItem('dashboard_widget_order', JSON.stringify(newOrder));
+    setDraggedWidget(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedWidget(null);
+  };
 
   const periods = [
     { value: 'all', label: t('allTime') },
