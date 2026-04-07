@@ -130,3 +130,4 @@ websockets==16.0
 yarl==1.23.0
 zipp==3.23.0
 resend==2.27.0
+sib-api-v3-sdk==7.6.0

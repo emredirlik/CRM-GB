@@ -24,6 +24,9 @@ import jwt
 from urllib.parse import quote
 import base64
 import resend
+import sib_api_v3_sdk
+from sib_api_v3_sdk.api.transactional_emails_api import TransactionalEmailsApi
+from sib_api_v3_sdk.models.send_smtp_email import SendSmtpEmail
 
 # Import PDF utilities
 from pdf_utils import generate_order_pdf, generate_recipe_pdf, generate_lead_pdf, generate_route_pdf, generate_specification_pdf, generate_daily_report_pdf, generate_combined_daily_report_pdf
@@ -4667,35 +4670,30 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Send email - saves to IMAP Drafts for manual sending"""
+    """Send email via Brevo (Sendinblue) API - free 300 emails/day"""
     settings = await db.company_settings.find_one({}, {"_id": 0})
     
-    if not settings:
-        raise HTTPException(status_code=400, detail="Email ayarları yapılandırılmamış")
+    from_email = settings.get('from_email', settings.get('smtp_username', 'emre@gewuerzberg.de')) if settings else 'emre@gewuerzberg.de'
+    from_name = settings.get('from_name', 'Gewürzberg GmbH') if settings else 'Gewürzberg GmbH'
     
-    from_email = settings.get('from_email', settings.get('smtp_username'))
-    from_name = settings.get('from_name', 'Gewürzberg GmbH')
+    brevo_key = os.environ.get('BREVO_API_KEY')
+    if not brevo_key:
+        raise HTTPException(status_code=500, detail="Email servisi yapılandırılmamış")
     
-    msg = MIMEMultipart()
-    msg['From'] = f"{from_name} <{from_email}>"
-    msg['To'] = request.to
-    msg['Subject'] = request.subject
-    msg['Date'] = formatdate(localtime=True)
-    
-    if request.html:
-        msg.attach(MIMEText(request.body, 'html', 'utf-8'))
-    else:
-        msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
-    
-    # Save to IMAP Drafts
     try:
-        import imaplib
-        import time
-        imap_host = settings.get('imap_host', 'imap.ionos.de')
-        imap = imaplib.IMAP4_SSL(imap_host, 993)
-        imap.login(settings['smtp_username'], settings['smtp_password'])
-        imap.append('Drafts', '', imaplib.Time2Internaldate(time.time()), msg.as_bytes())
-        imap.logout()
+        configuration = sib_api_v3_sdk.Configuration()
+        configuration.api_key['api-key'] = brevo_key
+        
+        api_instance = TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+        
+        send_smtp_email = SendSmtpEmail(
+            to=[{"email": request.to}],
+            sender={"name": from_name, "email": from_email},
+            subject=request.subject,
+            html_content=request.body if request.html else f"<p>{request.body}</p>"
+        )
+        
+        api_instance.send_transac_email(send_smtp_email)
         
         await db.sent_emails.insert_one({
             "id": str(uuid.uuid4()),
@@ -4705,10 +4703,10 @@ async def send_mail(request: MailSendRequest):
             "date": datetime.now(timezone.utc).isoformat()
         })
         
-        return {"success": True, "message": "Mail Taslaklar'a kaydedildi. Web mail'den gönderin."}
+        return {"success": True, "message": "Email gönderildi"}
     except Exception as e:
-        logger.error(f"IMAP error: {e}")
-        raise HTTPException(status_code=500, detail=f"Mail kaydedilemedi: {str(e)}")
+        logger.error(f"Brevo error: {e}")
+        raise HTTPException(status_code=500, detail=f"Mail gönderilemedi: {str(e)}")
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
