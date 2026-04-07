@@ -3,10 +3,19 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   Utensils, ExternalLink, RefreshCw, Globe, Clock, 
-  TrendingUp, Newspaper, ChefHat, Flame, Star
+  TrendingUp, Newspaper, ChefHat, Flame, Star, X, ArrowRight
 } from 'lucide-react';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 // Fun döner/kebab news and facts
 const donerNews = [
@@ -20,6 +29,11 @@ const donerNews = [
     descriptionTr: '1.500\'den fazla döner dükkanı ile Berlin dünya genelinde en yüksek döner restoran yoğunluğuna sahip.',
     descriptionEn: 'With over 1,500 döner shops, Berlin has the highest density of döner restaurants worldwide.',
     descriptionPl: 'Z ponad 1500 sklepami z dönerem Berlin ma najwyższą gęstość restauracji döner na świecie.',
+    fullContent: 'Berlin hat sich seit den 1970er Jahren zur unbestrittenen Döner-Hauptstadt der Welt entwickelt. Mit über 1.500 Döner-Läden bietet die Stadt nicht nur die höchste Dichte an Döner-Restaurants, sondern auch die größte Vielfalt an Zubereitungsarten. Von traditionellen Drehspieß-Varianten bis hin zu veganen Alternativen - Berlin hat alles zu bieten.',
+    fullContentTr: 'Berlin, 1970\'lerden bu yana tartışmasız dünyanın döner başkenti haline geldi. 1.500\'den fazla döner dükkanı ile şehir, yalnızca en yüksek döner restoran yoğunluğunu değil, aynı zamanda en büyük hazırlama çeşitliliğini de sunuyor. Geleneksel döner çeşitlerinden vegan alternatiflere kadar Berlin\'de her şey var.',
+    fullContentEn: 'Berlin has developed into the undisputed döner capital of the world since the 1970s. With over 1,500 döner shops, the city offers not only the highest density of döner restaurants, but also the greatest variety of preparation methods. From traditional rotisserie varieties to vegan alternatives - Berlin has it all.',
+    fullContentPl: 'Berlin od lat 70. stał się niekwestionowaną światową stolicą dönera. Z ponad 1500 sklepami z dönerem miasto oferuje nie tylko najwyższą gęstość restauracji döner, ale także największą różnorodność metod przygotowania.',
+    link: 'https://www.berlin.de/tourismus/infos/3988982-2562311-doenerkebab.html',
     category: 'stats',
     icon: '🇩🇪',
     date: '2026-04-01'
@@ -34,6 +48,11 @@ const donerNews = [
     descriptionTr: 'Guinness Dünya Rekoru 2017\'de Yunanistan\'da kırıldı.',
     descriptionEn: 'The Guinness World Record was set in Greece in 2017.',
     descriptionPl: 'Rekord Guinnessa został ustanowiony w Grecji w 2017 roku.',
+    fullContent: 'Im Jahr 2017 wurde in Athen, Griechenland, der größte Döner-Spieß der Welt aufgestellt. Mit einem Gewicht von 423 kg und einer Höhe von über 2 Metern brach er den Guinness-Weltrekord. An der Zubereitung waren über 50 Köche beteiligt.',
+    fullContentTr: '2017 yılında Atina, Yunanistan\'da dünyanın en büyük döner şişi hazırlandı. 423 kg ağırlığında ve 2 metreden fazla yüksekliğe sahip bu döner, Guinness Dünya Rekoru\'nu kırdı. Hazırlanmasında 50\'den fazla aşçı görev aldı.',
+    fullContentEn: 'In 2017, the world\'s largest döner spit was set up in Athens, Greece. Weighing 423 kg and standing over 2 meters tall, it broke the Guinness World Record. Over 50 chefs were involved in its preparation.',
+    fullContentPl: 'W 2017 roku w Atenach, Grecji, przygotowano największy szpikulec döner na świecie. Ważący 423 kg i mierzący ponad 2 metry, pobił rekord Guinnessa.',
+    link: 'https://www.guinnessworldrecords.com/world-records/largest-doner-kebab',
     category: 'record',
     icon: '🏆',
     date: '2026-03-28'
@@ -48,6 +67,11 @@ const donerNews = [
     descriptionTr: 'Gyros domuz etiyle yapılırken, döner geleneksel olarak kuzu veya dana eti kullanır.',
     descriptionEn: 'Gyros is made with pork, while döner traditionally uses lamb or beef.',
     descriptionPl: 'Gyros jest robiony z wieprzowiny, podczas gdy döner tradycyjnie używa jagnięciny lub wołowiny.',
+    fullContent: 'Obwohl Gyros und Döner ähnlich aussehen, gibt es wichtige Unterschiede. Gyros stammt aus Griechenland und wird traditionell mit Schweinefleisch zubereitet, gewürzt mit Oregano und Thymian. Döner hingegen kommt aus der Türkei und verwendet Lamm-, Rind- oder Hühnerfleisch mit Kreuzkümmel und Sumach.',
+    fullContentTr: 'Gyros ve döner benzer görünseler de önemli farklılıklar var. Gyros Yunanistan kökenlidir ve geleneksel olarak domuz etiyle, kekik ve mercanköşk ile hazırlanır. Döner ise Türkiye\'den gelir ve kuzu, dana veya tavuk eti kullanılarak kimyon ve sumak ile yapılır.',
+    fullContentEn: 'Although gyros and döner look similar, there are important differences. Gyros originates from Greece and is traditionally prepared with pork, seasoned with oregano and thyme. Döner, on the other hand, comes from Turkey and uses lamb, beef, or chicken with cumin and sumac.',
+    fullContentPl: 'Chociaż gyros i döner wyglądają podobnie, istnieją ważne różnice. Gyros pochodzi z Grecji i jest tradycyjnie przygotowywany z wieprzowiny, przyprawiony oregano i tymiankiem. Döner pochodzi z Turcji i używa jagnięciny, wołowiny lub kurczaka z kminkiem i sumachem.',
+    link: 'https://www.tasteatlas.com/gyros',
     category: 'culture',
     icon: '🇬🇷',
     date: '2026-03-25'
@@ -62,6 +86,11 @@ const donerNews = [
     descriptionTr: 'Alman döner endüstrisi 60.000\'den fazla kişiyi istihdam ediyor.',
     descriptionEn: 'The German döner industry employs over 60,000 people.',
     descriptionPl: 'Niemiecki przemysł döner zatrudnia ponad 60 000 osób.',
+    fullContent: 'Die Döner-Industrie in Deutschland ist ein wirtschaftlicher Gigant. Mit einem jährlichen Umsatz von 7,5 Milliarden Euro und über 60.000 Beschäftigten ist sie größer als viele andere Gastronomie-Segmente. Pro Tag werden etwa 700.000 Döner verkauft.',
+    fullContentTr: 'Almanya\'daki döner endüstrisi ekonomik bir devdir. Yıllık 7,5 milyar Euro ciro ve 60.000\'den fazla çalışanı ile birçok gastronomi sektöründen daha büyüktür. Günde yaklaşık 700.000 döner satılmaktadır.',
+    fullContentEn: 'The döner industry in Germany is an economic giant. With annual revenue of €7.5 billion and over 60,000 employees, it is larger than many other gastronomy segments. About 700,000 döners are sold per day.',
+    fullContentPl: 'Przemysł döner w Niemczech to ekonomiczny gigant. Z rocznymi przychodami 7,5 mld euro i ponad 60 000 pracownikami jest większy niż wiele innych segmentów gastronomii.',
+    link: 'https://www.handelsblatt.com/unternehmen/handel-konsumgueter/doener-kebab',
     category: 'business',
     icon: '💰',
     date: '2026-03-20'
@@ -76,6 +105,11 @@ const donerNews = [
     descriptionTr: 'Berlin\'deki Türk asıllı girişimci 1972\'de ekmek arası ilk döner kebabı icat etti.',
     descriptionEn: 'The Turkish-origin Berliner invented the first döner kebab in bread in 1972.',
     descriptionPl: 'Berlińczyk tureckiego pochodzenia wynalazł pierwszego dönera w chlebie w 1972 roku.',
+    fullContent: 'Kadir Nurman (1933-2013) war ein türkischstämmiger Gastronom in Berlin. Er gilt als Erfinder des modernen Döner Kebab im Fladenbrot, den er 1972 an seinem Stand am Bahnhof Zoo erstmals verkaufte. Seine Idee, das Fleisch in Brot zu servieren, revolutionierte die Fast-Food-Kultur.',
+    fullContentTr: 'Kadir Nurman (1933-2013), Berlin\'de yaşayan Türk asıllı bir gastronomcuydu. 1972\'de Bahnhof Zoo\'daki tezgahında ilk kez sattığı pide ekmeği içindeki modern döner kebabın mucidi olarak kabul edilir. Eti ekmek içinde servis etme fikri, fast-food kültürünü devrim niteliğinde değiştirdi.',
+    fullContentEn: 'Kadir Nurman (1933-2013) was a Turkish-origin gastronomer in Berlin. He is considered the inventor of the modern döner kebab in flatbread, which he first sold at his stand at Zoo Station in 1972. His idea of serving meat in bread revolutionized fast-food culture.',
+    fullContentPl: 'Kadir Nurman (1933-2013) był gastronomem tureckiego pochodzenia w Berlinie. Jest uważany za wynalazcę współczesnego döner kebaba w chlebie, który po raz pierwszy sprzedał w 1972 roku.',
+    link: 'https://en.wikipedia.org/wiki/Kadir_Nurman',
     category: 'history',
     icon: '👨‍🍳',
     date: '2026-03-15'
@@ -90,6 +124,11 @@ const donerNews = [
     descriptionTr: 'İskender Kebap 19. yüzyılda Bursa\'da icat edildi ve mucidinin adını taşıyor.',
     descriptionEn: 'Iskender Kebab was invented in Bursa in the 19th century and named after its creator.',
     descriptionPl: 'Iskender Kebab został wynaleziony w Bursie w XIX wieku i nosi imię swojego twórcy.',
+    fullContent: 'İskender Kebap wurde 1867 von İskender Efendi in Bursa, Türkei, erfunden. Das Gericht besteht aus dünn geschnittenem Dönerfleisch auf Fladenbrot, übergossen mit heißer Tomatensauce und zerlassener Butter, serviert mit Joghurt. Heute ist es weltweit in türkischen Restaurants zu finden.',
+    fullContentTr: 'İskender Kebap, 1867\'de Bursa\'da İskender Efendi tarafından icat edildi. Yemek, pide ekmeği üzerinde ince dilimlenmiş döner eti, sıcak domates sosu ve eritilmiş tereyağı ile kaplanarak yoğurtla servis edilir. Bugün dünya genelinde Türk restoranlarında bulunabilir.',
+    fullContentEn: 'Iskender Kebab was invented in 1867 by İskender Efendi in Bursa, Turkey. The dish consists of thinly sliced döner meat on flatbread, covered with hot tomato sauce and melted butter, served with yogurt. Today it can be found in Turkish restaurants worldwide.',
+    fullContentPl: 'Iskender Kebab został wynaleziony w 1867 roku przez İskender Efendi w Bursie, Turcja. Danie składa się z cienko pokrojonego mięsa döner na chlebie, polane gorącym sosem pomidorowym i roztopionym masłem, podawane z jogurtem.',
+    link: 'https://en.wikipedia.org/wiki/Iskender_kebap',
     category: 'history',
     icon: '🍖',
     date: '2026-03-10'
@@ -104,6 +143,11 @@ const donerNews = [
     descriptionTr: 'Almanya\'da günde 700.000\'den fazla döner satılıyor, hamburger ve pizzadan daha fazla!',
     descriptionEn: 'Over 700,000 döners are sold daily in Germany, more than burgers and pizza combined!',
     descriptionPl: 'W Niemczech codziennie sprzedaje się ponad 700 000 dönerów, więcej niż burgerów i pizzy razem!',
+    fullContent: 'Döner hat Burger und Pizza als beliebtestes Fast Food in Deutschland überholt. Mit über 700.000 verkauften Döner pro Tag und einem Marktanteil von über 40% im Fast-Food-Segment dominiert der Döner den deutschen Markt. Die Beliebtheit erstreckt sich über alle Altersgruppen.',
+    fullContentTr: 'Döner, Almanya\'da en sevilen fast food olarak hamburger ve pizzayı geride bıraktı. Günde 700.000\'den fazla satışı ve fast food segmentinde %40\'ın üzerinde pazar payı ile döner, Alman pazarına hakim. Popülerliği tüm yaş gruplarına yayılıyor.',
+    fullContentEn: 'Döner has overtaken burgers and pizza as the most popular fast food in Germany. With over 700,000 döners sold per day and a market share of over 40% in the fast-food segment, döner dominates the German market. Its popularity spans all age groups.',
+    fullContentPl: 'Döner wyprzedził burgery i pizzę jako najpopularniejszy fast food w Niemczech. Ze sprzedażą ponad 700 000 dönerów dziennie i udziałem w rynku ponad 40%, döner dominuje na niemieckim rynku.',
+    link: 'https://www.spiegel.de/wirtschaft/doener-kebab',
     category: 'stats',
     icon: '📊',
     date: '2026-03-05'
@@ -216,6 +260,7 @@ const DonerNews = () => {
   const { language } = useLanguage();
   const t = (key) => texts[language]?.[key] || texts.de[key] || key;
   const [randomFact, setRandomFact] = useState(null);
+  const [selectedNews, setSelectedNews] = useState(null);
 
   useEffect(() => {
     // Set a random fun fact on load
@@ -237,9 +282,20 @@ const DonerNews = () => {
     return item.description;
   };
 
+  const getFullContent = (item) => {
+    if (language === 'tr') return item.fullContentTr;
+    if (language === 'en') return item.fullContentEn;
+    if (language === 'pl') return item.fullContentPl;
+    return item.fullContent;
+  };
+
   const shuffleFact = () => {
     const randomIndex = Math.floor(Math.random() * donerNews.length);
     setRandomFact(donerNews[randomIndex]);
+  };
+
+  const openNewsDetail = (item) => {
+    setSelectedNews(item);
   };
 
   return (
@@ -315,7 +371,12 @@ const DonerNews = () => {
       {/* News Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {donerNews.map((item) => (
-          <Card key={item.id} className="hover:shadow-lg transition-shadow overflow-hidden group" data-testid={`news-${item.id}`}>
+          <Card 
+            key={item.id} 
+            className="hover:shadow-lg transition-shadow overflow-hidden group cursor-pointer" 
+            data-testid={`news-${item.id}`}
+            onClick={() => openNewsDetail(item)}
+          >
             <CardHeader className="pb-2">
               <div className="flex items-start gap-3">
                 <span className="text-3xl">{item.icon}</span>
@@ -338,11 +399,59 @@ const DonerNews = () => {
                   <Clock className="w-3 h-3" />
                   {new Date(item.date).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'tr' ? 'tr-TR' : language === 'pl' ? 'pl-PL' : 'en-US')}
                 </span>
+                <span className="flex items-center gap-1 text-amber-600">
+                  {t('readMore')} <ArrowRight className="w-3 h-3" />
+                </span>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* News Detail Modal */}
+      <Dialog open={!!selectedNews} onOpenChange={() => setSelectedNews(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {selectedNews && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-4">
+                  <span className="text-5xl">{selectedNews.icon}</span>
+                  <div>
+                    <Badge className={`${categoryColors[selectedNews.category]} border-0 mb-2`}>
+                      {categoryLabels[language]?.[selectedNews.category]}
+                    </Badge>
+                    <DialogTitle className="text-xl">{getTitle(selectedNews)}</DialogTitle>
+                  </div>
+                </div>
+              </DialogHeader>
+              
+              <div className="space-y-4 mt-4">
+                <p className="text-slate-700 leading-relaxed">
+                  {getFullContent(selectedNews)}
+                </p>
+                
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <span className="text-sm text-slate-500 flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    {new Date(selectedNews.date).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'tr' ? 'tr-TR' : language === 'pl' ? 'pl-PL' : 'en-US')}
+                  </span>
+                  
+                  {selectedNews.link && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => window.open(selectedNews.link, '_blank')}
+                      className="gap-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      {t('readMore')}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

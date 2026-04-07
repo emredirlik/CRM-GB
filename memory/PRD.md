@@ -66,12 +66,18 @@ Supported Languages: TR, EN, DE, PL, EL, BG
 
 ### Latest Session Updates
 1. ✅ **Food Fairs Page** - 18 international food exhibitions with future dates
-2. ✅ **Compact Leads List** - Single-row layout with better visibility
-3. ✅ **Compact Orders List** - Single-row layout with inline status
-4. ✅ **Mail Reading Area** - Full screen email view with compact header
+2. ✅ **Döner & Kebab News Page** - Entertainment section with 10 fun facts about döner/kebab
+   - Multilingual content (TR, EN, DE, PL)
+   - Detail modal when clicking news items
+   - External links to sources
+3. ✅ **Compact Leads List** - Single-row layout with better visibility
+4. ✅ **Compact Orders List** - Single-row layout with WhatsApp, Email, PDF, Edit, Delete buttons
 5. ✅ **Email Autocomplete** - Saves used addresses to localStorage
 6. ✅ **AI Compose Languages** - Working language tabs (TR, EN, DE, PL, EL, BG)
 7. ✅ **PWA Logo Update** - New logo applied to manifest.json
+8. ✅ **Full Language Support** - All UI labels change when switching languages
+9. ✅ **PDF Multi-language** - Lead and Report PDFs support lang parameter
+10. ✅ **Mobile Header** - Compact premium design with logo
 
 ### Previous Session Fixes
 1. ✅ Customers page - Lead model fixed

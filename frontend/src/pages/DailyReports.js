@@ -526,7 +526,7 @@ const DailyReports = () => {
     }
 
     try {
-      const response = await axios.get(`${API}/daily-reports/date/${dateStr}/pdf`, {
+      const response = await axios.get(`${API}/daily-reports/date/${dateStr}/pdf?lang=${language}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -557,7 +557,7 @@ const DailyReports = () => {
     }
 
     try {
-      const response = await axios.get(`${API}/daily-reports/month/${year}/${month}/pdf`, {
+      const response = await axios.get(`${API}/daily-reports/month/${year}/${month}/pdf?lang=${language}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));

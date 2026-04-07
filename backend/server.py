@@ -3366,7 +3366,7 @@ async def email_daily_reports(date: str, request: DailyReportEmailRequest):
     return {"message": "Email logged successfully", "report_count": len(reports)}
 
 @api_router.get("/daily-reports/month/{year}/{month}/pdf")
-async def download_monthly_reports_pdf(year: int, month: int):
+async def download_monthly_reports_pdf(year: int, month: int, lang: str = 'tr'):
     """Download all reports for a specific month as single PDF"""
     # Create date range for the month
     month_str = f"{year}-{str(month).zfill(2)}"
@@ -3384,7 +3384,7 @@ async def download_monthly_reports_pdf(year: int, month: int):
     settings = await db.company_settings.find_one({"id": "company_settings"}, {"_id": 0})
     
     # Generate combined PDF for all reports in the month
-    pdf_content = generate_combined_daily_report_pdf(reports, f"{month_str} (Monthly)", settings, 'tr')
+    pdf_content = generate_combined_daily_report_pdf(reports, f"{month_str} (Monthly)", settings, lang)
     
     return Response(
         content=pdf_content,

@@ -549,8 +549,11 @@ const Orders = () => {
                       <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-7 w-7 p-0" title="Önizle">
                         <Eye className="w-3.5 h-3.5 text-indigo-600" />
                       </Button>
+                      <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-7 w-7 p-0" title="WhatsApp">
+                        <MessageCircle className="w-3.5 h-3.5 text-green-600" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-7 w-7 p-0" title="PDF İndir">
-                        <FileDown className="w-3.5 h-3.5 text-green-600" />
+                        <FileDown className="w-3.5 h-3.5 text-blue-600" />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-7 w-7 p-0" title="Email Gönder">
                         <Mail className="w-3.5 h-3.5 text-purple-600" />
