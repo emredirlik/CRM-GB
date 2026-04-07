@@ -139,6 +139,7 @@ const MailPage = () => {
   const [aiComposePrompt, setAiComposePrompt] = useState('');
   const [aiComposing, setAiComposing] = useState(false);
   const [aiTone, setAiTone] = useState('professional');
+  const [aiComposeLanguage, setAiComposeLanguage] = useState(language); // Local state for AI compose language
 
   // Folder counts
   const inboxCount = emails.filter(e => !e.is_read).length;
@@ -462,7 +463,7 @@ const MailPage = () => {
         prompt: aiComposePrompt,
         tone: aiTone,
         context: composeData.subject ? `Subject: ${composeData.subject}` : '',
-        language: language // Pass current UI language
+        language: aiComposeLanguage // Use the local AI compose language state
       });
       if (response.data.email) {
         if (editorRef.current) {
@@ -1387,9 +1388,10 @@ const MailPage = () => {
                 ].map(lang => (
                   <button
                     key={lang.code}
-                    onClick={() => {/* setLanguage is from context, we can use a local state */}}
+                    onClick={() => setAiComposeLanguage(lang.code)}
+                    data-testid={`ai-compose-lang-${lang.code}`}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                      language === lang.code 
+                      aiComposeLanguage === lang.code 
                         ? 'bg-indigo-600 text-white' 
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
@@ -1398,7 +1400,7 @@ const MailPage = () => {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-slate-500 mt-1">Email, seçili UI diline göre yazılacaktır</p>
+              <p className="text-xs text-slate-500 mt-1">Email, seçili dile göre yazılacaktır</p>
             </div>
             
             <div>

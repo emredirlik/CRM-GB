@@ -23,7 +23,8 @@ import {
   Sparkles,
   UserCog,
   Brain,
-  Crown
+  Crown,
+  Utensils
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -43,6 +44,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/specifications', icon: ClipboardList, label: 'specifications' },
     { path: '/product-videos', icon: Video, label: 'productVideos' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
+    { path: '/food-fairs', icon: Utensils, label: 'foodFairs', highlight: true },
     { path: '/daily-reports', icon: Calendar, label: 'dailyReports' },
     { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
     { path: '/mail', icon: Mail, label: 'gewuerzbergMail' },
@@ -128,13 +130,13 @@ const Sidebar = ({ onClose }) => {
       {/* Language Selector */}
       <div className="p-3 border-t border-slate-700">
         <p className="text-[10px] text-slate-500 mb-2 uppercase tracking-wider font-medium">{t('language')}</p>
-        <div className="flex gap-1">
-          {['en', 'tr', 'de', 'pl'].map((lang) => (
+        <div className="flex flex-wrap gap-1">
+          {['en', 'tr', 'de', 'pl', 'el', 'bg'].map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}
               data-testid={`lang-${lang}`}
-              className={`lang-btn flex-1 ${language === lang ? 'active' : ''}`}
+              className={`lang-btn flex-1 min-w-[40px] ${language === lang ? 'active' : ''}`}
             >
               {lang.toUpperCase()}
             </button>

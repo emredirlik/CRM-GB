@@ -24,6 +24,7 @@ const translations = {
     recipes: 'Reçeteler',
     routePlanner: 'Rota Planlayıcı',
     dailyReports: 'Günlük Raporlar',
+    foodFairs: 'Gıda Fuarları',
     templates: 'Şablonlar',
     mail: 'Gewürzberg E-Mail',
     gewuerzbergMail: 'Gewürzberg Mail',
@@ -520,6 +521,7 @@ const translations = {
     recipes: 'Rezepte',
     routePlanner: 'Routenplaner',
     dailyReports: 'Tagesberichte',
+    foodFairs: 'Lebensmittelmessen',
     templates: 'Vorlagen',
     mail: 'Gewürzberg E-Mail',
     gewuerzbergMail: 'Gewürzberg Mail',
@@ -1015,6 +1017,7 @@ const translations = {
     recipes: 'Recipes',
     routePlanner: 'Route Planner',
     dailyReports: 'Daily Reports',
+    foodFairs: 'Food Fairs',
     templates: 'Templates',
     mail: 'Gewürzberg Mail',
     gewuerzbergMail: 'Gewürzberg Mail',
@@ -1510,6 +1513,7 @@ const translations = {
     recipes: 'Receptury',
     routePlanner: 'Planowanie trasy',
     dailyReports: 'Raporty dzienne',
+    foodFairs: 'Targi Spożywcze',
     templates: 'Szablony',
     mail: 'Gewürzberg Poczta',
     gewuerzbergMail: 'Gewürzberg Mail',
@@ -1896,6 +1900,7 @@ const translations = {
     mail: 'Email',
     settings: 'Ρυθμίσεις',
     logout: 'Αποσύνδεση',
+    foodFairs: 'Εκθέσεις Τροφίμων',
     
     // Mail
     inbox: 'Εισερχόμενα',
@@ -1953,6 +1958,7 @@ const translations = {
     mail: 'Имейл',
     settings: 'Настройки',
     logout: 'Изход',
+    foodFairs: 'Хранителни изложения',
     
     // Mail
     inbox: 'Входящи',
