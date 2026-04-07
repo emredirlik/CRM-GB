@@ -593,12 +593,17 @@ const MailPage = () => {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       } else {
-        await axios.post(`${API}/mail/send`, {
+        const response = await axios.post(`${API}/mail/send`, {
           to: composeData.to,
           subject: composeData.subject,
           body: bodyWithSignature,
           html: true
         });
+        
+        // If backend returns mailto link, open user's email client
+        if (response.data.mailto_link) {
+          window.location.href = response.data.mailto_link;
+        }
       }
       
       // Save email to history for autocomplete

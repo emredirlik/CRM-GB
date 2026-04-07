@@ -4670,44 +4670,29 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Send email via Brevo (Sendinblue) API - free 300 emails/day"""
-    settings = await db.company_settings.find_one({}, {"_id": 0})
+    """Generate mailto link for user to send from their own email client"""
+    import urllib.parse
     
-    from_name = settings.get('from_name', 'Gewürzberg GmbH') if settings else 'Gewürzberg GmbH'
+    # Create mailto link - opens user's email client
+    subject_encoded = urllib.parse.quote(request.subject)
+    body_text = request.body.replace('<p>', '').replace('</p>', '\n').replace('<br>', '\n').replace('<br/>', '\n')
+    body_text = body_text.replace('&nbsp;', ' ').strip()
+    # Remove other HTML tags
+    import re
+    body_text = re.sub('<[^<]+?>', '', body_text)
+    body_encoded = urllib.parse.quote(body_text)
     
-    brevo_key = os.environ.get('BREVO_API_KEY')
-    if not brevo_key:
-        raise HTTPException(status_code=500, detail="Email servisi yapılandırılmamış")
+    mailto_link = f"mailto:{request.to}?subject={subject_encoded}&body={body_encoded}"
     
-    try:
-        configuration = sib_api_v3_sdk.Configuration()
-        configuration.api_key['api-key'] = brevo_key
-        
-        api_instance = TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
-        
-        # Use verified sender email from Brevo
-        send_smtp_email = SendSmtpEmail(
-            to=[{"email": request.to}],
-            sender={"name": from_name, "email": "edirlik12@gmail.com"},
-            reply_to={"email": settings.get('from_email', 'emre@gewuerzberg.de')} if settings else None,
-            subject=request.subject,
-            html_content=request.body if request.html else f"<p>{request.body}</p>"
-        )
-        
-        api_instance.send_transac_email(send_smtp_email)
-        
-        await db.sent_emails.insert_one({
-            "id": str(uuid.uuid4()),
-            "to": request.to,
-            "subject": request.subject,
-            "body": request.body,
-            "date": datetime.now(timezone.utc).isoformat()
-        })
-        
-        return {"success": True, "message": "Email gönderildi"}
-    except Exception as e:
-        logger.error(f"Brevo error: {e}")
-        raise HTTPException(status_code=500, detail=f"Mail gönderilemedi: {str(e)}")
+    await db.sent_emails.insert_one({
+        "id": str(uuid.uuid4()),
+        "to": request.to,
+        "subject": request.subject,
+        "body": request.body,
+        "date": datetime.now(timezone.utc).isoformat()
+    })
+    
+    return {"success": True, "message": "Mail hazırlandı", "mailto_link": mailto_link, "open_client": True}
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
