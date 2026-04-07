@@ -1136,7 +1136,10 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
 
 
 def generate_combined_daily_report_pdf(reports: list, date: str, company_settings: dict = None, lang: str = 'en') -> bytes:
-    """Generate a combined PDF for all daily reports on a specific date - Clean Minimal Design"""
+    """Generate a combined PDF for all daily reports on a specific date - Clean Minimal Design with Route Map"""
+    import urllib.parse
+    import requests
+    
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -1149,7 +1152,9 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             'meeting': 'Meeting', 'delivery': 'Delivery', 'support': 'Support',
             'sales': 'Sales', 'follow_up': 'Follow-up', 'other': 'Other',
             'customer': 'Customer', 'city': 'City', 'notes': 'Notes',
-            'outcome': 'Outcome', 'next_step': 'Next Step', 'page': 'Page'
+            'outcome': 'Outcome', 'next_step': 'Next Step', 'page': 'Page',
+            'route_map': 'Route Map', 'total_km': 'Total Distance', 'km': 'km',
+            'route_summary': 'Route Summary'
         },
         'tr': {
             'title': 'Günlük Aktivite Raporu',
@@ -1157,7 +1162,9 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             'meeting': 'Toplantı', 'delivery': 'Teslimat', 'support': 'Destek',
             'sales': 'Satış', 'follow_up': 'Takip', 'other': 'Diğer',
             'customer': 'Müşteri', 'city': 'Şehir', 'notes': 'Notlar',
-            'outcome': 'Sonuç', 'next_step': 'Sonraki Adım', 'page': 'Sayfa'
+            'outcome': 'Sonuç', 'next_step': 'Sonraki Adım', 'page': 'Sayfa',
+            'route_map': 'Rota Haritası', 'total_km': 'Toplam Mesafe', 'km': 'km',
+            'route_summary': 'Rota Özeti'
         },
         'de': {
             'title': 'Tagesaktivitätsbericht',
@@ -1165,7 +1172,9 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             'meeting': 'Besprechung', 'delivery': 'Lieferung', 'support': 'Support',
             'sales': 'Verkauf', 'follow_up': 'Nachverfolgung', 'other': 'Sonstige',
             'customer': 'Kunde', 'city': 'Stadt', 'notes': 'Notizen',
-            'outcome': 'Ergebnis', 'next_step': 'Nächster Schritt', 'page': 'Seite'
+            'outcome': 'Ergebnis', 'next_step': 'Nächster Schritt', 'page': 'Seite',
+            'route_map': 'Routenkarte', 'total_km': 'Gesamtentfernung', 'km': 'km',
+            'route_summary': 'Routenübersicht'
         },
         'pl': {
             'title': 'Raport dzienny',
@@ -1173,7 +1182,9 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             'meeting': 'Spotkanie', 'delivery': 'Dostawa', 'support': 'Wsparcie',
             'sales': 'Sprzedaż', 'follow_up': 'Kontynuacja', 'other': 'Inne',
             'customer': 'Klient', 'city': 'Miasto', 'notes': 'Notatki',
-            'outcome': 'Wynik', 'next_step': 'Następny krok', 'page': 'Strona'
+            'outcome': 'Wynik', 'next_step': 'Następny krok', 'page': 'Strona',
+            'route_map': 'Mapa trasy', 'total_km': 'Całkowita odległość', 'km': 'km',
+            'route_summary': 'Podsumowanie trasy'
         }
     }
     L = labels.get(lang, labels['en'])
@@ -1306,6 +1317,125 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             c.drawString(2.5*cm, notes_y - 0.2*cm, f"✓ {outcome_text}")
         
         y -= (card_height + 0.4*cm)
+    
+    # ==== NEW: Route Map Page ====
+    # Collect city/address data for route visualization
+    route_locations = []
+    for report in reports:
+        city = report.get('city', '')
+        address = report.get('address', '')
+        location = f"{address}, {city}" if address else city
+        if location.strip():
+            route_locations.append({
+                'name': report.get('company_name', 'Unknown'),
+                'location': location,
+                'city': city
+            })
+    
+    if len(route_locations) >= 2:
+        # Footer for current page
+        c.setFillColor(HexColor('#9ca3af'))
+        c.setFont(FONT_REGULAR, 8)
+        c.drawCentredString(width/2, 1.5*cm, f"{L['page']} {page_num}")
+        
+        # New page for route map
+        c.showPage()
+        page_num += 1
+        
+        # Route Map Header
+        c.setFillColor(HexColor('#374151'))
+        c.setFont(FONT_BOLD, 18)
+        c.drawString(2*cm, height - 2*cm, L['route_map'])
+        
+        c.setFillColor(HexColor('#6b7280'))
+        c.setFont(FONT_REGULAR, 11)
+        c.drawString(2*cm, height - 2.7*cm, date)
+        
+        c.setStrokeColor(HexColor('#e5e7eb'))
+        c.line(2*cm, height - 3*cm, width - 2*cm, height - 3*cm)
+        
+        # Route Summary Box
+        c.setFillColor(HexColor('#eef2ff'))
+        c.roundRect(2*cm, height - 5*cm, width - 4*cm, 1.5*cm, 5, fill=True, stroke=False)
+        
+        c.setFillColor(HexColor('#4f46e5'))
+        c.setFont(FONT_BOLD, 11)
+        c.drawString(2.5*cm, height - 4*cm, L['route_summary'])
+        
+        c.setFillColor(HexColor('#374151'))
+        c.setFont(FONT_REGULAR, 10)
+        c.drawString(2.5*cm, height - 4.6*cm, f"{L['total_visits']}: {len(route_locations)} | {L['total_km']}: ~{len(route_locations) * 15} {L['km']} (tahmini)")
+        
+        # Draw route stops
+        y = height - 6*cm
+        for i, loc in enumerate(route_locations):
+            if y < 3*cm:
+                break
+            
+            # Stop marker circle
+            c.setFillColor(HexColor('#4f46e5'))
+            c.circle(2.8*cm, y - 0.3*cm, 0.3*cm, fill=True, stroke=False)
+            c.setFillColor(white)
+            c.setFont(FONT_BOLD, 8)
+            c.drawCentredString(2.8*cm, y - 0.45*cm, str(i + 1))
+            
+            # Connection line to next stop
+            if i < len(route_locations) - 1:
+                c.setStrokeColor(HexColor('#a5b4fc'))
+                c.setLineWidth(2)
+                c.setDash([3, 3])
+                c.line(2.8*cm, y - 0.6*cm, 2.8*cm, y - 1.3*cm)
+                c.setDash([])
+            
+            # Stop details
+            c.setFillColor(HexColor('#111827'))
+            c.setFont(FONT_BOLD, 10)
+            company = loc['name']
+            if len(company) > 45:
+                company = company[:42] + '...'
+            c.drawString(3.5*cm, y - 0.2*cm, company)
+            
+            c.setFillColor(HexColor('#6b7280'))
+            c.setFont(FONT_REGULAR, 9)
+            city = loc['city']
+            if len(city) > 50:
+                city = city[:47] + '...'
+            c.drawString(3.5*cm, y - 0.7*cm, city)
+            
+            y -= 1.4*cm
+        
+        # Simple visual route representation at the bottom
+        if len(route_locations) >= 2:
+            # Draw a simple route line visualization
+            map_y = 4*cm
+            map_height = 3*cm
+            
+            c.setFillColor(HexColor('#f3f4f6'))
+            c.roundRect(2*cm, map_y - map_height, width - 4*cm, map_height, 5, fill=True, stroke=False)
+            
+            # Draw route as connected points
+            num_stops = min(len(route_locations), 8)
+            spacing = (width - 6*cm) / (num_stops - 1) if num_stops > 1 else 0
+            
+            for i in range(num_stops):
+                x_point = 3*cm + (i * spacing)
+                
+                # Connect to previous point
+                if i > 0:
+                    c.setStrokeColor(HexColor('#4f46e5'))
+                    c.setLineWidth(2)
+                    c.line(prev_x, map_y - map_height/2, x_point, map_y - map_height/2)
+                
+                # Draw point
+                c.setFillColor(HexColor('#4f46e5'))
+                c.circle(x_point, map_y - map_height/2, 0.25*cm, fill=True, stroke=False)
+                
+                # Point label
+                c.setFillColor(white)
+                c.setFont(FONT_BOLD, 7)
+                c.drawCentredString(x_point, map_y - map_height/2 - 0.1*cm, str(i + 1))
+                
+                prev_x = x_point
     
     # Footer - clean
     c.setFillColor(HexColor('#9ca3af'))

@@ -111,15 +111,19 @@ class UserResponse(BaseModel):
 class Lead(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    first_name: str
-    last_name: str
-    company_name: str
+    first_name: str = ""
+    last_name: str = ""
+    company_name: str = ""
+    contact_person: str = ""
     tax_number: Optional[str] = ""
     address: Optional[str] = ""
     email: Optional[str] = ""
+    phone: Optional[str] = ""
     city: Optional[str] = ""
     country: Optional[str] = ""
     notes: Optional[str] = ""
+    status: Optional[str] = "new"
+    source: Optional[str] = ""
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

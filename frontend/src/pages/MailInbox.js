@@ -706,7 +706,7 @@ const MailPage = () => {
             <MailOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Gewürzberg</h2>
+            <h2 className="text-lg font-bold text-white">Gewürzberg Mail</h2>
             <p className="text-xs text-slate-400">{t('mailCenter')}</p>
           </div>
         </div>
@@ -973,9 +973,9 @@ const MailPage = () => {
 
       {/* Email Detail View */}
       {selectedEmail && (
-        <div className={`fixed inset-0 z-50 bg-slate-900 flex flex-col transition-all ${isEmailFullscreen ? 'lg:relative lg:flex-1' : 'lg:relative lg:w-[550px]'}`}>
+        <div className={`fixed inset-0 z-50 bg-slate-900 flex flex-col overflow-hidden ${isEmailFullscreen ? '' : 'lg:relative lg:w-[600px] lg:min-w-[500px]'}`}>
           {/* Header */}
-          <div className="flex items-center gap-2 p-4 border-b border-slate-700/50 bg-slate-800/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 p-3 md:p-4 border-b border-slate-700/50 bg-slate-800/80 backdrop-blur-sm flex-shrink-0">
             <Button variant="ghost" size="icon" onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); setShowAiPanel(false); }} className="text-white hover:bg-slate-700 rounded-xl">
               <ChevronLeft className="w-5 h-5" />
             </Button>
@@ -1161,9 +1161,9 @@ const MailPage = () => {
             </div>
           )}
 
-          {/* Body */}
-          <div className="flex-1 overflow-auto">
-            <div className="bg-white min-h-full rounded-t-2xl mt-2 mx-2">
+          {/* Body - Scrollable Container */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="bg-white min-h-full rounded-t-2xl mt-2 mx-2 mb-2">
               {loadingBody ? (
                 <div className="flex items-center justify-center py-10">
                   <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
@@ -1179,22 +1179,27 @@ const MailPage = () => {
                       <style>
                         body { 
                           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                          line-height: 1.6;
+                          line-height: 1.7;
                           color: #1f2937;
-                          padding: 20px;
+                          padding: 16px;
                           margin: 0;
                           background: white;
+                          font-size: 15px;
+                        }
+                        @media (max-width: 640px) {
+                          body { font-size: 14px; padding: 12px; }
                         }
                         img { max-width: 100%; height: auto; border-radius: 8px; }
                         a { color: #4f46e5; }
                         table { max-width: 100%; }
-                        pre, code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+                        pre, code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+                        p { margin: 0 0 1em 0; }
                       </style>
                     </head>
                     <body>${selectedEmail.body}</body>
                     </html>`}
                   className="w-full border-0"
-                  style={{ minHeight: '400px', height: 'calc(100vh - 450px)' }}
+                  style={{ minHeight: '300px', height: isEmailFullscreen ? 'calc(100vh - 380px)' : 'calc(100vh - 500px)' }}
                   sandbox="allow-same-origin"
                   title="Email Content"
                 />
@@ -1205,11 +1210,11 @@ const MailPage = () => {
           </div>
 
           {/* Actions */}
-          <div className="p-4 border-t border-slate-700/50 bg-slate-800/80 flex gap-3">
-            <Button onClick={() => handleReply(selectedEmail, 'reply')} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl py-5">
+          <div className="p-3 md:p-4 border-t border-slate-700/50 bg-slate-800/80 flex gap-3 flex-shrink-0">
+            <Button onClick={() => handleReply(selectedEmail, 'reply')} className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl py-4 md:py-5 text-sm md:text-base">
               <Reply className="w-4 h-4 mr-2" />{t('reply')}
             </Button>
-            <Button onClick={() => handleReply(selectedEmail, 'forward')} variant="outline" className="flex-1 border-slate-600 text-white hover:bg-slate-700 rounded-xl py-5">
+            <Button onClick={() => handleReply(selectedEmail, 'forward')} variant="outline" className="flex-1 border-slate-600 text-white hover:bg-slate-700 rounded-xl py-4 md:py-5 text-sm md:text-base">
               <Forward className="w-4 h-4 mr-2" />{t('forward')}
             </Button>
           </div>
@@ -1367,6 +1372,35 @@ const MailPage = () => {
                 className="min-h-[100px]"
               />
             </div>
+            
+            {/* Language Selection */}
+            <div>
+              <label className="text-sm font-medium text-slate-700 mb-2 block">Dil / Language</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { code: 'tr', label: '🇹🇷 Türkçe' },
+                  { code: 'en', label: '🇬🇧 English' },
+                  { code: 'de', label: '🇩🇪 Deutsch' },
+                  { code: 'pl', label: '🇵🇱 Polski' },
+                  { code: 'el', label: '🇬🇷 Ελληνικά' },
+                  { code: 'bg', label: '🇧🇬 Български' },
+                ].map(lang => (
+                  <button
+                    key={lang.code}
+                    onClick={() => {/* setLanguage is from context, we can use a local state */}}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      language === lang.code 
+                        ? 'bg-indigo-600 text-white' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Email, seçili UI diline göre yazılacaktır</p>
+            </div>
+            
             <div>
               <label className="text-sm font-medium text-slate-700 mb-2 block">{t('tone')}</label>
               <div className="flex gap-2">

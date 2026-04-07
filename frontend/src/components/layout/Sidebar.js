@@ -45,7 +45,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
     { path: '/daily-reports', icon: Calendar, label: 'dailyReports' },
     { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
-    { path: '/mail', icon: Mail, label: 'mail' },
+    { path: '/mail', icon: Mail, label: 'gewuerzbergMail' },
     { path: '/compose', icon: Sparkles, label: 'aiMailComposer', highlight: true },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/ai-analytics', icon: Brain, label: 'aiAnalytics', highlight: true },

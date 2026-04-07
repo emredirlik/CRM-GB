@@ -230,10 +230,11 @@ const LeadFinder = () => {
     }
     
     // For other countries, use AI search
-    const keywordList = parseKeywords(keywords);
+    // Provide default keywords if none specified
+    let keywordList = parseKeywords(keywords);
     if (keywordList.length === 0) {
-      toast.error(t.error, { description: 'En az bir arama kelimesi girin' });
-      return;
+      // Default to industry-relevant keywords
+      keywordList = ['döner producer', 'gyros manufacturer', 'kebab factory', 'meat processing', 'food production'];
     }
 
     setLoading(true);
