@@ -2,6 +2,7 @@
 PDF Generation Utilities with Turkish Character Support
 """
 import io
+import requests
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -12,6 +13,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Paragraph
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
+from reportlab.lib.utils import ImageReader
 
 # Register fonts for Turkish character support (ş, ı, ğ, ü, ö, ç)
 # Priority: FreeSans > Liberation > Helvetica (fallback)
@@ -1218,7 +1220,6 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None, lang:
 def generate_combined_daily_report_pdf(reports: list, date: str, company_settings: dict = None, lang: str = 'en') -> bytes:
     """Generate a combined PDF for all daily reports on a specific date - Clean Minimal Design with Route Map"""
     import urllib.parse
-    import requests
     
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -1434,20 +1435,93 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
         c.setStrokeColor(HexColor('#e5e7eb'))
         c.line(2*cm, height - 3*cm, width - 2*cm, height - 3*cm)
         
-        # Route Summary Box
+        # ============================================
+        # REAL MAP IMAGE FROM OPENSTREETMAP STATIC API
+        # ============================================
+        map_image_drawn = False
+        try:
+            # Geocode cities to get coordinates using Nominatim (free)
+            coordinates = []
+            for loc in route_locations[:10]:  # Max 10 stops
+                city_query = loc.get('city', '') or loc.get('location', '')
+                if city_query:
+                    # Use Nominatim geocoding (free, no API key needed)
+                    geo_url = f"https://nominatim.openstreetmap.org/search?q={requests.utils.quote(city_query)}&format=json&limit=1"
+                    geo_resp = requests.get(geo_url, headers={'User-Agent': 'GewurzbergCRM/1.0'}, timeout=5)
+                    if geo_resp.status_code == 200 and geo_resp.json():
+                        geo_data = geo_resp.json()[0]
+                        coordinates.append({
+                            'lat': float(geo_data['lat']),
+                            'lon': float(geo_data['lon']),
+                            'name': loc.get('name', ''),
+                            'city': city_query
+                        })
+            
+            if len(coordinates) >= 2:
+                # Calculate bounding box for all coordinates
+                lats = [c['lat'] for c in coordinates]
+                lons = [c['lon'] for c in coordinates]
+                min_lat, max_lat = min(lats), max(lats)
+                min_lon, max_lon = min(lons), max(lons)
+                
+                # Build marker string for OpenStreetMap Static API
+                markers = []
+                for coord in coordinates:
+                    markers.append(f"{coord['lon']},{coord['lat']},red")
+                
+                # Use staticmap.openstreetmap.de (free, no API key)
+                marker_str = "|".join(markers)
+                map_url = f"https://staticmap.openstreetmap.de/staticmap.php?center={(min_lat+max_lat)/2},{(min_lon+max_lon)/2}&zoom=auto&size=600x300&maptype=mapnik&markers={marker_str}"
+                
+                # Try fetching the map image
+                map_resp = requests.get(map_url, timeout=10)
+                if map_resp.status_code == 200 and len(map_resp.content) > 1000:
+                    # Successfully got map image
+                    map_image = ImageReader(io.BytesIO(map_resp.content))
+                    
+                    # Draw map image on PDF
+                    map_width = width - 4*cm
+                    map_height_img = 7*cm
+                    map_y_pos = height - 3.5*cm - map_height_img
+                    
+                    c.drawImage(map_image, 2*cm, map_y_pos, width=map_width, height=map_height_img, preserveAspectRatio=True)
+                    
+                    # Draw border around map
+                    c.setStrokeColor(HexColor('#e5e7eb'))
+                    c.setLineWidth(1)
+                    c.rect(2*cm, map_y_pos, map_width, map_height_img, fill=False, stroke=True)
+                    
+                    map_image_drawn = True
+                    
+                    # Adjust y position for route details below map
+                    y = map_y_pos - 1*cm
+                else:
+                    y = height - 4*cm
+            else:
+                y = height - 4*cm
+        except Exception as e:
+            # If map fetch fails, continue without map image
+            print(f"Map image fetch failed: {e}")
+            y = height - 4*cm
+        
+        # Route Summary Box (below map or at top if no map)
+        if not map_image_drawn:
+            y = height - 4*cm
+        
         c.setFillColor(HexColor('#eef2ff'))
-        c.roundRect(2*cm, height - 5*cm, width - 4*cm, 1.5*cm, 5, fill=True, stroke=False)
+        c.roundRect(2*cm, y - 1.5*cm, width - 4*cm, 1.5*cm, 5, fill=True, stroke=False)
         
         c.setFillColor(HexColor('#4f46e5'))
         c.setFont(FONT_BOLD, 11)
-        c.drawString(2.5*cm, height - 4*cm, L['route_summary'])
+        c.drawString(2.5*cm, y - 0.5*cm, L['route_summary'])
         
         c.setFillColor(HexColor('#374151'))
         c.setFont(FONT_REGULAR, 10)
-        c.drawString(2.5*cm, height - 4.6*cm, f"{L['total_visits']}: {len(route_locations)} | {L['total_km']}: ~{len(route_locations) * 15} {L['km']} (tahmini)")
+        c.drawString(2.5*cm, y - 1.1*cm, f"{L['total_visits']}: {len(route_locations)} | {L['total_km']}: ~{len(route_locations) * 15} {L['km']} (tahmini)")
         
-        # Draw route stops
-        y = height - 6*cm
+        y -= 2.5*cm
+        
+        # Draw route stops list
         for i, loc in enumerate(route_locations):
             if y < 3*cm:
                 break
@@ -1483,40 +1557,6 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
             c.drawString(3.5*cm, y - 0.7*cm, city)
             
             y -= 1.4*cm
-        
-        # Simple visual route representation at the bottom
-        if len(route_locations) >= 2:
-            # Draw a simple route line visualization
-            map_y = 4*cm
-            map_height = 3*cm
-            
-            c.setFillColor(HexColor('#f3f4f6'))
-            c.roundRect(2*cm, map_y - map_height, width - 4*cm, map_height, 5, fill=True, stroke=False)
-            
-            # Draw route as connected points
-            num_stops = min(len(route_locations), 8)
-            spacing = (width - 6*cm) / (num_stops - 1) if num_stops > 1 else 0
-            prev_x_point = 3*cm
-            
-            for i in range(num_stops):
-                x_point = 3*cm + (i * spacing)
-                
-                # Connect to previous point
-                if i > 0:
-                    c.setStrokeColor(HexColor('#4f46e5'))
-                    c.setLineWidth(2)
-                    c.line(prev_x_point, map_y - map_height/2, x_point, map_y - map_height/2)
-                
-                # Draw point
-                c.setFillColor(HexColor('#4f46e5'))
-                c.circle(x_point, map_y - map_height/2, 0.25*cm, fill=True, stroke=False)
-                
-                # Point label
-                c.setFillColor(white)
-                c.setFont(FONT_BOLD, 7)
-                c.drawCentredString(x_point, map_y - map_height/2 - 0.1*cm, str(i + 1))
-                
-                prev_x_point = x_point
     
     # Footer - clean
     c.setFillColor(HexColor('#9ca3af'))

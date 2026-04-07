@@ -6779,10 +6779,56 @@ async def send_bulk_payment_reminders(admin_email: str = None, min_days_overdue:
 # ============== DONER NEWS API ==============
 @api_router.get("/doner-news")
 async def get_doner_news(lang: str = 'de'):
-    """Get döner/kebab news from web sources"""
+    """Get döner/kebab news from web sources using SerpAPI Google News"""
     try:
-        # In production, this would use a news API like NewsAPI, Google News, etc.
-        # For now, we return curated real news about döner/kebab industry
+        import os
+        serpapi_key = os.environ.get('SERPAPI_KEY', '')
+        
+        # Fetch real news using SerpAPI Google News
+        real_news = []
+        if serpapi_key:
+            try:
+                # Search queries based on language
+                search_queries = {
+                    'de': 'Döner Kebab Deutschland Nachrichten',
+                    'tr': 'Döner kebab haberleri',
+                    'en': 'Döner kebab news Germany',
+                    'pl': 'Döner kebab wiadomości'
+                }
+                query = search_queries.get(lang, search_queries['de'])
+                
+                serp_url = f"https://serpapi.com/search.json?engine=google_news&q={requests.utils.quote(query)}&gl={'de' if lang == 'de' else 'tr' if lang == 'tr' else 'us'}&hl={lang}&api_key={serpapi_key}"
+                
+                resp = requests.get(serp_url, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    news_results = data.get('news_results', [])
+                    
+                    for i, item in enumerate(news_results[:6]):
+                        real_news.append({
+                            "id": f"serp_news_{i+1}",
+                            "title": item.get('title', ''),
+                            "description": item.get('snippet', item.get('title', '')),
+                            "source": item.get('source', {}).get('name', 'Unknown'),
+                            "url": item.get('link', '#'),
+                            "date": item.get('date', datetime.now().strftime('%Y-%m-%d')),
+                            "image": item.get('thumbnail', 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=400'),
+                            "category": "news"
+                        })
+            except Exception as serp_error:
+                print(f"SerpAPI error: {serp_error}")
+        
+        # If we got real news, return them
+        if real_news:
+            return {
+                "success": True,
+                "news": real_news,
+                "total": len(real_news),
+                "language": lang,
+                "source": "live"
+            }
+        
+        # Fallback to curated news if SerpAPI fails or no key
         news_items = [
             {
                 "id": "news_1",
@@ -6870,7 +6916,8 @@ async def get_doner_news(lang: str = 'de'):
             "success": True,
             "news": news_items,
             "total": len(news_items),
-            "language": lang
+            "language": lang,
+            "source": "curated"
         }
     except Exception as e:
         return {"success": False, "error": str(e), "news": []}

@@ -292,6 +292,23 @@ const Orders = () => {
     }
   };
 
+  // Set payment due date (10, 15, 30 days from order creation)
+  const handlePaymentDueDaysChange = async (orderId, days) => {
+    try {
+      const order = orders.find(o => o.id === orderId);
+      const createdAt = new Date(order?.created_at || new Date());
+      const dueDate = new Date(createdAt);
+      dueDate.setDate(dueDate.getDate() + parseInt(days));
+      const dueDateStr = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      await axios.put(`${API}/orders/${orderId}/payment`, { payment_due_date: dueDateStr });
+      toast.success('Başarılı', { description: `Son ödeme tarihi ${days} gün olarak ayarlandı` });
+      fetchData();
+    } catch (error) {
+      toast.error('Hata', { description: 'Son ödeme tarihi güncellenemedi' });
+    }
+  };
+
   const downloadPdf = async (orderId) => {
     try {
       const response = await axios.get(`${API}/orders/${orderId}/pdf?lang=${language}`, {
@@ -492,7 +509,7 @@ const Orders = () => {
                     </div>
                     
                     {/* Main Info - Flexible */}
-                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-5 gap-1 sm:gap-3">
+                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-6 gap-1 sm:gap-2">
                       {/* Product */}
                       <div className="sm:col-span-1 min-w-0">
                         <p className="font-semibold text-sm truncate">{formatOrderProducts(order)}</p>
@@ -511,13 +528,52 @@ const Orders = () => {
                         </Badge>
                       </div>
                       
-                      {/* Payment */}
+                      {/* Payment Status with Dropdown */}
                       <div className="hidden sm:flex items-center gap-1">
-                        <Badge className={`${paymentStatusColors[order.payment_status || 'pending']} border text-[10px] px-1.5`}>
-                          {paymentStatusLabels[language]?.[order.payment_status || 'pending'] || 'Bekliyor'}
-                        </Badge>
+                        <Select 
+                          value={order.payment_status || 'pending'} 
+                          onValueChange={(value) => handlePaymentStatusChange(order.id, value)}
+                        >
+                          <SelectTrigger className={`w-auto h-6 px-1.5 text-[10px] ${paymentStatusColors[order.payment_status || 'pending']} border`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.keys(paymentStatusColors).map(ps => (
+                              <SelectItem key={ps} value={ps}>
+                                <Badge className={`${paymentStatusColors[ps]} border text-xs`}>
+                                  {paymentStatusLabels[language]?.[ps]}
+                                </Badge>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
-                          <span className="text-[10px] text-red-600">{getDaysOverdue(order)}g</span>
+                          <span className="text-[10px] text-red-600 font-bold animate-pulse">{getDaysOverdue(order)}g gecikmiş!</span>
+                        )}
+                      </div>
+                      
+                      {/* Payment Due Days Dropdown */}
+                      <div className="hidden sm:flex items-center gap-1">
+                        <Select 
+                          value={order.payment_due_days?.toString() || ''}
+                          onValueChange={(value) => handlePaymentDueDaysChange(order.id, value)}
+                        >
+                          <SelectTrigger className="w-auto h-6 px-1.5 text-[10px] border-dashed border-gray-300">
+                            <Clock className="w-3 h-3 mr-1" />
+                            <SelectValue placeholder="Vade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10 Gün</SelectItem>
+                            <SelectItem value="15">15 Gün</SelectItem>
+                            <SelectItem value="30">30 Gün</SelectItem>
+                            <SelectItem value="45">45 Gün</SelectItem>
+                            <SelectItem value="60">60 Gün</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {order.payment_due_date && (
+                          <span className="text-[9px] text-muted-foreground">
+                            {new Date(order.payment_due_date).toLocaleDateString('tr-TR')}
+                          </span>
                         )}
                       </div>
                       
@@ -560,7 +616,7 @@ const Orders = () => {
                       </Button>
                       {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
                         <Button variant="ghost" size="sm" onClick={() => sendPaymentReminder(order.id)} className="h-7 w-7 p-0" title="Ödeme Hatırlatma">
-                          <Bell className="w-3.5 h-3.5 text-orange-500" />
+                          <Bell className="w-3.5 h-3.5 text-orange-500 animate-bounce" />
                         </Button>
                       )}
                       <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-7 w-7 p-0" title="Düzenle">
