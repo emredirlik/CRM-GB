@@ -575,22 +575,8 @@ const Leads = () => {
                       </div>
                     </div>
                     
-                    {/* Actions - Fewer buttons on mobile */}
+                    {/* Actions - All buttons visible, smaller on mobile */}
                     <div className="flex items-center gap-0.5 flex-shrink-0">
-                      {/* Desktop actions */}
-                      <div className="hidden sm:flex items-center gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openActivityDialog(lead)}
-                          className="h-7 w-7 p-0"
-                          data-testid={`activity-${lead.id}`}
-                        >
-                          <History className="w-3.5 h-3.5 text-purple-600" />
-                        </Button>
-                      </div>
-                      
-                      {/* Always visible */}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -600,37 +586,33 @@ const Leads = () => {
                       >
                         <Eye className="w-3.5 h-3.5 text-gray-600" />
                       </Button>
-                      
-                      {/* Desktop only */}
-                      <div className="hidden sm:flex items-center gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openMailDialog(lead)}
-                          className="h-7 w-7 p-0"
-                          data-testid={`mail-${lead.id}`}
-                        >
-                          <Mail className="w-3.5 h-3.5 text-blue-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(lead)}
-                          className="h-7 w-7 p-0"
-                          data-testid={`edit-${lead.id}`}
-                        >
-                          <Pencil className="w-3.5 h-3.5 text-amber-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openDeleteDialog(lead)}
-                          className="h-7 w-7 p-0"
-                          data-testid={`delete-${lead.id}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                        </Button>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openMailDialog(lead)}
+                        className="h-7 w-7 p-0"
+                        data-testid={`mail-${lead.id}`}
+                      >
+                        <Mail className="w-3.5 h-3.5 text-blue-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(lead)}
+                        className="h-7 w-7 p-0"
+                        data-testid={`edit-${lead.id}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-amber-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(lead)}
+                        className="h-7 w-7 p-0"
+                        data-testid={`delete-${lead.id}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

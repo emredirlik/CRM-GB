@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -531,89 +531,105 @@ const Orders = () => {
                       <Package className="w-4 h-4 text-indigo-600" />
                     </div>
                     
-                    {/* Main Info - Flexible */}
-                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-6 gap-1 sm:gap-2">
-                      {/* Product */}
-                      <div className="sm:col-span-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">{formatOrderProducts(order)}</p>
-                        <p className="text-xs text-muted-foreground truncate">{order.company_name}</p>
+                    {/* Main Info */}
+                    <div className="flex-1 min-w-0">
+                      {/* Mobile: Show product and company name vertically */}
+                      <div className="sm:hidden">
+                        <p className="font-semibold text-sm leading-tight">{formatOrderProducts(order)}</p>
+                        <p className="text-xs text-muted-foreground">{order.company_name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className={`${statusColors[order.status]} border-0 text-[9px] px-1`}>
+                            {statusLabels[language]?.[order.status] || order.status}
+                          </Badge>
+                          <span className="text-xs font-medium text-indigo-600">{formatOrderQuantity(order)}</span>
+                        </div>
                       </div>
                       
-                      {/* Quantity */}
-                      <div className="hidden sm:block min-w-0">
-                        <p className="text-xs font-semibold text-indigo-600">{formatOrderQuantity(order)}</p>
-                      </div>
-                      
-                      {/* Status */}
-                      <div className="hidden sm:block">
-                        <Badge className={`${statusColors[order.status]} border-0 text-[10px] px-1.5`}>
-                          {statusLabels[language]?.[order.status] || order.status}
-                        </Badge>
-                      </div>
-                      
-                      {/* Payment Status with Dropdown */}
-                      <div className="hidden sm:flex items-center gap-1">
-                        <Select 
-                          value={order.payment_status || 'pending'} 
-                          onValueChange={(value) => handlePaymentStatusChange(order.id, value)}
-                        >
-                          <SelectTrigger className={`w-auto h-6 px-1.5 text-[10px] ${paymentStatusColors[order.payment_status || 'pending']} border`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.keys(paymentStatusColors).map(ps => (
-                              <SelectItem key={ps} value={ps}>
-                                <Badge className={`${paymentStatusColors[ps]} border text-xs`}>
-                                  {paymentStatusLabels[language]?.[ps]}
-                                </Badge>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
-                          <span className="text-[10px] text-red-600 font-bold animate-pulse">{getDaysOverdue(order)}{dueDateLabels[language]?.overdueSuffix || 'd overdue!'}</span>
-                        )}
-                      </div>
-                      
-                      {/* Payment Due Days Dropdown */}
-                      <div className="hidden sm:flex items-center gap-1">
-                        <Select 
-                          value={order.payment_due_days?.toString() || ''}
-                          onValueChange={(value) => handlePaymentDueDaysChange(order.id, value)}
-                        >
-                          <SelectTrigger className="w-auto h-6 px-1.5 text-[10px] border-dashed border-gray-300">
-                            <Clock className="w-3 h-3 mr-1" />
-                            <SelectValue placeholder={dueDateLabels[language]?.dueDate || 'Due'} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="10">10 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
-                            <SelectItem value="15">15 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
-                            <SelectItem value="30">30 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
-                            <SelectItem value="45">45 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
-                            <SelectItem value="60">60 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {order.payment_due_date && (
-                          <span className="text-[9px] text-muted-foreground">
-                            {new Date(order.payment_due_date).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR')}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Date */}
-                      <div className="hidden sm:block text-xs text-muted-foreground">
-                        {new Date(order.created_at).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR')}
+                      {/* Desktop: Grid layout */}
+                      <div className="hidden sm:grid sm:grid-cols-6 gap-2">
+                        {/* Product */}
+                        <div className="col-span-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">{formatOrderProducts(order)}</p>
+                          <p className="text-xs text-muted-foreground truncate">{order.company_name}</p>
+                        </div>
+                        
+                        {/* Quantity */}
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-indigo-600">{formatOrderQuantity(order)}</p>
+                        </div>
+                        
+                        {/* Status */}
+                        <div>
+                          <Badge className={`${statusColors[order.status]} border-0 text-[10px] px-1.5`}>
+                            {statusLabels[language]?.[order.status] || order.status}
+                          </Badge>
+                        </div>
+                        
+                        {/* Payment Status with Dropdown */}
+                        <div className="flex items-center gap-1">
+                          <Select 
+                            value={order.payment_status || 'pending'} 
+                            onValueChange={(value) => handlePaymentStatusChange(order.id, value)}
+                          >
+                            <SelectTrigger className={`w-auto h-6 px-1.5 text-[10px] ${paymentStatusColors[order.payment_status || 'pending']} border`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.keys(paymentStatusColors).map(ps => (
+                                <SelectItem key={ps} value={ps}>
+                                  <Badge className={`${paymentStatusColors[ps]} border text-xs`}>
+                                    {paymentStatusLabels[language]?.[ps]}
+                                  </Badge>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
+                            <span className="text-[10px] text-red-600 font-bold animate-pulse">{getDaysOverdue(order)}{dueDateLabels[language]?.overdueSuffix || 'd overdue!'}</span>
+                          )}
+                        </div>
+                        
+                        {/* Payment Due Days Dropdown */}
+                        <div className="flex items-center gap-1">
+                          <Select 
+                            value={order.payment_due_days?.toString() || ''}
+                            onValueChange={(value) => handlePaymentDueDaysChange(order.id, value)}
+                          >
+                            <SelectTrigger className="w-auto h-6 px-1.5 text-[10px] border-dashed border-gray-300">
+                              <Clock className="w-3 h-3 mr-1" />
+                              <SelectValue placeholder={dueDateLabels[language]?.dueDate || 'Due'} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="10">10 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                              <SelectItem value="15">15 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                              <SelectItem value="30">30 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                              <SelectItem value="45">45 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                              <SelectItem value="60">60 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {order.payment_due_date && (
+                            <span className="text-[9px] text-muted-foreground">
+                              {new Date(order.payment_due_date).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR')}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Date */}
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(order.created_at).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR')}
+                        </div>
                       </div>
                     </div>
                     
-                    {/* Actions */}
+                    {/* Actions - Fewer on mobile */}
                     <div className="flex items-center gap-0.5 flex-shrink-0">
+                      {/* Status dropdown - always visible but smaller */}
                       <Select 
                         value={order.status} 
                         onValueChange={(value) => handleStatusChange(order.id, value)}
                       >
-                        <SelectTrigger className="w-auto h-6 px-1.5 text-[10px]">
-                          <span className="sr-only">Status</span>
+                        <SelectTrigger className="w-8 h-7 p-0 justify-center border-0 bg-transparent">
+                          <ChevronDown className="w-3 h-3" />
                         </SelectTrigger>
                         <SelectContent>
                           {Object.keys(statusColors).map(status => (
@@ -625,23 +641,24 @@ const Orders = () => {
                           ))}
                         </SelectContent>
                       </Select>
+                      
                       <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-7 w-7 p-0" title="Önizle">
                         <Eye className="w-3.5 h-3.5 text-indigo-600" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-7 w-7 p-0" title="WhatsApp">
-                        <MessageCircle className="w-3.5 h-3.5 text-green-600" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-7 w-7 p-0" title="PDF İndir">
-                        <FileDown className="w-3.5 h-3.5 text-blue-600" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-7 w-7 p-0" title="Email Gönder">
-                        <Mail className="w-3.5 h-3.5 text-purple-600" />
-                      </Button>
-                      {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
-                        <Button variant="ghost" size="sm" onClick={() => sendPaymentReminder(order.id)} className="h-7 w-7 p-0" title="Ödeme Hatırlatma">
-                          <Bell className="w-3.5 h-3.5 text-orange-500 animate-bounce" />
+                      
+                      {/* Desktop only buttons */}
+                      <div className="hidden sm:flex items-center gap-0.5">
+                        <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-7 w-7 p-0" title="WhatsApp">
+                          <MessageCircle className="w-3.5 h-3.5 text-green-600" />
                         </Button>
-                      )}
+                        <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-7 w-7 p-0" title="PDF İndir">
+                          <FileDown className="w-3.5 h-3.5 text-blue-600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-7 w-7 p-0" title="Email Gönder">
+                          <Mail className="w-3.5 h-3.5 text-purple-600" />
+                        </Button>
+                      </div>
+                      
                       <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-7 w-7 p-0" title="Düzenle">
                         <Pencil className="w-3.5 h-3.5 text-slate-500" />
                       </Button>
