@@ -60,6 +60,14 @@ const paymentStatusLabels = {
   pl: { pending: 'Oczekuje', partial: 'Częściowo', paid: 'Zapłacono', overdue: 'Zaległe' }
 };
 
+// Due date labels
+const dueDateLabels = {
+  tr: { dueDate: 'Vade', days: 'Gün', overdueSuffix: 'g gecikmiş!' },
+  en: { dueDate: 'Due', days: 'Days', overdueSuffix: 'd overdue!' },
+  de: { dueDate: 'Fällig', days: 'Tage', overdueSuffix: 'T überfällig!' },
+  pl: { dueDate: 'Termin', days: 'Dni', overdueSuffix: 'd zaległy!' }
+};
+
 const statusLabels = {
   tr: { pending: 'Beklemede', confirmed: 'Onaylandı', shipped: 'Gönderildi', delivered: 'Teslim Edildi', cancelled: 'İptal' },
   de: { pending: 'Ausstehend', confirmed: 'Bestätigt', shipped: 'Versendet', delivered: 'Geliefert', cancelled: 'Storniert' },
@@ -99,6 +107,7 @@ const Orders = () => {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [emailTo, setEmailTo] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
+  const [emailLanguage, setEmailLanguage] = useState('tr'); // Language for email
   const [sendingEmail, setSendingEmail] = useState(false);
   const [previewOrder, setPreviewOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -363,36 +372,50 @@ const Orders = () => {
     setSelectedOrder(order);
     const lead = leads.find(l => l.id === order.lead_id);
     setEmailTo(lead?.email || '');
-    setEmailSubject(`Sipariş Formu - ${order.company_name || lead?.company || ''}`);
+    setEmailLanguage(language); // Default to current UI language
+    const subjectByLang = {
+      tr: `Sipariş Formu - ${order.company_name || lead?.company || ''}`,
+      en: `Order Form - ${order.company_name || lead?.company || ''}`,
+      de: `Bestellformular - ${order.company_name || lead?.company || ''}`,
+      pl: `Formularz zamówienia - ${order.company_name || lead?.company || ''}`
+    };
+    setEmailSubject(subjectByLang[language] || subjectByLang.en);
     setIsEmailDialogOpen(true);
   };
 
   // Send order via email to custom address
   const sendOrderByEmail = async () => {
     if (!emailTo) {
-      toast.error('Hata', { description: 'E-posta adresi gerekli' });
+      toast.error(t('error'), { description: t('recipientSubjectRequired') || 'Email address is required' });
       return;
     }
     
     setSendingEmail(true);
     try {
-      // Generate PDF and send
-      const pdfResponse = await axios.get(`${API}/orders/${selectedOrder.id}/pdf?lang=${language}`, {
+      // Generate PDF with selected language and send
+      const pdfResponse = await axios.get(`${API}/orders/${selectedOrder.id}/pdf?lang=${emailLanguage}`, {
         responseType: 'blob'
       });
+      
+      const bodyByLang = {
+        tr: `<p>Sayın Yetkili,</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla</p>`,
+        en: `<p>Dear Sir/Madam,</p><p>Please find your order attached.</p><p>Best regards</p>`,
+        de: `<p>Sehr geehrte Damen und Herren,</p><p>Im Anhang finden Sie Ihre Bestellung.</p><p>Mit freundlichen Grüßen</p>`,
+        pl: `<p>Szanowni Państwo,</p><p>W załączniku znajduje się Państwa zamówienie.</p><p>Z poważaniem</p>`
+      };
       
       const formData = new FormData();
       formData.append('to', emailTo);
       formData.append('subject', emailSubject);
-      formData.append('body', `<p>Sayın Yetkili,</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla</p>`);
+      formData.append('body', bodyByLang[emailLanguage] || bodyByLang.en);
       formData.append('html', 'true');
-      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `siparis_${selectedOrder.id.slice(0,8)}.pdf`);
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `order_${selectedOrder.id.slice(0,8)}.pdf`);
       
       await axios.post(`${API}/mail/send-with-attachments`, formData);
-      toast.success('Mail Gönderildi', { description: `Sipariş ${emailTo} adresine gönderildi` });
+      toast.success(t('success'), { description: t('mailSent') || 'Email sent' });
       setIsEmailDialogOpen(false);
     } catch (error) {
-      toast.error('Hata', { description: 'Mail gönderilemedi' });
+      toast.error(t('error'), { description: t('emailFailed') || 'Failed to send email' });
     } finally {
       setSendingEmail(false);
     }
@@ -548,7 +571,7 @@ const Orders = () => {
                           </SelectContent>
                         </Select>
                         {getDaysOverdue(order) > 0 && order.payment_status !== 'paid' && (
-                          <span className="text-[10px] text-red-600 font-bold animate-pulse">{getDaysOverdue(order)}g gecikmiş!</span>
+                          <span className="text-[10px] text-red-600 font-bold animate-pulse">{getDaysOverdue(order)}{dueDateLabels[language]?.overdueSuffix || 'd overdue!'}</span>
                         )}
                       </div>
                       
@@ -560,26 +583,26 @@ const Orders = () => {
                         >
                           <SelectTrigger className="w-auto h-6 px-1.5 text-[10px] border-dashed border-gray-300">
                             <Clock className="w-3 h-3 mr-1" />
-                            <SelectValue placeholder="Vade" />
+                            <SelectValue placeholder={dueDateLabels[language]?.dueDate || 'Due'} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="10">10 Gün</SelectItem>
-                            <SelectItem value="15">15 Gün</SelectItem>
-                            <SelectItem value="30">30 Gün</SelectItem>
-                            <SelectItem value="45">45 Gün</SelectItem>
-                            <SelectItem value="60">60 Gün</SelectItem>
+                            <SelectItem value="10">10 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                            <SelectItem value="15">15 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                            <SelectItem value="30">30 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                            <SelectItem value="45">45 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
+                            <SelectItem value="60">60 {dueDateLabels[language]?.days || 'Days'}</SelectItem>
                           </SelectContent>
                         </Select>
                         {order.payment_due_date && (
                           <span className="text-[9px] text-muted-foreground">
-                            {new Date(order.payment_due_date).toLocaleDateString('tr-TR')}
+                            {new Date(order.payment_due_date).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR')}
                           </span>
                         )}
                       </div>
                       
                       {/* Date */}
                       <div className="hidden sm:block text-xs text-muted-foreground">
-                        {new Date(order.created_at).toLocaleDateString('tr-TR')}
+                        {new Date(order.created_at).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR')}
                       </div>
                     </div>
                     
@@ -639,10 +662,10 @@ const Orders = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="order-dialog">
           <DialogHeader>
             <DialogTitle className="font-['Manrope']">
-              {selectedOrder ? 'Sipariş Düzenle' : 'Yeni Sipariş'}
+              {selectedOrder ? t('editOrder') : t('addOrder')}
             </DialogTitle>
             <DialogDescription>
-              {selectedOrder ? 'Sipariş bilgilerini güncelleyin' : 'Birden fazla ürün ekleyebilirsiniz'}
+              {selectedOrder ? t('updateOrderInfo') || 'Update order information' : t('addMultipleProducts') || 'You can add multiple products'}
             </DialogDescription>
           </DialogHeader>
           
@@ -650,10 +673,10 @@ const Orders = () => {
             {/* Müşteri Seçimi */}
             {!selectedOrder && (
               <div className="space-y-2">
-                <Label>Müşteri *</Label>
+                <Label>{t('customer')} *</Label>
                 <Select value={leadId} onValueChange={setLeadId}>
                   <SelectTrigger data-testid="select-lead">
-                    <SelectValue placeholder="Müşteri seçin" />
+                    <SelectValue placeholder={t('selectCustomer')} />
                   </SelectTrigger>
                   <SelectContent>
                     {leads.map((lead) => (
@@ -669,17 +692,17 @@ const Orders = () => {
             {/* Products List */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-base font-semibold">Ürünler</Label>
+                <Label className="text-base font-semibold">{t('products') || 'Products'}</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addProductItem} data-testid="add-product-btn">
                   <Plus className="w-4 h-4 mr-1" />
-                  Ürün Ekle
+                  {t('addProduct')}
                 </Button>
               </div>
 
               {orderProducts.map((item, index) => (
                 <div key={index} className="p-4 bg-muted/50 rounded-lg space-y-3" data-testid={`product-item-${index}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-muted-foreground">Ürün #{index + 1}</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t('product') || 'Product'} #{index + 1}</span>
                     {orderProducts.length > 1 && (
                       <Button 
                         type="button" 
@@ -697,10 +720,10 @@ const Orders = () => {
                   {/* Kayıtlı Ürün Seçimi */}
                   {availableProducts.length > 0 && (
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Kayıtlı Ürünlerden Seç</Label>
+                      <Label className="text-xs text-muted-foreground">{t('selectFromSaved') || 'Select from saved products'}</Label>
                       <Select onValueChange={(val) => handleProductSelect(index, val)}>
                         <SelectTrigger className="h-8" data-testid={`select-saved-product-${index}`}>
-                          <SelectValue placeholder="Ürün seç (opsiyonel)" />
+                          <SelectValue placeholder={t('selectProduct') || 'Select product (optional)'} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableProducts.map((product) => (
@@ -716,7 +739,7 @@ const Orders = () => {
                   {/* Ürün Bilgileri */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">Ürün Adı *</Label>
+                      <Label className="text-xs">{t('productName')} *</Label>
                       <Input
                         value={item.product_name}
                         onChange={(e) => updateProductItem(index, 'product_name', e.target.value)}
@@ -726,7 +749,7 @@ const Orders = () => {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Ürün Kodu *</Label>
+                      <Label className="text-xs">{t('productCode')} *</Label>
                       <Input
                         value={item.product_code}
                         onChange={(e) => updateProductItem(index, 'product_code', e.target.value)}
@@ -740,7 +763,7 @@ const Orders = () => {
                   {/* Miktar */}
                   <div className="grid grid-cols-5 gap-2 items-end">
                     <div className="space-y-1">
-                      <Label className="text-xs">Adet</Label>
+                      <Label className="text-xs">{t('pieces') || 'Pieces'}</Label>
                       <Input
                         type="number"
                         min="1"
@@ -752,7 +775,7 @@ const Orders = () => {
                     </div>
                     <div className="flex items-center justify-center pb-1 text-lg font-bold text-muted-foreground">×</div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Miktar</Label>
+                      <Label className="text-xs">{t('quantity')}</Label>
                       <Input
                         type="number"
                         min="0.01"
@@ -764,7 +787,7 @@ const Orders = () => {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Birim</Label>
+                      <Label className="text-xs">{t('unit')}</Label>
                       <Select value={item.unit} onValueChange={(val) => updateProductItem(index, 'unit', val)}>
                         <SelectTrigger className="h-8" data-testid={`select-unit-${index}`}>
                           <SelectValue />
@@ -797,17 +820,17 @@ const Orders = () => {
             {/* Durum (sadece düzenleme) */}
             {selectedOrder && (
               <div className="space-y-2">
-                <Label>Durum</Label>
+                <Label>{t('status')}</Label>
                 <Select value={orderStatus} onValueChange={setOrderStatus}>
                   <SelectTrigger data-testid="select-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">Beklemede</SelectItem>
-                    <SelectItem value="confirmed">Onaylandı</SelectItem>
-                    <SelectItem value="shipped">Gönderildi</SelectItem>
-                    <SelectItem value="delivered">Teslim Edildi</SelectItem>
-                    <SelectItem value="cancelled">İptal</SelectItem>
+                    <SelectItem value="pending">{statusLabels[language]?.pending}</SelectItem>
+                    <SelectItem value="confirmed">{statusLabels[language]?.confirmed}</SelectItem>
+                    <SelectItem value="shipped">{statusLabels[language]?.shipped}</SelectItem>
+                    <SelectItem value="delivered">{statusLabels[language]?.delivered}</SelectItem>
+                    <SelectItem value="cancelled">{statusLabels[language]?.cancelled}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -815,13 +838,13 @@ const Orders = () => {
 
             {/* Notlar */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notlar</Label>
+              <Label htmlFor="notes">{t('notes')}</Label>
               <Textarea
                 id="notes"
                 value={orderNotes}
                 onChange={(e) => setOrderNotes(e.target.value)}
                 rows={2}
-                placeholder="Sipariş notları..."
+                placeholder={t('orderNotes')}
                 data-testid="input-notes"
               />
             </div>
@@ -829,10 +852,10 @@ const Orders = () => {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} data-testid="cancel-btn">
-              İptal
+              {t('cancel')}
             </Button>
             <Button onClick={handleSave} disabled={saving} data-testid="save-btn">
-              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              {saving ? t('saving') || 'Saving...' : t('save')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -842,15 +865,15 @@ const Orders = () => {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent data-testid="delete-dialog">
           <AlertDialogHeader>
-            <AlertDialogTitle>Siparişi Sil</AlertDialogTitle>
+            <AlertDialogTitle>{t('deleteOrder') || 'Delete Order'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu siparişi silmek istediğinize emin misiniz?
+              {t('confirmDelete')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="cancel-delete-btn">İptal</AlertDialogCancel>
+            <AlertDialogCancel data-testid="cancel-delete-btn">{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" data-testid="confirm-delete-btn">
-              Sil
+              {t('delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -862,10 +885,10 @@ const Orders = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5 text-indigo-600" />
-              Sipariş Önizleme
+              {t('preview') || 'Preview'}
             </DialogTitle>
             <DialogDescription>
-              Sipariş detayları
+              {t('orderDetails') || 'Order details'}
             </DialogDescription>
           </DialogHeader>
           
@@ -873,22 +896,22 @@ const Orders = () => {
             <div className="space-y-6">
               {/* Customer Info */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-sm text-gray-600 mb-2">Müşteri Bilgileri</h4>
+                <h4 className="font-semibold text-sm text-gray-600 mb-2">{t('customerInfo') || 'Customer Info'}</h4>
                 <p className="text-lg font-bold">{previewOrder.company_name}</p>
                 <p className="text-sm text-gray-600">{previewOrder.lead_name}</p>
               </div>
 
               {/* Products Table */}
               <div>
-                <h4 className="font-semibold text-sm text-gray-600 mb-2">Ürünler</h4>
-                <div className="border rounded-lg overflow-hidden">
+                <h4 className="font-semibold text-sm text-gray-600 mb-2">{t('products') || 'Products'}</h4>
+                <div className="border rounded-lg overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="text-left px-4 py-2 font-medium">Ürün</th>
-                        <th className="text-left px-4 py-2 font-medium">Kod</th>
-                        <th className="text-right px-4 py-2 font-medium">Miktar</th>
-                        <th className="text-right px-4 py-2 font-medium">Birim Fiyat</th>
+                        <th className="text-left px-4 py-2 font-medium whitespace-nowrap">{t('product') || 'Product'}</th>
+                        <th className="text-left px-4 py-2 font-medium whitespace-nowrap">{t('productCode')}</th>
+                        <th className="text-right px-4 py-2 font-medium whitespace-nowrap">{t('quantity')}</th>
+                        <th className="text-right px-4 py-2 font-medium whitespace-nowrap">{t('unitPrice')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -923,29 +946,29 @@ const Orders = () => {
               {/* Status & Notes */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600 mb-2">Durum</h4>
+                  <h4 className="font-semibold text-sm text-gray-600 mb-2">{t('status')}</h4>
                   <Badge className={`${statusColors[previewOrder.status]} border-0`}>
                     {statusLabels[language]?.[previewOrder.status] || previewOrder.status}
                   </Badge>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600 mb-2">Tarih</h4>
-                  <p className="text-sm">{previewOrder.created_at ? new Date(previewOrder.created_at).toLocaleDateString('tr-TR') : '-'}</p>
+                  <h4 className="font-semibold text-sm text-gray-600 mb-2">{t('date')}</h4>
+                  <p className="text-sm">{previewOrder.created_at ? new Date(previewOrder.created_at).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'pl' ? 'pl-PL' : 'tr-TR') : '-'}</p>
                 </div>
               </div>
 
               {previewOrder.notes && (
                 <div>
-                  <h4 className="font-semibold text-sm text-gray-600 mb-2">Notlar</h4>
+                  <h4 className="font-semibold text-sm text-gray-600 mb-2">{t('notes')}</h4>
                   <p className="text-sm bg-gray-50 rounded-lg p-3">{previewOrder.notes}</p>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-4 border-t">
+              <div className="flex flex-wrap gap-2 pt-4 border-t">
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 min-w-[120px]"
                   onClick={() => {
                     sendWhatsApp(previewOrder.id);
                     setIsPreviewOpen(false);
@@ -956,23 +979,23 @@ const Orders = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 min-w-[120px]"
                   onClick={() => {
                     downloadPdf(previewOrder.id);
                   }}
                 >
                   <FileDown className="w-4 h-4 mr-2 text-blue-600" />
-                  PDF İndir
+                  {t('downloadPdf')}
                 </Button>
                 <Button
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                  className="flex-1 min-w-[120px] bg-indigo-600 hover:bg-indigo-700"
                   onClick={() => {
                     setIsPreviewOpen(false);
                     openEditDialog(previewOrder);
                   }}
                 >
                   <Pencil className="w-4 h-4 mr-2" />
-                  Düzenle
+                  {t('edit')}
                 </Button>
               </div>
             </div>
@@ -1006,6 +1029,20 @@ const Orders = () => {
                 onChange={(e) => setEmailSubject(e.target.value)}
                 placeholder={t('emailSubjectPlaceholder')}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('emailLanguage') || 'E-posta Dili'}</Label>
+              <Select value={emailLanguage} onValueChange={setEmailLanguage}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tr">🇹🇷 Türkçe</SelectItem>
+                  <SelectItem value="en">🇬🇧 English</SelectItem>
+                  <SelectItem value="de">🇩🇪 Deutsch</SelectItem>
+                  <SelectItem value="pl">🇵🇱 Polski</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

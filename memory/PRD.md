@@ -64,7 +64,14 @@ Supported Languages: TR, EN, DE, PL, EL, BG
 
 ## What's Been Implemented (April 2026 Session)
 
-### Latest Session Updates
+### Latest Session Updates (7 Nisan 2026)
+1. ✅ **Route Planner State Persistence** - Sayfa değiştirildiğinde seçimler korunuyor (localStorage)
+2. ✅ **Orders Dil Desteği** - "Vade", tarih formatları ve tüm UI metinleri 4 dilde (TR/EN/DE/PL)
+3. ✅ **Sipariş Email Dil Seçimi** - Müşteriye mail gönderirken dil seçimi dropdown'u eklendi
+4. ✅ **Recipes Dil Senkronizasyonu** - Tüm Türkçe hardcoded metinler 4 dile çevrildi
+5. ✅ **Preview Dialog Dil Desteği** - Sipariş önizleme diyaloğu çoklu dil desteği
+
+### Previous Session Updates
 1. ✅ **Food Fairs Page** - 18 international food exhibitions with future dates
 2. ✅ **Döner & Kebab News Page** - Entertainment section with 10 fun facts about döner/kebab
    - Multilingual content (TR, EN, DE, PL)

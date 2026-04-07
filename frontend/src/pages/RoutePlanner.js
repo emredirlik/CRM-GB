@@ -271,12 +271,25 @@ const RoutePlanner = () => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
-  const [selectedLeads, setSelectedLeads] = useState(new Set());
+  const [selectedLeads, setSelectedLeads] = useState(() => {
+    // Restore from localStorage
+    const saved = localStorage.getItem('routePlanner_selectedLeads');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
   const [geocodedLeads, setGeocodedLeads] = useState({});
-  const [route, setRoute] = useState(null);
+  const [route, setRoute] = useState(() => {
+    // Restore route from localStorage
+    const saved = localStorage.getItem('routePlanner_route');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [calculating, setCalculating] = useState(false);
-  const [startAddress, setStartAddress] = useState('');
-  const [startCoords, setStartCoords] = useState(null);
+  const [startAddress, setStartAddress] = useState(() => {
+    return localStorage.getItem('routePlanner_startAddress') || '';
+  });
+  const [startCoords, setStartCoords] = useState(() => {
+    const saved = localStorage.getItem('routePlanner_startCoords');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   
@@ -287,6 +300,27 @@ const RoutePlanner = () => {
   const searchTimeoutRef = useRef(null);
   
   const mapRef = useRef(null);
+  
+  // Save state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('routePlanner_selectedLeads', JSON.stringify([...selectedLeads]));
+  }, [selectedLeads]);
+  
+  useEffect(() => {
+    if (route) {
+      localStorage.setItem('routePlanner_route', JSON.stringify(route));
+    }
+  }, [route]);
+  
+  useEffect(() => {
+    localStorage.setItem('routePlanner_startAddress', startAddress);
+  }, [startAddress]);
+  
+  useEffect(() => {
+    if (startCoords) {
+      localStorage.setItem('routePlanner_startCoords', JSON.stringify(startCoords));
+    }
+  }, [startCoords]);
 
   // Extended city coordinates
   const cityCoords = {
@@ -488,6 +522,11 @@ const RoutePlanner = () => {
     setRoute(null);
     setStartCoords(null);
     setStartAddress('');
+    // Clear localStorage
+    localStorage.removeItem('routePlanner_selectedLeads');
+    localStorage.removeItem('routePlanner_route');
+    localStorage.removeItem('routePlanner_startAddress');
+    localStorage.removeItem('routePlanner_startCoords');
   };
 
   // Auto optimize route by distance

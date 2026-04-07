@@ -119,6 +119,7 @@ const translations = {
     sendOrderByEmail: 'Siparişi Mail ile Gönder',
     sendOrderEmailDescription: 'Sipariş PDF\'ini istediğiniz e-posta adresine gönderin',
     emailSubjectPlaceholder: 'Mail konusu',
+    emailLanguage: 'E-posta Dili',
     send: 'Gönder',
     cancel: 'İptal',
     
@@ -368,6 +369,9 @@ const translations = {
     generating: 'Oluşturuluyor...',
     send: 'Gönder',
     preview: 'Önizleme',
+    orderDetails: 'Sipariş Detayları',
+    customerInfo: 'Müşteri Bilgileri',
+    product: 'Ürün',
     emailSubject: 'Mail Konusu',
     emailBody: 'Mail İçeriği',
     tone: 'Ton',
@@ -412,7 +416,15 @@ const translations = {
     cancelled: 'İptal',
     addOrder: 'Sipariş Ekle',
     editOrder: 'Sipariş Düzenle',
+    deleteOrder: 'Siparişi Sil',
     noOrders: 'Henüz sipariş yok',
+    products: 'Ürünler',
+    pieces: 'Adet',
+    selectFromSaved: 'Kayıtlı Ürünlerden Seç',
+    selectProduct: 'Ürün seç (opsiyonel)',
+    updateOrderInfo: 'Sipariş bilgilerini güncelleyin',
+    addMultipleProducts: 'Birden fazla ürün ekleyebilirsiniz',
+    saving: 'Kaydediliyor...',
     
     // Shipments
     trackingNumber: 'Takip Numarası',
@@ -626,6 +638,7 @@ const translations = {
     sendOrderByEmail: 'Bestellung per E-Mail senden',
     sendOrderEmailDescription: 'Senden Sie die Bestell-PDF an die gewünschte E-Mail-Adresse',
     emailSubjectPlaceholder: 'E-Mail Betreff',
+    emailLanguage: 'E-Mail Sprache',
     send: 'Senden',
     cancel: 'Abbrechen',
     
@@ -1133,6 +1146,7 @@ const translations = {
     sendOrderByEmail: 'Send Order by Email',
     sendOrderEmailDescription: 'Send the order PDF to the desired email address',
     emailSubjectPlaceholder: 'Email subject',
+    emailLanguage: 'Email Language',
     send: 'Send',
     cancel: 'Cancel',
     
@@ -1640,6 +1654,7 @@ const translations = {
     sendOrderByEmail: 'Wyślij zamówienie e-mailem',
     sendOrderEmailDescription: 'Wyślij PDF zamówienia na podany adres e-mail',
     emailSubjectPlaceholder: 'Temat e-maila',
+    emailLanguage: 'Język e-maila',
     send: 'Wyślij',
     cancel: 'Anuluj',
     

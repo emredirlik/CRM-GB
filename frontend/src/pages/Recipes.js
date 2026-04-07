@@ -53,8 +53,241 @@ const initialFormData = {
   notes: ''
 };
 
+// Multi-language texts for Recipes
+const texts = {
+  tr: {
+    title: 'Reçeteler',
+    subtitle: 'müşteri reçetesi',
+    addRecipe: 'Reçete Ekle',
+    searchPlaceholder: 'Reçete ara...',
+    noRecipesFound: 'Reçete bulunamadı',
+    noRecipesYet: 'Henüz reçete yok',
+    newRecipe: 'Yeni Reçete',
+    editRecipe: 'Reçete Düzenle',
+    recipeDescription: 'Müşteriye özel üretim reçetesi oluşturun',
+    customer: 'Müşteri',
+    selectCustomer: 'Müşteri seçin',
+    recipeName: 'Reçete Adı',
+    productCode: 'Ürün Kodu',
+    mainIngredients: 'Ana Malzemeler',
+    meatAmount: 'Et Miktarı',
+    waterAmount: 'Su Miktarı',
+    spiceAmount: 'Baharat Miktarı',
+    bindingAmount: 'Binding Miktarı',
+    productionParams: 'Üretim Parametreleri',
+    mixingTime: 'Karışım Süresi',
+    motorSpeed: 'Motor Hızı',
+    additionalIngredients: 'Ek Malzemeler',
+    ingredientName: 'Malzeme adı',
+    amount: 'Miktar',
+    productionInstructions: 'Üretim Talimatları',
+    notes: 'Notlar',
+    cancel: 'İptal',
+    saving: 'Kaydediliyor...',
+    save: 'Kaydet',
+    deleteRecipe: 'Reçeteyi Sil',
+    deleteConfirm: 'Bu reçeteyi silmek istediğinize emin misiniz?',
+    delete: 'Sil',
+    sendByEmail: 'Reçeteyi Email ile Gönder',
+    sendEmailDesc: 'reçetesini müşteriye email ile gönderin',
+    selectCustomerRequired: 'Müşteri Seçin',
+    language: 'Dil / Language',
+    subject: 'Konu',
+    message: 'Mesaj',
+    sendEmail: 'Email Gönder',
+    sending: 'Gönderiliyor...',
+    pdfAttached: 'PDF olarak eklenecek',
+    fillRequired: 'Lütfen tüm zorunlu alanları doldurun',
+    recipeCreated: 'Reçete oluşturuldu',
+    recipeUpdated: 'Reçete güncellendi',
+    recipeDeleted: 'Reçete silindi',
+    recipeDuplicated: 'Reçete kopyalandı',
+    pdfDownloaded: 'PDF indirildi',
+    pdfFailed: 'PDF indirilemedi',
+    emailSent: 'Reçete email ile gönderildi',
+    emailFailed: 'Email gönderilemedi',
+    noEmail: 'Müşterinin email adresi yok',
+    minute: 'dakika',
+    duplicatePrompt: 'Hangi müşteriye kopyalamak istiyorsunuz? Müşteri ID girin veya iptal için boş bırakın.',
+    error: 'Hata',
+    success: 'Başarılı'
+  },
+  en: {
+    title: 'Recipes',
+    subtitle: 'customer recipe',
+    addRecipe: 'Add Recipe',
+    searchPlaceholder: 'Search recipes...',
+    noRecipesFound: 'No recipes found',
+    noRecipesYet: 'No recipes yet',
+    newRecipe: 'New Recipe',
+    editRecipe: 'Edit Recipe',
+    recipeDescription: 'Create a custom production recipe for the customer',
+    customer: 'Customer',
+    selectCustomer: 'Select customer',
+    recipeName: 'Recipe Name',
+    productCode: 'Product Code',
+    mainIngredients: 'Main Ingredients',
+    meatAmount: 'Meat Amount',
+    waterAmount: 'Water Amount',
+    spiceAmount: 'Spice Amount',
+    bindingAmount: 'Binding Amount',
+    productionParams: 'Production Parameters',
+    mixingTime: 'Mixing Time',
+    motorSpeed: 'Motor Speed',
+    additionalIngredients: 'Additional Ingredients',
+    ingredientName: 'Ingredient name',
+    amount: 'Amount',
+    productionInstructions: 'Production Instructions',
+    notes: 'Notes',
+    cancel: 'Cancel',
+    saving: 'Saving...',
+    save: 'Save',
+    deleteRecipe: 'Delete Recipe',
+    deleteConfirm: 'Are you sure you want to delete this recipe?',
+    delete: 'Delete',
+    sendByEmail: 'Send Recipe by Email',
+    sendEmailDesc: 'recipe to customer via email',
+    selectCustomerRequired: 'Select Customer',
+    language: 'Language',
+    subject: 'Subject',
+    message: 'Message',
+    sendEmail: 'Send Email',
+    sending: 'Sending...',
+    pdfAttached: 'Will be attached as PDF',
+    fillRequired: 'Please fill all required fields',
+    recipeCreated: 'Recipe created',
+    recipeUpdated: 'Recipe updated',
+    recipeDeleted: 'Recipe deleted',
+    recipeDuplicated: 'Recipe duplicated',
+    pdfDownloaded: 'PDF downloaded',
+    pdfFailed: 'PDF could not be downloaded',
+    emailSent: 'Recipe sent via email',
+    emailFailed: 'Email could not be sent',
+    noEmail: 'Customer does not have an email address',
+    minute: 'minute',
+    duplicatePrompt: 'Which customer to copy to? Enter customer ID or leave empty to cancel.',
+    error: 'Error',
+    success: 'Success'
+  },
+  de: {
+    title: 'Rezepte',
+    subtitle: 'Kundenrezept',
+    addRecipe: 'Rezept hinzufügen',
+    searchPlaceholder: 'Rezepte suchen...',
+    noRecipesFound: 'Keine Rezepte gefunden',
+    noRecipesYet: 'Noch keine Rezepte',
+    newRecipe: 'Neues Rezept',
+    editRecipe: 'Rezept bearbeiten',
+    recipeDescription: 'Erstellen Sie ein kundenspezifisches Produktionsrezept',
+    customer: 'Kunde',
+    selectCustomer: 'Kunde auswählen',
+    recipeName: 'Rezeptname',
+    productCode: 'Produktcode',
+    mainIngredients: 'Hauptzutaten',
+    meatAmount: 'Fleischmenge',
+    waterAmount: 'Wassermenge',
+    spiceAmount: 'Gewürzmenge',
+    bindingAmount: 'Bindungsmenge',
+    productionParams: 'Produktionsparameter',
+    mixingTime: 'Mischzeit',
+    motorSpeed: 'Motorgeschwindigkeit',
+    additionalIngredients: 'Zusätzliche Zutaten',
+    ingredientName: 'Zutatname',
+    amount: 'Menge',
+    productionInstructions: 'Produktionsanweisungen',
+    notes: 'Notizen',
+    cancel: 'Abbrechen',
+    saving: 'Speichern...',
+    save: 'Speichern',
+    deleteRecipe: 'Rezept löschen',
+    deleteConfirm: 'Möchten Sie dieses Rezept wirklich löschen?',
+    delete: 'Löschen',
+    sendByEmail: 'Rezept per E-Mail senden',
+    sendEmailDesc: 'Rezept per E-Mail an den Kunden senden',
+    selectCustomerRequired: 'Kunde auswählen',
+    language: 'Sprache',
+    subject: 'Betreff',
+    message: 'Nachricht',
+    sendEmail: 'E-Mail senden',
+    sending: 'Senden...',
+    pdfAttached: 'Wird als PDF angehängt',
+    fillRequired: 'Bitte füllen Sie alle Pflichtfelder aus',
+    recipeCreated: 'Rezept erstellt',
+    recipeUpdated: 'Rezept aktualisiert',
+    recipeDeleted: 'Rezept gelöscht',
+    recipeDuplicated: 'Rezept dupliziert',
+    pdfDownloaded: 'PDF heruntergeladen',
+    pdfFailed: 'PDF konnte nicht heruntergeladen werden',
+    emailSent: 'Rezept per E-Mail gesendet',
+    emailFailed: 'E-Mail konnte nicht gesendet werden',
+    noEmail: 'Kunde hat keine E-Mail-Adresse',
+    minute: 'Minute',
+    duplicatePrompt: 'Zu welchem Kunden kopieren? Geben Sie die Kunden-ID ein oder lassen Sie das Feld leer.',
+    error: 'Fehler',
+    success: 'Erfolg'
+  },
+  pl: {
+    title: 'Przepisy',
+    subtitle: 'przepis klienta',
+    addRecipe: 'Dodaj przepis',
+    searchPlaceholder: 'Szukaj przepisów...',
+    noRecipesFound: 'Nie znaleziono przepisów',
+    noRecipesYet: 'Brak przepisów',
+    newRecipe: 'Nowy przepis',
+    editRecipe: 'Edytuj przepis',
+    recipeDescription: 'Utwórz niestandardowy przepis produkcyjny dla klienta',
+    customer: 'Klient',
+    selectCustomer: 'Wybierz klienta',
+    recipeName: 'Nazwa przepisu',
+    productCode: 'Kod produktu',
+    mainIngredients: 'Główne składniki',
+    meatAmount: 'Ilość mięsa',
+    waterAmount: 'Ilość wody',
+    spiceAmount: 'Ilość przypraw',
+    bindingAmount: 'Ilość wiązania',
+    productionParams: 'Parametry produkcji',
+    mixingTime: 'Czas mieszania',
+    motorSpeed: 'Prędkość silnika',
+    additionalIngredients: 'Dodatkowe składniki',
+    ingredientName: 'Nazwa składnika',
+    amount: 'Ilość',
+    productionInstructions: 'Instrukcje produkcji',
+    notes: 'Notatki',
+    cancel: 'Anuluj',
+    saving: 'Zapisywanie...',
+    save: 'Zapisz',
+    deleteRecipe: 'Usuń przepis',
+    deleteConfirm: 'Czy na pewno chcesz usunąć ten przepis?',
+    delete: 'Usuń',
+    sendByEmail: 'Wyślij przepis e-mailem',
+    sendEmailDesc: 'przepis do klienta e-mailem',
+    selectCustomerRequired: 'Wybierz klienta',
+    language: 'Język',
+    subject: 'Temat',
+    message: 'Wiadomość',
+    sendEmail: 'Wyślij e-mail',
+    sending: 'Wysyłanie...',
+    pdfAttached: 'Zostanie załączony jako PDF',
+    fillRequired: 'Proszę wypełnić wszystkie wymagane pola',
+    recipeCreated: 'Przepis utworzony',
+    recipeUpdated: 'Przepis zaktualizowany',
+    recipeDeleted: 'Przepis usunięty',
+    recipeDuplicated: 'Przepis zduplikowany',
+    pdfDownloaded: 'PDF pobrany',
+    pdfFailed: 'Nie można pobrać PDF',
+    emailSent: 'Przepis wysłany e-mailem',
+    emailFailed: 'Nie można wysłać e-maila',
+    noEmail: 'Klient nie ma adresu e-mail',
+    minute: 'minuta',
+    duplicatePrompt: 'Do którego klienta skopiować? Wprowadź ID klienta lub zostaw puste, aby anulować.',
+    error: 'Błąd',
+    success: 'Sukces'
+  }
+};
+
 const Recipes = () => {
-  const { t, language } = useLanguage();
+  const { t: tLang, language } = useLanguage();
+  const txt = texts[language] || texts.en;
   const [recipes, setRecipes] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -154,7 +387,7 @@ const Recipes = () => {
 
   const handleSave = async () => {
     if (!formData.lead_id || !formData.name || !formData.product_code) {
-      toast.error('Hata', { description: 'Lütfen tüm zorunlu alanları doldurun' });
+      toast.error(txt.error, { description: txt.fillRequired });
       return;
     }
 
@@ -172,15 +405,15 @@ const Recipes = () => {
 
       if (selectedRecipe) {
         await axios.put(`${API}/recipes/${selectedRecipe.id}`, payload);
-        toast.success('Başarılı', { description: 'Reçete güncellendi' });
+        toast.success(txt.success, { description: txt.recipeUpdated });
       } else {
         await axios.post(`${API}/recipes`, payload);
-        toast.success('Başarılı', { description: 'Reçete oluşturuldu' });
+        toast.success(txt.success, { description: txt.recipeCreated });
       }
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error('Hata', { description: error.response?.data?.detail || 'İşlem başarısız' });
+      toast.error(txt.error, { description: error.response?.data?.detail || txt.error });
     } finally {
       setSaving(false);
     }
@@ -189,24 +422,24 @@ const Recipes = () => {
   const handleDelete = async () => {
     try {
       await axios.delete(`${API}/recipes/${selectedRecipe.id}`);
-      toast.success('Başarılı', { description: 'Reçete silindi' });
+      toast.success(txt.success, { description: txt.recipeDeleted });
       setIsDeleteDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error('Hata', { description: 'Reçete silinemedi' });
+      toast.error(txt.error, { description: txt.error });
     }
   };
 
   const handleDuplicate = async (recipe) => {
     // Show lead selection for duplication
-    const leadId = prompt('Hangi müşteriye kopyalamak istiyorsunuz? Müşteri ID girin veya iptal için boş bırakın.');
+    const leadId = prompt(txt.duplicatePrompt);
     if (leadId) {
       try {
         await axios.post(`${API}/recipes/${recipe.id}/duplicate?new_lead_id=${leadId}`);
-        toast.success('Başarılı', { description: 'Reçete kopyalandı' });
+        toast.success(txt.success, { description: txt.recipeDuplicated });
         fetchData();
       } catch (error) {
-        toast.error('Hata', { description: 'Reçete kopyalanamadı' });
+        toast.error(txt.error, { description: txt.error });
       }
     }
   };
@@ -224,9 +457,9 @@ const Recipes = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success('Başarılı', { description: 'PDF indirildi' });
+      toast.success(txt.success, { description: txt.pdfDownloaded });
     } catch (error) {
-      toast.error('Hata', { description: 'PDF indirilemedi' });
+      toast.error(txt.error, { description: txt.pdfFailed });
     }
   };
 
@@ -290,23 +523,23 @@ const Recipes = () => {
 
   const sendRecipeEmail = async () => {
     if (!selectedLeadId) {
-      toast.error('Hata', { description: 'Lütfen müşteri seçin' });
+      toast.error(txt.error, { description: txt.selectCustomerRequired });
       return;
     }
 
     const lead = leads.find(l => l.id === selectedLeadId);
     if (!lead?.email) {
-      toast.error('Hata', { description: 'Müşterinin email adresi yok' });
+      toast.error(txt.error, { description: txt.noEmail });
       return;
     }
 
     setSendingEmail(true);
     try {
       await axios.post(`${API}/recipes/${selectedRecipe.id}/email?to_email=${encodeURIComponent(lead.email)}`);
-      toast.success('Başarılı', { description: 'Reçete email ile gönderildi' });
+      toast.success(txt.success, { description: txt.emailSent });
       setIsEmailDialogOpen(false);
     } catch (error) {
-      toast.error('Hata', { description: error.response?.data?.detail || 'Email gönderilemedi' });
+      toast.error(txt.error, { description: error.response?.data?.detail || txt.emailFailed });
     } finally {
       setSendingEmail(false);
     }
@@ -332,14 +565,14 @@ const Recipes = () => {
   return (
     <div className="space-y-6" data-testid="recipes-page">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Reçeteler</h1>
-          <p className="text-muted-foreground mt-1">{recipes.length} müşteri reçetesi</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight font-['Manrope']">{txt.title}</h1>
+          <p className="text-muted-foreground mt-1">{recipes.length} {txt.subtitle}</p>
         </div>
         <Button onClick={openAddDialog} data-testid="add-recipe-btn">
           <Plus className="w-4 h-4 mr-2" />
-          Reçete Ekle
+          {txt.addRecipe}
         </Button>
       </div>
 
@@ -347,7 +580,7 @@ const Recipes = () => {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Reçete ara..."
+          placeholder={txt.searchPlaceholder}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -360,7 +593,7 @@ const Recipes = () => {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>{searchTerm ? 'Reçete bulunamadı' : 'Henüz reçete yok'}</p>
+            <p>{searchTerm ? txt.noRecipesFound : txt.noRecipesYet}</p>
           </CardContent>
         </Card>
       ) : (
@@ -445,28 +678,28 @@ const Recipes = () => {
                 <div className="p-4 bg-red-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <ChefHat className="w-5 h-5 text-red-600" />
-                    <span className="font-medium">Et Miktarı</span>
+                    <span className="font-medium">{txt.meatAmount}</span>
                   </div>
                   <p className="text-2xl font-bold">{selectedRecipe.meat_amount} kg</p>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Droplets className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium">Su Miktarı</span>
+                    <span className="font-medium">{txt.waterAmount}</span>
                   </div>
                   <p className="text-2xl font-bold">{selectedRecipe.water_amount} L</p>
                 </div>
                 <div className="p-4 bg-orange-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Package className="w-5 h-5 text-orange-600" />
-                    <span className="font-medium">Baharat Miktarı</span>
+                    <span className="font-medium">{txt.spiceAmount}</span>
                   </div>
                   <p className="text-2xl font-bold">{selectedRecipe.spice_amount} kg</p>
                 </div>
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Package className="w-5 h-5 text-purple-600" />
-                    <span className="font-medium">Binding Miktarı</span>
+                    <span className="font-medium">{txt.bindingAmount}</span>
                   </div>
                   <p className="text-2xl font-bold">{selectedRecipe.binding_amount} kg</p>
                 </div>
@@ -477,14 +710,14 @@ const Recipes = () => {
                 <div className="p-4 bg-green-50 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Timer className="w-5 h-5 text-green-600" />
-                    <span className="font-medium">Karışım Süresi</span>
+                    <span className="font-medium">{txt.mixingTime}</span>
                   </div>
-                  <p className="text-2xl font-bold">{selectedRecipe.mixing_time} dakika</p>
+                  <p className="text-2xl font-bold">{selectedRecipe.mixing_time} {txt.minute}</p>
                 </div>
                 <div className="p-4 bg-gray-100 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Gauge className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium">Motor Hızı</span>
+                    <span className="font-medium">{txt.motorSpeed}</span>
                   </div>
                   <p className="text-2xl font-bold">{selectedRecipe.motor_speed} rpm</p>
                 </div>
@@ -493,7 +726,7 @@ const Recipes = () => {
               {/* Ek Malzemeler */}
               {selectedRecipe.additional_ingredients?.length > 0 && (
                 <div>
-                  <h4 className="font-medium mb-2">Ek Malzemeler</h4>
+                  <h4 className="font-medium mb-2">{txt.additionalIngredients}</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedRecipe.additional_ingredients.map((ing, i) => (
                       <Badge key={i} variant="secondary">
@@ -507,7 +740,7 @@ const Recipes = () => {
               {/* Talimatlar */}
               {selectedRecipe.instructions && (
                 <div>
-                  <h4 className="font-medium mb-2">Üretim Talimatları</h4>
+                  <h4 className="font-medium mb-2">{txt.productionInstructions}</h4>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap bg-muted p-3 rounded-md">
                     {selectedRecipe.instructions}
                   </p>
@@ -517,7 +750,7 @@ const Recipes = () => {
               {/* Notlar */}
               {selectedRecipe.notes && (
                 <div>
-                  <h4 className="font-medium mb-2">Notlar</h4>
+                  <h4 className="font-medium mb-2">{txt.notes}</h4>
                   <p className="text-sm text-muted-foreground">{selectedRecipe.notes}</p>
                 </div>
               )}
@@ -531,21 +764,21 @@ const Recipes = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="recipe-dialog">
           <DialogHeader>
             <DialogTitle className="font-['Manrope']">
-              {selectedRecipe ? 'Reçete Düzenle' : 'Yeni Reçete'}
+              {selectedRecipe ? txt.editRecipe : txt.newRecipe}
             </DialogTitle>
             <DialogDescription>
-              Müşteriye özel üretim reçetesi oluşturun
+              {txt.recipeDescription}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
             {/* Müşteri ve Temel Bilgiler */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {!selectedRecipe && (
                 <div className="space-y-2">
-                  <Label>Müşteri *</Label>
+                  <Label>{txt.customer} *</Label>
                   <Select value={formData.lead_id} onValueChange={(value) => setFormData(prev => ({ ...prev, lead_id: value }))}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Müşteri seçin" />
+                      <SelectValue placeholder={txt.selectCustomer} />
                     </SelectTrigger>
                     <SelectContent>
                       {leads.map((lead) => (
@@ -558,7 +791,7 @@ const Recipes = () => {
                 </div>
               )}
               <div className="space-y-2">
-                <Label>Reçete Adı *</Label>
+                <Label>{txt.recipeName} *</Label>
                 <Input
                   name="name"
                   value={formData.name}
@@ -567,7 +800,7 @@ const Recipes = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Ürün Kodu *</Label>
+                <Label>{txt.productCode} *</Label>
                 <Input
                   name="product_code"
                   value={formData.product_code}
@@ -579,12 +812,12 @@ const Recipes = () => {
 
             {/* Ana Malzemeler */}
             <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-              <h4 className="font-medium">Ana Malzemeler</h4>
+              <h4 className="font-medium">{txt.mainIngredients}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <ChefHat className="w-4 h-4 text-red-500" />
-                    Et Miktarı (kg)
+                    {txt.meatAmount} (kg)
                   </Label>
                   <Input
                     name="meat_amount"
@@ -597,7 +830,7 @@ const Recipes = () => {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Droplets className="w-4 h-4 text-blue-500" />
-                    Su Miktarı (L)
+                    {txt.waterAmount} (L)
                   </Label>
                   <Input
                     name="water_amount"
@@ -610,7 +843,7 @@ const Recipes = () => {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-orange-500" />
-                    Baharat Miktarı (kg)
+                    {txt.spiceAmount} (kg)
                   </Label>
                   <Input
                     name="spice_amount"
@@ -623,7 +856,7 @@ const Recipes = () => {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Package className="w-4 h-4 text-purple-500" />
-                    Binding Miktarı (kg)
+                    {txt.bindingAmount} (kg)
                   </Label>
                   <Input
                     name="binding_amount"
@@ -638,12 +871,12 @@ const Recipes = () => {
 
             {/* Üretim Parametreleri */}
             <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-              <h4 className="font-medium">Üretim Parametreleri</h4>
+              <h4 className="font-medium">{txt.productionParams}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Timer className="w-4 h-4 text-green-500" />
-                    Karışım Süresi (dakika)
+                    {txt.mixingTime} ({txt.minute})
                   </Label>
                   <Input
                     name="mixing_time"
@@ -655,7 +888,7 @@ const Recipes = () => {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Gauge className="w-4 h-4 text-gray-500" />
-                    Motor Hızı (rpm)
+                    {txt.motorSpeed} (rpm)
                   </Label>
                   <Input
                     name="motor_speed"
@@ -669,16 +902,16 @@ const Recipes = () => {
 
             {/* Ek Malzemeler */}
             <div className="p-4 bg-muted/50 rounded-lg space-y-4">
-              <h4 className="font-medium">Ek Malzemeler</h4>
-              <div className="flex gap-2">
+              <h4 className="font-medium">{txt.additionalIngredients}</h4>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
-                  placeholder="Malzeme adı"
+                  placeholder={txt.ingredientName}
                   value={newIngredient.name}
                   onChange={(e) => setNewIngredient(prev => ({ ...prev, name: e.target.value }))}
                   className="flex-1"
                 />
                 <Input
-                  placeholder="Miktar"
+                  placeholder={txt.amount}
                   type="number"
                   step="0.01"
                   value={newIngredient.amount}
@@ -713,34 +946,34 @@ const Recipes = () => {
 
             {/* Talimatlar */}
             <div className="space-y-2">
-              <Label>Üretim Talimatları</Label>
+              <Label>{txt.productionInstructions}</Label>
               <Textarea
                 name="instructions"
                 value={formData.instructions}
                 onChange={handleInputChange}
                 rows={3}
-                placeholder="Üretim adımlarını yazın..."
+                placeholder={txt.productionInstructions}
               />
             </div>
 
             {/* Notlar */}
             <div className="space-y-2">
-              <Label>Notlar</Label>
+              <Label>{txt.notes}</Label>
               <Textarea
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
                 rows={2}
-                placeholder="Ek notlar..."
+                placeholder={txt.notes}
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              İptal
+              {txt.cancel}
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+              {saving ? txt.saving : txt.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -750,15 +983,15 @@ const Recipes = () => {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reçeteyi Sil</AlertDialogTitle>
+            <AlertDialogTitle>{txt.deleteRecipe}</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu reçeteyi silmek istediğinize emin misiniz?
+              {txt.deleteConfirm}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogCancel>{txt.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Sil
+              {txt.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -768,9 +1001,9 @@ const Recipes = () => {
       <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Reçeteyi Email ile Gönder</DialogTitle>
+            <DialogTitle className="font-['Manrope']">{txt.sendByEmail}</DialogTitle>
             <DialogDescription>
-              {selectedRecipe?.name} reçetesini müşteriye email ile gönderin
+              {selectedRecipe?.name} {txt.sendEmailDesc}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -778,14 +1011,14 @@ const Recipes = () => {
               <BookOpen className="w-8 h-8 text-orange-600" />
               <div>
                 <p className="font-medium text-sm">{selectedRecipe?.name}</p>
-                <p className="text-xs text-muted-foreground">PDF olarak eklenecek</p>
+                <p className="text-xs text-muted-foreground">{txt.pdfAttached}</p>
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Müşteri Seçin *</Label>
+              <Label>{txt.selectCustomerRequired} *</Label>
               <Select value={selectedLeadId} onValueChange={setSelectedLeadId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Müşteri seçin" />
+                  <SelectValue placeholder={txt.selectCustomer} />
                 </SelectTrigger>
                 <SelectContent>
                   {leads.map(lead => (
@@ -797,10 +1030,10 @@ const Recipes = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Dil / Language</Label>
+              <Label>{txt.language}</Label>
               <Select value={emailLang} onValueChange={updateEmailLanguage}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Dil seçin" />
+                  <SelectValue placeholder={txt.language} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="tr">🇹🇷 Türkçe</SelectItem>
@@ -811,14 +1044,14 @@ const Recipes = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Konu</Label>
+              <Label>{txt.subject}</Label>
               <Input
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Mesaj</Label>
+              <Label>{txt.message}</Label>
               <Textarea
                 value={emailBody}
                 onChange={(e) => setEmailBody(e.target.value)}
@@ -826,12 +1059,12 @@ const Recipes = () => {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
-              İptal
+              {txt.cancel}
             </Button>
             <Button onClick={sendRecipeEmail} disabled={sendingEmail}>
-              {sendingEmail ? 'Gönderiliyor...' : 'Email Gönder'}
+              {sendingEmail ? txt.sending : txt.sendEmail}
             </Button>
           </DialogFooter>
         </DialogContent>
