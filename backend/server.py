@@ -4667,7 +4667,7 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Send email via Resend API (bypasses IONOS IP block)"""
+    """Send email - saves to IMAP Drafts if SMTP blocked"""
     settings = await db.company_settings.find_one({}, {"_id": 0})
     
     if not settings:
@@ -4675,38 +4675,6 @@ async def send_mail(request: MailSendRequest):
     
     from_email = settings.get('from_email', settings.get('smtp_username', 'noreply@gewuerzberg.de'))
     from_name = settings.get('from_name', 'Gewürzberg GmbH')
-    
-    # Try Resend API first (no IP blocking issues)
-    resend_key = os.environ.get('RESEND_API_KEY')
-    if resend_key:
-        try:
-            resend.api_key = resend_key
-            params = {
-                "from": f"{from_name} <{from_email}>",
-                "to": [request.to],
-                "subject": request.subject,
-            }
-            if request.html:
-                params["html"] = request.body
-            else:
-                params["text"] = request.body
-            
-            r = resend.Emails.send(params)
-            
-            await db.sent_emails.insert_one({
-                "id": str(uuid.uuid4()),
-                "to": request.to,
-                "subject": request.subject,
-                "body": request.body,
-                "date": datetime.now(timezone.utc).isoformat()
-            })
-            return {"success": True, "message": "Email gönderildi"}
-        except Exception as e:
-            logger.error(f"Resend API error: {e}")
-    
-    # Fallback to SMTP
-    if not settings.get('smtp_host'):
-        raise HTTPException(status_code=400, detail="SMTP yapılandırılmamış")
     
     msg = MIMEMultipart()
     msg['From'] = f"{from_name} <{from_email}>"
@@ -4719,46 +4687,29 @@ async def send_mail(request: MailSendRequest):
     else:
         msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
     
-    smtp_host = settings['smtp_host']
-    smtp_port = int(settings.get('smtp_port', 587))
-    
+    # Always save to IMAP Drafts (SMTP is blocked by IONOS)
     try:
-        if settings.get('use_ssl') or smtp_port == 465:
-            server = smtplib.SMTP_SSL(smtp_host, 465, timeout=30)
-        else:
-            server = smtplib.SMTP(smtp_host, smtp_port, timeout=30)
-            if settings.get('use_tls', True):
-                server.starttls()
-        server.login(settings['smtp_username'], settings['smtp_password'])
-        server.send_message(msg)
-        server.quit()
+        import imaplib
+        import time
+        imap_host = settings.get('imap_host', 'imap.ionos.de')
+        imap = imaplib.IMAP4_SSL(imap_host, 993)
+        imap.login(settings['smtp_username'], settings['smtp_password'])
+        imap.append('Drafts', '', imaplib.Time2Internaldate(time.time()), msg.as_bytes())
+        imap.logout()
         
         await db.sent_emails.insert_one({
             "id": str(uuid.uuid4()),
             "to": request.to,
             "subject": request.subject,
             "body": request.body,
+            "status": "draft",
             "date": datetime.now(timezone.utc).isoformat()
         })
-        return {"success": True, "message": "Email gönderildi"}
         
-    except (smtplib.SMTPDataError, smtplib.SMTPRecipientsRefused) as e:
-        error_msg = str(e)
-        if "policy" in error_msg.lower() or "554" in error_msg:
-            # Save to IMAP Drafts
-            try:
-                imap_host = settings.get('imap_host', smtp_host.replace('smtp.', 'imap.'))
-                import imaplib
-                imap = imaplib.IMAP4_SSL(imap_host, 993)
-                imap.login(settings['smtp_username'], settings['smtp_password'])
-                imap.append('Drafts', '', imaplib.Time2Internaldate(datetime.now()), msg.as_bytes())
-                imap.logout()
-                return {"success": True, "message": "Mail 'Taslaklar' klasörüne kaydedildi. Web mail'den gönderin.", "saved_to_drafts": True}
-            except:
-                pass
-        raise HTTPException(status_code=500, detail=f"Mail gönderilemedi: {error_msg}")
+        return {"success": True, "message": "Mail 'Taslaklar'a kaydedildi. IONOS web mail'den gönderin.", "saved_to_drafts": True}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Mail hatası: {str(e)}")
+        logger.error(f"IMAP error: {e}")
+        raise HTTPException(status_code=500, detail=f"Taslak kaydedilemedi: {str(e)}")
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
