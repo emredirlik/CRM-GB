@@ -30,32 +30,31 @@ const Layout = ({ children }) => {
       
       {/* Main content */}
       <main className="flex-1 overflow-auto w-full">
-        {/* Mobile header - Premium style */}
-        <div className="lg:hidden sticky top-0 z-30 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 shadow-lg">
-          <div className="px-4 py-3 flex items-center justify-between">
+        {/* Mobile header - Premium compact style */}
+        <div className="lg:hidden sticky top-0 z-30 bg-gradient-to-r from-slate-900 to-indigo-900 border-b border-indigo-500/30 shadow-xl">
+          <div className="px-3 py-2 flex items-center justify-between">
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => setSidebarOpen(true)}
-              className="text-white hover:bg-white/10 transition-colors"
+              className="text-white hover:bg-white/10 transition-colors h-8 w-8 p-0"
               data-testid="mobile-menu-btn"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </Button>
             
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <img 
-                src="https://customer-assets.emergentagent.com/job_customer-agent-2/artifacts/u9wa6amt_Ads%C4%B1z%20tasar%C4%B1m%20%281%29.png"
+                src="https://customer-assets.emergentagent.com/job_customer-agent-2/artifacts/wqgvx1bf_Ads%C4%B1z%20tasar%C4%B1m%20%281%29.png"
                 alt="Logo"
-                className="w-8 h-8 object-contain bg-white rounded-lg p-0.5 shadow-md"
+                className="w-7 h-7 object-contain rounded-md shadow-md"
               />
-              <div className="text-center">
-                <span className="text-white font-bold text-sm tracking-tight block">Gewürzberg GmbH</span>
-                <span className="text-slate-400 text-[10px] block">{user?.name || 'Emre Dirlik'}</span>
-              </div>
+              <span className="text-white font-bold text-sm tracking-tight">Gewürzberg CRM</span>
             </div>
             
-            <div className="w-10" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+              {user?.name?.[0] || 'E'}
+            </div>
           </div>
         </div>
         

@@ -25,6 +25,7 @@ import AdminPage from "@/pages/AdminPage";
 import AIAnalytics from "@/pages/AIAnalytics";
 import CustomerSegmentation from "@/pages/CustomerSegmentation";
 import FoodFairs from "@/pages/FoodFairs";
+import DonerNews from "@/pages/DonerNews";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -108,6 +109,7 @@ function AppRoutes() {
                 <Route path="/ai-analytics" element={<AIAnalytics />} />
                 <Route path="/customer-segments" element={<CustomerSegmentation />} />
                 <Route path="/food-fairs" element={<FoodFairs />} />
+                <Route path="/doner-news" element={<DonerNews />} />
               </Routes>
             </Layout>
             {/* AI Chat Widget - floating button */}

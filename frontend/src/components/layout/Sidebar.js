@@ -53,6 +53,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/ai-analytics', icon: Brain, label: 'aiAnalytics', highlight: true },
     { path: '/history', icon: History, label: 'emailHistory' },
     { path: '/settings', icon: Settings, label: 'settings' },
+    { path: '/doner-news', icon: Utensils, label: 'donerNews' },
   ];
 
   // Add admin page only for admin user

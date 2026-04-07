@@ -447,12 +447,12 @@ const Orders = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">Siparişler</h1>
-          <p className="text-muted-foreground mt-1">{orders.length} sipariş</p>
+          <h1 className="text-4xl font-bold tracking-tight font-['Manrope']">{t('orders')}</h1>
+          <p className="text-muted-foreground mt-1">{orders.length} {t('orders').toLowerCase()}</p>
         </div>
         <Button onClick={openAddDialog} data-testid="add-order-btn">
           <Plus className="w-4 h-4 mr-2" />
-          Sipariş Ekle
+          {t('addOrder')}
         </Button>
       </div>
 
@@ -460,7 +460,7 @@ const Orders = () => {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Sipariş ara..."
+          placeholder={t('searchOrders')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -475,7 +475,7 @@ const Orders = () => {
             <CardContent className="py-12">
               <div className="text-center text-muted-foreground" data-testid="no-orders">
                 <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>{searchTerm ? 'Sipariş bulunamadı' : 'Henüz sipariş yok'}</p>
+                <p>{searchTerm ? t('noResults') : t('noOrdersYet')}</p>
               </div>
             </CardContent>
           </Card>

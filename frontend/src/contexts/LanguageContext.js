@@ -110,6 +110,12 @@ const translations = {
     bulkEmail: 'Toplu Email',
     selected: 'Seçili',
     sendingEmail: 'Gönderiliyor...',
+    addOrder: 'Sipariş Ekle',
+    searchOrders: 'Sipariş ara...',
+    noOrdersYet: 'Henüz sipariş yok',
+    selectCustomer: 'Müşteri seçin',
+    orderNotes: 'Sipariş notları...',
+    donerNews: 'Döner & Kebab Haberleri',
     
     // Activity
     activityHistory: 'Aktivite Geçmişi',
@@ -606,6 +612,12 @@ const translations = {
     bulkEmail: 'Massen-E-Mail',
     selected: 'Ausgewählt',
     sendingEmail: 'Wird gesendet...',
+    addOrder: 'Bestellung hinzufügen',
+    searchOrders: 'Bestellungen suchen...',
+    noOrdersYet: 'Noch keine Bestellungen',
+    selectCustomer: 'Kunde auswählen',
+    orderNotes: 'Bestellnotizen...',
+    donerNews: 'Döner & Kebab Nachrichten',
     
     // Activity
     activityHistory: 'Aktivitätsverlauf',
@@ -1102,6 +1114,12 @@ const translations = {
     bulkEmail: 'Bulk Email',
     selected: 'Selected',
     sendingEmail: 'Sending...',
+    addOrder: 'Add Order',
+    searchOrders: 'Search orders...',
+    noOrdersYet: 'No orders yet',
+    selectCustomer: 'Select customer',
+    orderNotes: 'Order notes...',
+    donerNews: 'Döner & Kebab News',
     
     // Activity
     activityHistory: 'Activity History',
@@ -1598,6 +1616,12 @@ const translations = {
     bulkEmail: 'Masowy e-mail',
     selected: 'Wybrano',
     sendingEmail: 'Wysyłanie...',
+    addOrder: 'Dodaj zamówienie',
+    searchOrders: 'Szukaj zamówień...',
+    noOrdersYet: 'Brak zamówień',
+    selectCustomer: 'Wybierz klienta',
+    orderNotes: 'Notatki do zamówienia...',
+    donerNews: 'Wiadomości o Döner & Kebab',
     
     // Activity
     activityHistory: 'Historia aktywności',

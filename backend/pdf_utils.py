@@ -1064,13 +1064,59 @@ def generate_specification_pdf(spec: dict, company_settings: dict = None) -> byt
 
 
 
-def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> bytes:
+def generate_daily_report_pdf(report: dict, company_settings: dict = None, lang: str = 'tr') -> bytes:
     """Generate a PDF for daily visit report"""
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
     company_name = company_settings.get('company_name', 'Gewürzberg GmbH') if company_settings else 'Gewürzberg GmbH'
+    
+    # Multilingual labels
+    labels = {
+        'tr': {
+            'title': 'GÜNLÜK ZİYARET RAPORU',
+            'date': 'Tarih',
+            'city': 'Şehir',
+            'visitType': 'Ziyaret Türü',
+            'notes': 'NOTLAR',
+            'outcome': 'SONUÇ',
+            'nextAction': 'SONRAKİ AKSİYON',
+            'route': 'ROTA HARİTASI'
+        },
+        'de': {
+            'title': 'TÄGLICHER BESUCHSBERICHT',
+            'date': 'Datum',
+            'city': 'Stadt',
+            'visitType': 'Besuchsart',
+            'notes': 'NOTIZEN',
+            'outcome': 'ERGEBNIS',
+            'nextAction': 'NÄCHSTE AKTION',
+            'route': 'ROUTENKARTE'
+        },
+        'en': {
+            'title': 'DAILY VISIT REPORT',
+            'date': 'Date',
+            'city': 'City',
+            'visitType': 'Visit Type',
+            'notes': 'NOTES',
+            'outcome': 'OUTCOME',
+            'nextAction': 'NEXT ACTION',
+            'route': 'ROUTE MAP'
+        },
+        'pl': {
+            'title': 'DZIENNY RAPORT WIZYT',
+            'date': 'Data',
+            'city': 'Miasto',
+            'visitType': 'Typ wizyty',
+            'notes': 'NOTATKI',
+            'outcome': 'WYNIK',
+            'nextAction': 'NASTĘPNA AKCJA',
+            'route': 'MAPA TRASY'
+        }
+    }
+    
+    L = labels.get(lang, labels['en'])
     
     # Header background
     c.setFillColor(PRIMARY_COLOR)
@@ -1083,12 +1129,12 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
     
     # Document title
     c.setFont(FONT_REGULAR, 12)
-    c.drawString(2*cm, height - 2.8*cm, "GÜNLÜK ZİYARET RAPORU")
+    c.drawString(2*cm, height - 2.8*cm, L['title'])
     
     # Date badge
     c.setFillColor(ACCENT_COLOR)
     date_text = report.get('date', '')
-    c.drawRightString(width - 2*cm, height - 2*cm, f"Tarih: {date_text}")
+    c.drawRightString(width - 2*cm, height - 2*cm, f"{L['date']}: {date_text}")
     
     y = height - 5.5*cm
     
@@ -1098,19 +1144,19 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
     
     c.setFillColor(black)
     c.setFont(FONT_BOLD, 14)
-    c.drawString(2*cm, y - 0.8*cm, report.get('company_name', 'Müşteri'))
+    c.drawString(2*cm, y - 0.8*cm, report.get('company_name', 'Customer'))
     
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 10)
-    c.drawString(2*cm, y - 1.5*cm, f"Şehir: {report.get('city', 'N/A')}")
-    c.drawString(2*cm, y - 2.2*cm, f"Ziyaret Türü: {report.get('visit_type', 'N/A')}")
+    c.drawString(2*cm, y - 1.5*cm, f"{L['city']}: {report.get('city', 'N/A')}")
+    c.drawString(2*cm, y - 2.2*cm, f"{L['visitType']}: {report.get('visit_type', 'N/A')}")
     
     y -= 4*cm
     
     # Notes section
     c.setFillColor(PRIMARY_COLOR)
     c.setFont(FONT_BOLD, 12)
-    c.drawString(2*cm, y, "NOTLAR")
+    c.drawString(2*cm, y, L['notes'])
     y -= 0.8*cm
     
     c.setFillColor(black)
@@ -1138,7 +1184,7 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
     if report.get('outcome'):
         c.setFillColor(PRIMARY_COLOR)
         c.setFont(FONT_BOLD, 12)
-        c.drawString(2*cm, y, "SONUÇ")
+        c.drawString(2*cm, y, L['outcome'])
         y -= 0.8*cm
         
         c.setFillColor(SUCCESS_COLOR)
@@ -1150,7 +1196,7 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
     if report.get('next_action'):
         c.setFillColor(PRIMARY_COLOR)
         c.setFont(FONT_BOLD, 12)
-        c.drawString(2*cm, y, "BİR SONRAKİ ADIM")
+        c.drawString(2*cm, y, L['nextAction'])
         y -= 0.8*cm
         
         c.setFillColor(ACCENT_COLOR)
@@ -1160,7 +1206,7 @@ def generate_daily_report_pdf(report: dict, company_settings: dict = None) -> by
     # Footer
     c.setFillColor(TEXT_MUTED)
     c.setFont(FONT_REGULAR, 8)
-    c.drawString(2*cm, 1.5*cm, f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+    c.drawString(2*cm, 1.5*cm, f"{datetime.now().strftime('%d.%m.%Y %H:%M')}")
     c.drawRightString(width - 2*cm, 1.5*cm, company_name)
     
     c.save()
