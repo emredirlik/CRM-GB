@@ -4667,13 +4667,13 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Send email - saves to IMAP Drafts if SMTP blocked"""
+    """Send email - saves to IMAP Drafts for manual sending"""
     settings = await db.company_settings.find_one({}, {"_id": 0})
     
     if not settings:
         raise HTTPException(status_code=400, detail="Email ayarları yapılandırılmamış")
     
-    from_email = settings.get('from_email', settings.get('smtp_username', 'noreply@gewuerzberg.de'))
+    from_email = settings.get('from_email', settings.get('smtp_username'))
     from_name = settings.get('from_name', 'Gewürzberg GmbH')
     
     msg = MIMEMultipart()
@@ -4687,7 +4687,7 @@ async def send_mail(request: MailSendRequest):
     else:
         msg.attach(MIMEText(request.body, 'plain', 'utf-8'))
     
-    # Always save to IMAP Drafts (SMTP is blocked by IONOS)
+    # Save to IMAP Drafts
     try:
         import imaplib
         import time
@@ -4702,14 +4702,13 @@ async def send_mail(request: MailSendRequest):
             "to": request.to,
             "subject": request.subject,
             "body": request.body,
-            "status": "draft",
             "date": datetime.now(timezone.utc).isoformat()
         })
         
-        return {"success": True, "message": "Mail 'Taslaklar'a kaydedildi. IONOS web mail'den gönderin.", "saved_to_drafts": True}
+        return {"success": True, "message": "Mail Taslaklar'a kaydedildi. Web mail'den gönderin."}
     except Exception as e:
         logger.error(f"IMAP error: {e}")
-        raise HTTPException(status_code=500, detail=f"Taslak kaydedilemedi: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Mail kaydedilemedi: {str(e)}")
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
