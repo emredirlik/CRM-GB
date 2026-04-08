@@ -43,6 +43,7 @@ import {
   CreditCard, Building2, Fuel, LayoutGrid, List, Euro, FileSpreadsheet, Camera, ScanLine, CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
+import DocumentScanner from '@/components/DocumentScanner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -70,6 +71,7 @@ const Expenses = () => {
   const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false); // CamScanner style camera
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
@@ -207,7 +209,7 @@ const Expenses = () => {
     }
   };
 
-  // Handle camera/scan for mobile
+  // Handle camera/scan for mobile (legacy input method)
   const handleScanCapture = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -239,6 +241,41 @@ const Expenses = () => {
       console.error('OCR error:', error);
       toast.error('Tarama başarısız. Manuel giriş yapın.');
       // Still allow manual entry
+      setUploadFiles([file]);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  // Handle DocumentScanner capture (CamScanner style)
+  const handleDocumentScannerCapture = async (file) => {
+    setIsScannerOpen(false);
+    setScanning(true);
+    setIsScanOpen(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axios.post(`${API}/expenses/scan-ocr`, formData);
+      
+      if (response.data && response.data.success !== false) {
+        setOcrResult(response.data);
+        setUploadData(prev => ({
+          ...prev,
+          description: response.data.vendor || '',
+          amount: response.data.total || '',
+          date: response.data.date || prev.date
+        }));
+        setUploadFiles([file]);
+        toast.success('Fatura başarıyla tarandı!');
+      } else {
+        setUploadFiles([file]);
+        toast.info('OCR tamamlandı, lütfen verileri kontrol edin.');
+      }
+    } catch (error) {
+      console.error('DocumentScanner OCR error:', error);
+      toast.error('Tarama başarısız. Manuel giriş yapabilirsiniz.');
       setUploadFiles([file]);
     } finally {
       setScanning(false);
@@ -380,10 +417,11 @@ const Expenses = () => {
           </Button>
           <Button 
             size="sm" 
-            onClick={() => cameraInputRef.current?.click()} 
+            onClick={() => setIsScannerOpen(true)} 
             className="bg-green-600 hover:bg-green-700 text-white"
+            data-testid="scan-invoice-btn"
           >
-            <ScanLine className="w-4 h-4 mr-2" />
+            <Camera className="w-4 h-4 mr-2" />
             Fatura Tara
           </Button>
           <input 
@@ -394,7 +432,7 @@ const Expenses = () => {
             className="hidden"
             onChange={handleScanCapture}
           />
-          <Button onClick={() => setIsUploadOpen(true)}>
+          <Button onClick={() => setIsUploadOpen(true)} data-testid="upload-pdf-btn">
             <Upload className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">PDF Yükle</span>
           </Button>
@@ -699,12 +737,12 @@ const Expenses = () => {
             {folders.length > 0 && (
               <div>
                 <Label>Klasör (Opsiyonel)</Label>
-                <Select value={uploadData.folder_id} onValueChange={(v) => setUploadData({...uploadData, folder_id: v})}>
+                <Select value={uploadData.folder_id || "none"} onValueChange={(v) => setUploadData({...uploadData, folder_id: v === "none" ? "" : v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Klasör seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Klasör Yok</SelectItem>
+                    <SelectItem value="none">Klasör Yok</SelectItem>
                     {folders.map(f => (
                       <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                     ))}
@@ -862,6 +900,13 @@ const Expenses = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CamScanner Style Document Scanner */}
+      <DocumentScanner 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onCapture={handleDocumentScannerCapture}
+      />
     </div>
   );
 };

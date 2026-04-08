@@ -6,44 +6,53 @@ Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 ## Tamamlanan Özellikler (08.04.2026)
 
 ### Giderler & Faturalar (TAM FONKSİYONEL)
-- ✅ **Fatura Tara (CamScanner Tarzı)**
-  - Yeşil, belirgin buton (mobilde de görünür)
-  - Kamera ile fotoğraf çekme
-  - OCR ile otomatik veri çekme (Tarih, Firma, Tutar)
-  - Scan sonucu form alanlarına otomatik dolma
-- ✅ Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
-- ✅ PDF yükleme (Drag & Drop)
-- ✅ Klasör oluşturma
-- ✅ Detaylı form: Açıklama, Ülke, Yerel Para Birimi, Adres, Fatura Adı, Notlar
-- ✅ **Excel - GB Ausnahmen 2026 Formatı:**
+- **CamScanner Tarzı Kamera Tarayıcı** (YENİ!)
+  - DocumentScanner.js bileşeni ile gerçek kamera erişimi
+  - Vizör çerçevesi, köşe marker'ları
+  - Flaş kontrolü (destekleyen cihazlarda)
+  - Kamera değiştirme (ön/arka)
+  - Görüntü iyileştirme (kontrast/parlaklık)
+  - Çekilen fotoğraf OCR'a otomatik gönderilir
+- PDF Yükleme (Drag & Drop + Dialog)
+- Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
+- Klasör oluşturma ve yönetimi
+- **Excel - GB Ausnahmen 2026 Formatı:**
   - Ausgabenübersicht 2026 (Genel Özet)
   - Hotel sayfası
   - DKV 2026 sayfası
   - Kreditkarte 2026 sayfası
-  - Almanca sütun başlıkları
-- ✅ Grid/List görünüm
+- OCR: PyMuPDF + pdfplumber + pytesseract
+- Grid/List görünüm
 
 ### Grid Görünüm (TÜM MODÜLLER)
-- ✅ **Müşteriler**: Temiz kartlar (checkbox kaldırıldı)
-  - Avatar ile firma baş harfi
-  - Firma adı, şehir, ülke
-  - Mail, Düzenle, Sil butonları görünür
-- ✅ Siparişler: Dropdown menülü kartlar
-- ✅ Reçeteler: Grid/List seçeneği
+- Müşteriler: Temiz kartlar (checkbox kaldırıldı)
+- Siparişler: Dropdown menülü kartlar
+- Reçeteler: Grid/List seçeneği
 
 ### Mobil Uyumluluk
-- ✅ Tüm butonlar mobilde erişilebilir
-- ✅ Responsive grid (2 sütun mobilde)
-- ✅ AI Chatbox navigasyonu engellemiyor
+- Tüm butonlar mobilde erişilebilir
+- Responsive grid (2 sütun mobilde)
+- AI Chatbox navigasyonu engellemiyor
 
-### Düzeltilen Sorunlar
-- ✅ Grid kartlarındaki çirkin checkbox'lar kaldırıldı
-- ✅ "Fatura Tara" butonu her yerde görünür
-- ✅ Türkçe dil tam senkronize
+### Düzeltilen Sorunlar (08.04.2026)
+- PDF Yükle dialog'undaki SelectItem boş string hatası düzeltildi
+- IMAP bağlantısı devre dışı bırakıldı (artık uygulama bloklanmıyor)
+- DocumentScanner bileşeni Expenses.js'e entegre edildi
 
 ## Bekleyen
-- E-posta sistemi (CNAME sonrası)
+- E-posta IMAP/SMTP sistemi (Kullanıcı CNAME kaydı yapınca aktifleştirilecek)
 
-## Gelecek
-- WhatsApp Business API
-- Stok Takibi
+## Gelecek Görevler
+- WhatsApp Business API entegrasyonu
+- Otomatik Haftalık E-posta (CRON)
+- AI Auto-Categorization for incoming emails
+- Stok Takibi (Inventory)
+- Fatura Yönetimi (Invoice Generation)
+- Kampanya Yönetimi
+- Multi-user Roles (Admin, Sales, etc.)
+
+## Teknik Notlar
+- Backend: FastAPI + MongoDB
+- Frontend: React + TailwindCSS + Shadcn/UI
+- OCR: PyMuPDF (fitz), pdfplumber, pytesseract
+- Excel: openpyxl

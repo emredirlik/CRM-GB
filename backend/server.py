@@ -3928,191 +3928,21 @@ class MailSendRequest(BaseModel):
 
 @api_router.get("/mail/inbox")
 async def get_mail_inbox(page: int = 1, limit: int = 20, folder: str = "INBOX"):
-    """Fetch emails from IMAP inbox with pagination"""
-    settings = await db.company_settings.find_one({}, {"_id": 0})
-    
-    if not settings or not settings.get('imap_host'):
-        return {
-            "status": "not_configured",
-            "emails": [],
-            "total": 0,
-            "page": page,
-            "pages": 0,
-            "message": "IMAP settings not configured"
-        }
-    
-    try:
-        # Connect to IMAP server
-        imap_host = settings.get('imap_host', 'imap.ionos.de')
-        imap_port = int(settings.get('imap_port', 993))
-        imap_user = settings.get('smtp_username')
-        imap_pass = settings.get('smtp_password')
-        
-        if not imap_user or not imap_pass:
-            return {"status": "error", "emails": [], "total": 0, "page": page, "pages": 0, "message": "IMAP credentials not configured"}
-        
-        logger.info(f"Connecting to IMAP: {imap_host}:{imap_port} as {imap_user}")
-        
-        # Try SSL connection first (port 993)
-        try:
-            mail = imaplib.IMAP4_SSL(imap_host, imap_port)
-        except Exception as ssl_error:
-            logger.warning(f"SSL connection failed, trying STARTTLS: {ssl_error}")
-            # Try STARTTLS
-            mail = imaplib.IMAP4(imap_host, 143)
-            mail.starttls()
-        
-        mail.login(imap_user, imap_pass)
-        
-        # Select folder (INBOX, Sent, Drafts, etc.)
-        try:
-            mail.select(folder)
-        except:
-            mail.select('INBOX')
-        
-        # Fetch all email IDs
-        _, message_numbers = mail.search(None, 'ALL')
-        all_email_ids = message_numbers[0].split()
-        total_emails = len(all_email_ids)
-        total_pages = max(1, (total_emails + limit - 1) // limit)
-        
-        # Calculate pagination slice
-        start_idx = max(0, total_emails - (page * limit))
-        end_idx = total_emails - ((page - 1) * limit)
-        email_ids = all_email_ids[start_idx:end_idx]
-        
-        emails = []
-        for eid in reversed(email_ids):
-            # Fetch headers, flags and body structure for attachment detection
-            _, msg_data = mail.fetch(eid, '(BODY.PEEK[HEADER] FLAGS BODYSTRUCTURE)')
-            for response_part in msg_data:
-                if isinstance(response_part, tuple):
-                    msg = email.message_from_bytes(response_part[1])
-                    
-                    # Decode subject
-                    subject = ''
-                    if msg['Subject']:
-                        decoded = decode_header(msg['Subject'])
-                        for part, charset in decoded:
-                            if isinstance(part, bytes):
-                                subject += part.decode(charset or 'utf-8', errors='replace')
-                            else:
-                                subject += part
-                    
-                    # Decode from
-                    from_header = msg.get('From', '')
-                    from_name = ''
-                    from_email_addr = from_header
-                    if '<' in from_header:
-                        from_name = from_header.split('<')[0].strip().strip('"')
-                        from_email_addr = from_header.split('<')[1].strip('>')
-                    
-                    # Check flags
-                    is_read = b'\\Seen' in response_part[0]
-                    
-                    # Check for attachments in BODYSTRUCTURE
-                    has_attachments = False
-                    attachment_count = 0
-                    body_struct_str = str(response_part[0])
-                    if 'ATTACHMENT' in body_struct_str.upper() or 'attachment' in body_struct_str:
-                        has_attachments = True
-                        attachment_count = body_struct_str.upper().count('ATTACHMENT')
-                    
-                    emails.append({
-                        "id": eid.decode(),
-                        "subject": subject,
-                        "from_name": from_name,
-                        "from_email": from_email_addr,
-                        "date": msg.get('Date', ''),
-                        "body": '',  # Load on demand
-                        "snippet": subject[:100] if subject else '',
-                        "is_read": is_read,
-                        "has_attachments": has_attachments,
-                        "attachmentCount": attachment_count
-                    })
-        
-        mail.logout()
-        return {
-            "status": "connected", 
-            "emails": emails,
-            "total": total_emails,
-            "page": page,
-            "pages": total_pages,
-            "limit": limit
-        }
-        
-    except Exception as e:
-        logger.error(f"IMAP error: {e}")
-        return {"status": "error", "emails": [], "total": 0, "page": page, "pages": 0, "message": str(e)}
+    """Fetch emails from IMAP inbox - DISABLED until CNAME configured"""
+    # IMAP bağlantısı devre dışı - kullanıcı CNAME ayarını yapana kadar
+    return {
+        "status": "pending_cname",
+        "emails": [],
+        "total": 0,
+        "page": page,
+        "pages": 0,
+        "message": "E-posta sistemi CNAME kaydı bekleniyor"
+    }
 
 @api_router.get("/mail/body/{email_id}")
 async def get_email_body(email_id: str):
-    """Fetch email body on demand"""
-    settings = await db.company_settings.find_one({}, {"_id": 0})
-    
-    if not settings or not settings.get('imap_host'):
-        raise HTTPException(status_code=400, detail="IMAP not configured")
-    
-    try:
-        mail = imaplib.IMAP4_SSL(settings['imap_host'], int(settings.get('imap_port', 993)))
-        mail.login(settings['smtp_username'], settings['smtp_password'])
-        mail.select('INBOX')
-        
-        _, msg_data = mail.fetch(email_id.encode(), '(RFC822)')
-        for response_part in msg_data:
-            if isinstance(response_part, tuple):
-                msg = email.message_from_bytes(response_part[1])
-                
-                # Get body and attachments
-                body = ''
-                html_body = ''
-                attachments = []
-                
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        content_type = part.get_content_type()
-                        content_disposition = str(part.get('Content-Disposition', ''))
-                        
-                        # Check for attachments
-                        if 'attachment' in content_disposition or part.get_filename():
-                            filename = part.get_filename()
-                            if filename:
-                                # Decode filename if needed
-                                if '=?' in filename:
-                                    decoded = decode_header(filename)
-                                    filename = ''.join([
-                                        t[0].decode(t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0]
-                                        for t in decoded
-                                    ])
-                                attachments.append({
-                                    'filename': filename,
-                                    'content_type': content_type,
-                                    'size': len(part.get_payload(decode=True) or b'')
-                                })
-                        elif content_type == 'text/plain' and not body:
-                            try:
-                                body = part.get_payload(decode=True).decode('utf-8', errors='replace')
-                            except:
-                                body = str(part.get_payload())
-                        elif content_type == 'text/html' and not html_body:
-                            try:
-                                html_body = part.get_payload(decode=True).decode('utf-8', errors='replace')
-                            except:
-                                html_body = str(part.get_payload())
-                else:
-                    try:
-                        body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
-                    except:
-                        body = str(msg.get_payload())
-                
-                mail.logout()
-                return {"body": html_body or body, "plain": body, "attachments": attachments}
-        
-        mail.logout()
-        return {"body": "", "plain": "", "attachments": []}
-    except Exception as e:
-        logger.error(f"Get email body error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Fetch email body on demand - DISABLED until CNAME configured"""
+    raise HTTPException(status_code=503, detail="E-posta sistemi CNAME kaydı bekleniyor")
 
 
 # Multi-language support for AI features
