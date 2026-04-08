@@ -10,6 +10,7 @@ const API = `${BACKEND_URL}/api`;
 const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
   const [processedImage, setProcessedImage] = useState(null); // OpenCV processed image
@@ -132,7 +133,11 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
       
       if (processResponse.data.processed_image) {
         // Set the processed image from backend (base64)
-        const processedBase64 = `data:image/png;base64,${processResponse.data.processed_image}`;
+        // Check if it's PNG or JPEG based on first bytes
+        const imgData = processResponse.data.processed_image;
+        const isJpeg = imgData.startsWith('/9j/'); // JPEG magic bytes in base64
+        const mimeType = isJpeg ? 'image/jpeg' : 'image/png';
+        const processedBase64 = `data:${mimeType};base64,${imgData}`;
         setProcessedImage(processedBase64);
         setShowProcessed(true);
         
@@ -207,6 +212,58 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
     onClose();
   };
 
+  // Handle file upload (alternative to camera)
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Read file as data URL for preview
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const originalImageUrl = event.target.result;
+      setCapturedImage(originalImageUrl);
+      setCameraError(null);
+      
+      // Process with backend
+      setIsProcessing(true);
+      setProcessingStep('Belge kenarları algılanıyor...');
+      
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        setProcessingStep('Perspektif düzeltiliyor...');
+        
+        const processResponse = await axios.post(`${API}/expenses/scan-ocr`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        setProcessingStep('Siyah-beyaz dönüşüm yapılıyor...');
+        
+        if (processResponse.data.processed_image) {
+          const imgData = processResponse.data.processed_image;
+          const isJpeg = imgData.startsWith('/9j/');
+          const mimeType = isJpeg ? 'image/jpeg' : 'image/png';
+          const processedBase64 = `data:${mimeType};base64,${imgData}`;
+          setProcessedImage(processedBase64);
+          setShowProcessed(true);
+          
+          setOcrData({
+            vendor: processResponse.data.vendor || '',
+            date: processResponse.data.date || '',
+            total: processResponse.data.total || ''
+          });
+        }
+      } catch (error) {
+        console.error('File processing error:', error);
+      } finally {
+        setIsProcessing(false);
+        setProcessingStep('');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden bg-black">
@@ -228,9 +285,25 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
               <Camera className="w-16 h-16 mb-4 text-gray-500" />
               <p className="text-lg mb-2">Kamera Erişimi Gerekli</p>
               <p className="text-sm text-gray-400 mb-4">{cameraError}</p>
-              <Button onClick={startCamera} variant="outline" className="text-white border-white">
-                Tekrar Dene
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={startCamera} variant="outline" className="text-white border-white">
+                  Tekrar Dene
+                </Button>
+                <Button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  Dosya Seç
+                </Button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
             </div>
           ) : capturedImage ? (
             // Show captured/processed image

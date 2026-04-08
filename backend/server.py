@@ -7204,7 +7204,12 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
                 # Load image with OpenCV
                 nparr = np.frombuffer(content, np.uint8)
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                
+                if img is None:
+                    raise ValueError("Could not decode image")
+                
                 original = img.copy()
+                original_height, original_width = img.shape[:2]
                 
                 # === CAMSCANNER STYLE PROCESSING ===
                 
@@ -7215,7 +7220,11 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
                 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
                 
                 # 3. Edge detection for document boundary
-                edges = cv2.Canny(blurred, 50, 200)
+                edges = cv2.Canny(blurred, 30, 150)
+                
+                # Dilate edges to connect broken lines
+                kernel = np.ones((3, 3), np.uint8)
+                edges = cv2.dilate(edges, kernel, iterations=1)
                 
                 # 4. Find contours (document boundary)
                 contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -7223,9 +7232,11 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
                 # 5. Find largest rectangular contour (document)
                 doc_contour = None
                 max_area = 0
+                min_area_threshold = original_width * original_height * 0.05  # At least 5% of image
+                
                 for contour in contours:
                     area = cv2.contourArea(contour)
-                    if area > max_area and area > (img.shape[0] * img.shape[1] * 0.1):  # At least 10% of image
+                    if area > max_area and area > min_area_threshold:
                         peri = cv2.arcLength(contour, True)
                         approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
                         if len(approx) == 4:  # Rectangle
@@ -7233,62 +7244,75 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
                             max_area = area
                 
                 # 6. Perspective correction if document found
+                warped = None
                 if doc_contour is not None:
-                    # Order points: top-left, top-right, bottom-right, bottom-left
-                    pts = doc_contour.reshape(4, 2)
-                    rect = np.zeros((4, 2), dtype="float32")
-                    
-                    # Sum and diff to find corners
-                    s = pts.sum(axis=1)
-                    rect[0] = pts[np.argmin(s)]  # top-left
-                    rect[2] = pts[np.argmax(s)]  # bottom-right
-                    
-                    diff = np.diff(pts, axis=1)
-                    rect[1] = pts[np.argmin(diff)]  # top-right
-                    rect[3] = pts[np.argmax(diff)]  # bottom-left
-                    
-                    # Calculate new dimensions
-                    widthA = np.linalg.norm(rect[2] - rect[3])
-                    widthB = np.linalg.norm(rect[1] - rect[0])
-                    maxWidth = int(max(widthA, widthB))
-                    
-                    heightA = np.linalg.norm(rect[1] - rect[2])
-                    heightB = np.linalg.norm(rect[0] - rect[3])
-                    maxHeight = int(max(heightA, heightB))
-                    
-                    # Perspective transform
-                    dst = np.array([
-                        [0, 0],
-                        [maxWidth - 1, 0],
-                        [maxWidth - 1, maxHeight - 1],
-                        [0, maxHeight - 1]
-                    ], dtype="float32")
-                    
-                    M = cv2.getPerspectiveTransform(rect, dst)
-                    warped = cv2.warpPerspective(original, M, (maxWidth, maxHeight))
-                    gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+                    try:
+                        # Order points: top-left, top-right, bottom-right, bottom-left
+                        pts = doc_contour.reshape(4, 2).astype(np.float32)
+                        rect = np.zeros((4, 2), dtype="float32")
+                        
+                        # Sum and diff to find corners
+                        s = pts.sum(axis=1)
+                        rect[0] = pts[np.argmin(s)]  # top-left
+                        rect[2] = pts[np.argmax(s)]  # bottom-right
+                        
+                        diff = np.diff(pts, axis=1)
+                        rect[1] = pts[np.argmin(diff)]  # top-right
+                        rect[3] = pts[np.argmax(diff)]  # bottom-left
+                        
+                        # Calculate new dimensions
+                        widthA = np.linalg.norm(rect[2] - rect[3])
+                        widthB = np.linalg.norm(rect[1] - rect[0])
+                        maxWidth = int(max(widthA, widthB))
+                        
+                        heightA = np.linalg.norm(rect[1] - rect[2])
+                        heightB = np.linalg.norm(rect[0] - rect[3])
+                        maxHeight = int(max(heightA, heightB))
+                        
+                        # Ensure minimum dimensions
+                        if maxWidth > 100 and maxHeight > 100:
+                            # Perspective transform
+                            dst = np.array([
+                                [0, 0],
+                                [maxWidth - 1, 0],
+                                [maxWidth - 1, maxHeight - 1],
+                                [0, maxHeight - 1]
+                            ], dtype="float32")
+                            
+                            M = cv2.getPerspectiveTransform(rect, dst)
+                            warped = cv2.warpPerspective(original, M, (maxWidth, maxHeight))
+                            gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+                            logger.info(f"Document detected and cropped: {maxWidth}x{maxHeight}")
+                    except Exception as e:
+                        logger.warning(f"Perspective correction failed: {e}")
+                        warped = None
+                
+                # If no document found or perspective failed, use original with contrast enhancement
+                if warped is None:
+                    logger.info("No document boundary found, using full image with enhancement")
+                    # Apply CLAHE for better contrast
+                    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+                    gray = clahe.apply(gray)
                 
                 # 7. Adaptive thresholding for black & white document look
                 processed = cv2.adaptiveThreshold(
                     gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                    cv2.THRESH_BINARY, 21, 10
+                    cv2.THRESH_BINARY, 15, 8
                 )
                 
-                # 8. Denoise
-                processed = cv2.fastNlMeansDenoising(processed, None, 10, 7, 21)
-                
-                # 9. Sharpen edges
-                kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-                processed = cv2.filter2D(processed, -1, kernel)
+                # 8. Light denoise (don't over-process)
+                processed = cv2.medianBlur(processed, 3)
                 
                 # Save processed image
-                processed_filename = f"processed_{uuid.uuid4().hex[:8]}.png"
+                processed_filename = f"processed_{uuid.uuid4().hex[:8]}.jpg"
                 processed_path = upload_dir / processed_filename
-                cv2.imwrite(str(processed_path), processed)
+                cv2.imwrite(str(processed_path), processed, [cv2.IMWRITE_JPEG_QUALITY, 90])
                 
-                # Convert to base64 for frontend preview
-                _, buffer = cv2.imencode('.png', processed)
+                # Convert to base64 for frontend preview (JPEG for smaller size)
+                _, buffer = cv2.imencode('.jpg', processed, [cv2.IMWRITE_JPEG_QUALITY, 85])
                 processed_image_base64 = base64.b64encode(buffer).decode('utf-8')
+                
+                logger.info(f"Processed image size: {len(processed_image_base64)} chars, dimensions: {processed.shape}")
                 
                 # OCR on processed image
                 import pytesseract
