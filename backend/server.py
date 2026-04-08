@@ -7088,6 +7088,30 @@ async def create_expense_folder(data: ExpenseFolderCreate):
     # Return without _id
     return {"id": folder_id, "name": data.name, "category": data.category}
 
+@api_router.put("/expense-folders/{folder_id}")
+async def update_expense_folder(folder_id: str, data: ExpenseFolderCreate):
+    """Update expense folder"""
+    result = await db.expense_folders.update_one(
+        {"id": folder_id},
+        {"$set": {"name": data.name, "category": data.category}}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    return {"id": folder_id, "name": data.name, "category": data.category}
+
+@api_router.delete("/expense-folders/{folder_id}")
+async def delete_expense_folder(folder_id: str):
+    """Delete expense folder"""
+    result = await db.expense_folders.delete_one({"id": folder_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    # Also update expenses that were in this folder
+    await db.expenses.update_many(
+        {"folder_id": folder_id},
+        {"$set": {"folder_id": None}}
+    )
+    return {"message": "Folder deleted"}
+
 @api_router.get("/expenses/export/excel")
 async def export_expenses_excel(category: str = None, date_filter: str = 'all', date: str = None):
     """Export expenses to Excel - GB Ausnahmen 2026 format"""

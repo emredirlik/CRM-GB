@@ -145,6 +145,19 @@ const Expenses = () => {
     }
   };
 
+  const handleDeleteFolder = async (folderId) => {
+    try {
+      await axios.delete(`${API}/expense-folders/${folderId}`);
+      toast.success('Klasör silindi');
+      if (selectedFolder === folderId) {
+        setSelectedFolder(null);
+      }
+      fetchFolders();
+    } catch (error) {
+      toast.error('Klasör silinemedi');
+    }
+  };
+
   const handleUpload = async () => {
     if (uploadFiles.length === 0) {
       toast.error('Dosya seçin');
@@ -539,15 +552,32 @@ const Expenses = () => {
             Tümü
           </Button>
           {folders.map(folder => (
-            <Button 
-              key={folder.id}
-              variant={selectedFolder === folder.id ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setSelectedFolder(folder.id)}
-            >
-              <Folder className="w-4 h-4 mr-2" />
-              {folder.name}
-            </Button>
+            <div key={folder.id} className="relative group">
+              <Button 
+                variant={selectedFolder === folder.id ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setSelectedFolder(folder.id)}
+              >
+                <Folder className="w-4 h-4 mr-2" />
+                {folder.name}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-white shadow border opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <MoreVertical className="w-3 h-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)}>
+                    <Trash2 className="w-4 h-4 mr-2 text-red-500" /> Sil
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ))}
         </div>
       )}
@@ -650,13 +680,13 @@ const Expenses = () => {
 
       {/* Upload Dialog */}
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>PDF Yükle</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div 
-              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary transition-colors"
+              className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center cursor-pointer hover:border-primary transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
@@ -677,11 +707,11 @@ const Expenses = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>Kategori</Label>
+                <Label className="text-xs">Kategori</Label>
                 <Select value={uploadData.category} onValueChange={(v) => setUploadData({...uploadData, category: v})}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -692,53 +722,53 @@ const Expenses = () => {
                 </Select>
               </div>
               <div>
-                <Label>Tarih</Label>
-                <Input type="date" value={uploadData.date} onChange={(e) => setUploadData({...uploadData, date: e.target.value})} />
+                <Label className="text-xs">Tarih</Label>
+                <Input type="date" className="h-9" value={uploadData.date} onChange={(e) => setUploadData({...uploadData, date: e.target.value})} />
               </div>
             </div>
 
             <div>
-              <Label>Tutar (€)</Label>
-              <Input type="number" step="0.01" value={uploadData.amount} onChange={(e) => setUploadData({...uploadData, amount: e.target.value})} placeholder="0.00" />
+              <Label className="text-xs">Tutar (€)</Label>
+              <Input type="number" step="0.01" className="h-9" value={uploadData.amount} onChange={(e) => setUploadData({...uploadData, amount: e.target.value})} placeholder="0.00" />
             </div>
 
             <div>
-              <Label>Açıklama / Ort / Hotelname</Label>
-              <Input value={uploadData.description} onChange={(e) => setUploadData({...uploadData, description: e.target.value})} placeholder="Otel adı veya açıklama" />
+              <Label className="text-xs">Açıklama / Ort / Hotelname</Label>
+              <Input className="h-9" value={uploadData.description} onChange={(e) => setUploadData({...uploadData, description: e.target.value})} placeholder="Otel adı veya açıklama" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>Ülke (Land)</Label>
-                <Input value={uploadData.country} onChange={(e) => setUploadData({...uploadData, country: e.target.value})} placeholder="Türkei, Deutschland..." />
+                <Label className="text-xs">Ülke (Land)</Label>
+                <Input className="h-9" value={uploadData.country} onChange={(e) => setUploadData({...uploadData, country: e.target.value})} placeholder="Türkei, Deutschland..." />
               </div>
               <div>
-                <Label>Yerel Para Birimi</Label>
-                <Input value={uploadData.local_currency} onChange={(e) => setUploadData({...uploadData, local_currency: e.target.value})} placeholder="1700 TRY" />
+                <Label className="text-xs">Yerel Para Birimi</Label>
+                <Input className="h-9" value={uploadData.local_currency} onChange={(e) => setUploadData({...uploadData, local_currency: e.target.value})} placeholder="1700 TRY" />
               </div>
             </div>
 
             <div>
-              <Label>Adres</Label>
-              <Input value={uploadData.address} onChange={(e) => setUploadData({...uploadData, address: e.target.value})} placeholder="Tam adres" />
+              <Label className="text-xs">Adres</Label>
+              <Input className="h-9" value={uploadData.address} onChange={(e) => setUploadData({...uploadData, address: e.target.value})} placeholder="Tam adres" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label>Fatura Adı</Label>
-                <Input value={uploadData.invoice_name} onChange={(e) => setUploadData({...uploadData, invoice_name: e.target.value})} placeholder="Fatura sahibi" />
+                <Label className="text-xs">Fatura Adı</Label>
+                <Input className="h-9" value={uploadData.invoice_name} onChange={(e) => setUploadData({...uploadData, invoice_name: e.target.value})} placeholder="Fatura sahibi" />
               </div>
               <div>
-                <Label>Notlar</Label>
-                <Input value={uploadData.notes} onChange={(e) => setUploadData({...uploadData, notes: e.target.value})} placeholder="Ek notlar" />
+                <Label className="text-xs">Notlar</Label>
+                <Input className="h-9" value={uploadData.notes} onChange={(e) => setUploadData({...uploadData, notes: e.target.value})} placeholder="Ek notlar" />
               </div>
             </div>
 
             {folders.length > 0 && (
               <div>
-                <Label>Klasör (Opsiyonel)</Label>
+                <Label className="text-xs">Klasör (Opsiyonel)</Label>
                 <Select value={uploadData.folder_id || "none"} onValueChange={(v) => setUploadData({...uploadData, folder_id: v === "none" ? "" : v})}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Klasör seçin" />
                   </SelectTrigger>
                   <SelectContent>
@@ -751,9 +781,9 @@ const Expenses = () => {
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUploadOpen(false)}>İptal</Button>
-            <Button onClick={handleUpload} disabled={uploading}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsUploadOpen(false)} className="w-full sm:w-auto">İptal</Button>
+            <Button onClick={handleUpload} disabled={uploading} className="w-full sm:w-auto">
               {uploading ? 'Yükleniyor...' : 'Yükle'}
             </Button>
           </DialogFooter>

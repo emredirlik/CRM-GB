@@ -3,56 +3,58 @@
 ## Özet
 Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 
-## Tamamlanan Özellikler (08.04.2026)
+## Düzeltilen Sorunlar (08.04.2026 - Son Güncelleme)
 
-### Giderler & Faturalar (TAM FONKSİYONEL)
-- **CamScanner Tarzı Kamera Tarayıcı** (YENİ!)
-  - DocumentScanner.js bileşeni ile gerçek kamera erişimi
-  - Vizör çerçevesi, köşe marker'ları
-  - Flaş kontrolü (destekleyen cihazlarda)
-  - Kamera değiştirme (ön/arka)
-  - Görüntü iyileştirme (kontrast/parlaklık)
-  - Çekilen fotoğraf OCR'a otomatik gönderilir
-- PDF Yükleme (Drag & Drop + Dialog)
+### 1. PDF Rapor Hatası ✅
+- Font paketi (`fonts-dejavu-core`) yüklendi
+- `/api/expenses/report/pdf` artık 200 döndürüyor
+
+### 2. Excel Export ✅
+- Çalışıyor, "Excel indirildi" toast mesajı gösteriliyor
+
+### 3. Klasör Silme ✅
+- DELETE `/api/expense-folders/{folder_id}` endpoint'i eklendi
+- Klasör üzerine hover yapınca silme butonu görünür
+
+### 4. Checkbox'lar Kaldırıldı ✅
+- Liste görünümünden checkbox'lar kaldırıldı
+- Grid görünümü temiz kartlar gösteriyor
+
+### 5. Mobil Uyumluluk ✅
+- Giderler sayfası mobilde düzgün görünüyor
+- Upload Dialog mobil responsive yapıldı
+- Form alanları tek sütuna dönüyor
+
+### 6. IMAP Bloklaması ✅
+- Mail endpoint'leri devre dışı (CNAME bekleniyor)
+- Sistem artık bloklanmıyor
+
+## Aktif Özellikler
+
+### Giderler & Faturalar
+- CamScanner tarzı kamera tarayıcı (DocumentScanner.js)
+- PDF yükleme (Drag & Drop + Dialog)
 - Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
-- Klasör oluşturma ve yönetimi
-- **Excel - GB Ausnahmen 2026 Formatı:**
-  - Ausgabenübersicht 2026 (Genel Özet)
-  - Hotel sayfası
-  - DKV 2026 sayfası
-  - Kreditkarte 2026 sayfası
+- Klasör yönetimi (oluştur, sil)
+- Excel export (GB Ausnahmen 2026 formatı)
+- PDF Rapor
 - OCR: PyMuPDF + pdfplumber + pytesseract
 - Grid/List görünüm
 
-### Grid Görünüm (TÜM MODÜLLER)
-- Müşteriler: Temiz kartlar (checkbox kaldırıldı)
-- Siparişler: Dropdown menülü kartlar
-- Reçeteler: Grid/List seçeneği
-
-### Mobil Uyumluluk
-- Tüm butonlar mobilde erişilebilir
-- Responsive grid (2 sütun mobilde)
-- AI Chatbox navigasyonu engellemiyor
-
-### Düzeltilen Sorunlar (08.04.2026)
-- PDF Yükle dialog'undaki SelectItem boş string hatası düzeltildi
-- IMAP bağlantısı devre dışı bırakıldı (artık uygulama bloklanmıyor)
-- DocumentScanner bileşeni Expenses.js'e entegre edildi
+### Müşteriler (Leads)
+- Liste ve Grid görünüm (checkbox'sız)
+- PDF ve Excel export
+- Müşteri ekleme/düzenleme/silme
+- Email gönderme
 
 ## Bekleyen
-- E-posta IMAP/SMTP sistemi (Kullanıcı CNAME kaydı yapınca aktifleştirilecek)
+- E-posta IMAP/SMTP (CNAME kaydı bekleniyor)
 
 ## Gelecek Görevler
-- WhatsApp Business API entegrasyonu
+- WhatsApp Business API
 - Otomatik Haftalık E-posta (CRON)
-- AI Auto-Categorization for incoming emails
-- Stok Takibi (Inventory)
-- Fatura Yönetimi (Invoice Generation)
-- Kampanya Yönetimi
-- Multi-user Roles (Admin, Sales, etc.)
+- Stok Takibi
+- Fatura Yönetimi
 
-## Teknik Notlar
-- Backend: FastAPI + MongoDB
-- Frontend: React + TailwindCSS + Shadcn/UI
-- OCR: PyMuPDF (fitz), pdfplumber, pytesseract
-- Excel: openpyxl
+## Notlar
+- Tarama özelliği: Otomatik kenar kesme (edge detection) şu an basit kontrast/parlaklık iyileştirmesi yapıyor. Daha gelişmiş CV kütüphanesi (OpenCV) gerekli.

@@ -571,12 +571,6 @@ const Leads = () => {
                 <CardContent className="p-2 sm:p-3">
                   {/* Compact Row Layout */}
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedLeads.has(lead.id)}
-                      onCheckedChange={() => toggleLeadSelection(lead.id)}
-                      className="flex-shrink-0"
-                    />
-                    
                     {/* Avatar */}
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
                       {lead.first_name?.[0]}{lead.last_name?.[0]}
