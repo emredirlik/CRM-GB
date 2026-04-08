@@ -162,6 +162,37 @@ const Expenses = () => {
     }
   };
 
+  // Gideri klasöre taşı
+  const handleMoveToFolder = async (expenseId, folderId) => {
+    try {
+      await axios.put(`${API}/expenses/${expenseId}`, { folder_id: folderId || null });
+      toast.success(folderId ? 'Klasöre taşındı' : 'Klasörden çıkarıldı');
+      fetchExpenses();
+    } catch (error) {
+      toast.error('Taşıma başarısız');
+    }
+  };
+
+  // Klasöre gir (navigasyon)
+  const [currentFolderPath, setCurrentFolderPath] = useState([]);
+  
+  const enterFolder = (folder) => {
+    setCurrentFolderPath(prev => [...prev, folder]);
+    setSelectedFolder(folder.id);
+  };
+  
+  const goToParentFolder = () => {
+    const newPath = [...currentFolderPath];
+    newPath.pop();
+    setCurrentFolderPath(newPath);
+    setSelectedFolder(newPath.length > 0 ? newPath[newPath.length - 1].id : null);
+  };
+  
+  const goToRootFolder = () => {
+    setCurrentFolderPath([]);
+    setSelectedFolder(null);
+  };
+
   const handleUpload = async () => {
     if (uploadFiles.length === 0) {
       toast.error('Dosya seçin');
@@ -607,26 +638,81 @@ const Expenses = () => {
         })}
       </div>
 
-      {/* Folders */}
-      {folders.length > 0 && (
+      {/* Folders with Navigation */}
+      <div className="space-y-2">
+        {/* Breadcrumb Navigation */}
+        {currentFolderPath.length > 0 && (
+          <div className="flex items-center gap-2 text-sm">
+            <Button variant="ghost" size="sm" onClick={goToRootFolder} className="h-7 px-2">
+              <Folder className="w-4 h-4 mr-1" />
+              Ana Dizin
+            </Button>
+            {currentFolderPath.map((folder, idx) => (
+              <React.Fragment key={folder.id}>
+                <span className="text-muted-foreground">/</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    const newPath = currentFolderPath.slice(0, idx + 1);
+                    setCurrentFolderPath(newPath);
+                    setSelectedFolder(folder.id);
+                  }}
+                  className="h-7 px-2"
+                >
+                  {folder.name}
+                </Button>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+        
+        {/* Folder Buttons */}
         <div className="flex flex-wrap gap-2">
-          <Button 
-            variant={selectedFolder === null ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setSelectedFolder(null)}
-          >
-            <Folder className="w-4 h-4 mr-2" />
-            Tümü
-          </Button>
-          {folders.map(folder => (
+          {currentFolderPath.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={goToParentFolder}
+              className="border-dashed"
+            >
+              <Folder className="w-4 h-4 mr-2" />
+              ← Geri
+            </Button>
+          )}
+          
+          {currentFolderPath.length === 0 && (
+            <Button 
+              variant={selectedFolder === null ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => setSelectedFolder(null)}
+            >
+              <Folder className="w-4 h-4 mr-2" />
+              Tümü
+            </Button>
+          )}
+          
+          {/* Show folders that belong to current parent */}
+          {folders
+            .filter(f => {
+              if (currentFolderPath.length === 0) return !f.parent_id;
+              return f.parent_id === currentFolderPath[currentFolderPath.length - 1]?.id;
+            })
+            .map(folder => (
             <div key={folder.id} className="relative group">
               <Button 
                 variant={selectedFolder === folder.id ? 'default' : 'outline'} 
                 size="sm"
-                onClick={() => setSelectedFolder(folder.id)}
+                onClick={() => enterFolder(folder)}
+                onDoubleClick={() => enterFolder(folder)}
               >
                 <Folder className="w-4 h-4 mr-2" />
                 {folder.name}
+                {folder.children_count > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                    {folder.children_count}
+                  </Badge>
+                )}
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -639,6 +725,9 @@ const Expenses = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => enterFolder(folder)}>
+                    <Folder className="w-4 h-4 mr-2" /> Klasöre Gir
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)}>
                     <Trash2 className="w-4 h-4 mr-2 text-red-500" /> Sil
                   </DropdownMenuItem>
@@ -647,7 +736,7 @@ const Expenses = () => {
             </div>
           ))}
         </div>
-      )}
+      </div>
 
       {/* Expenses Grid/List */}
       {filteredExpenses.length === 0 ? (
@@ -661,7 +750,7 @@ const Expenses = () => {
           {filteredExpenses.map(expense => {
             const catInfo = getCategoryInfo(expense.category);
             return (
-              <Card key={expense.id} className="group cursor-pointer hover:shadow-md transition-shadow">
+              <Card key={expense.id} className="group cursor-pointer hover:shadow-md transition-shadow relative">
                 <CardContent className="p-3">
                   <div className="aspect-[3/4] bg-slate-100 rounded-lg mb-2 flex items-center justify-center relative">
                     <FileText className="w-12 h-12 text-slate-400" />
@@ -681,6 +770,38 @@ const Expenses = () => {
                     <span className="font-semibold text-sm">{expense.amount} €</span>
                   </div>
                 </CardContent>
+                {/* Dropdown menu for grid cards */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute top-1 right-1 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }}>
+                      <Eye className="w-4 h-4 mr-2" /> Görüntüle
+                    </DropdownMenuItem>
+                    {folders.length > 0 && (
+                      <>
+                        <DropdownMenuItem onClick={() => handleMoveToFolder(expense.id, null)}>
+                          <Folder className="w-4 h-4 mr-2" /> Klasörden Çıkar
+                        </DropdownMenuItem>
+                        {folders.filter(f => f.id !== expense.folder_id).slice(0, 5).map(folder => (
+                          <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(expense.id, folder.id)}>
+                            <Folder className="w-4 h-4 mr-2 text-blue-500" /> {folder.name}'a Taşı
+                          </DropdownMenuItem>
+                        ))}
+                      </>
+                    )}
+                    <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }}>
+                      <Trash2 className="w-4 h-4 mr-2" /> Sil
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </Card>
             );
           })}
@@ -714,6 +835,18 @@ const Expenses = () => {
                       <DropdownMenuItem onClick={() => downloadExpense(expense)}>
                         <Download className="w-4 h-4 mr-2" /> İndir
                       </DropdownMenuItem>
+                      {folders.length > 0 && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleMoveToFolder(expense.id, null)}>
+                            <Folder className="w-4 h-4 mr-2" /> Klasörden Çıkar
+                          </DropdownMenuItem>
+                          {folders.filter(f => f.id !== expense.folder_id).slice(0, 5).map(folder => (
+                            <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(expense.id, folder.id)}>
+                              <Folder className="w-4 h-4 mr-2 text-blue-500" /> {folder.name}'a Taşı
+                            </DropdownMenuItem>
+                          ))}
+                        </>
+                      )}
                       <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }}>
                         <Trash2 className="w-4 h-4 mr-2" /> Sil
                       </DropdownMenuItem>
@@ -987,16 +1120,47 @@ const Expenses = () => {
 
       {/* Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>{selectedExpense?.description || selectedExpense?.filename}</DialogTitle>
+        <DialogContent className="max-w-5xl max-h-[95vh] p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle className="flex items-center justify-between">
+              <span>{selectedExpense?.description || selectedExpense?.filename || 'PDF Önizleme'}</span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.open(`${API}/expenses/${selectedExpense?.id}/view`, '_blank')}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  İndir
+                </Button>
+              </div>
+            </DialogTitle>
           </DialogHeader>
           {selectedExpense && (
-            <iframe 
-              src={`${API}/expenses/${selectedExpense.id}/view`}
-              className="w-full h-[70vh] rounded border"
-              title="PDF Preview"
-            />
+            <div className="w-full h-[80vh] bg-gray-100">
+              <object
+                data={`${API}/expenses/${selectedExpense.id}/view`}
+                type="application/pdf"
+                className="w-full h-full"
+              >
+                <embed
+                  src={`${API}/expenses/${selectedExpense.id}/view`}
+                  type="application/pdf"
+                  className="w-full h-full"
+                />
+                <p className="text-center py-8">
+                  PDF önizleme yüklenemedi. 
+                  <a 
+                    href={`${API}/expenses/${selectedExpense.id}/view`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline ml-1"
+                  >
+                    Buraya tıklayarak indirin
+                  </a>
+                </p>
+              </object>
+            </div>
           )}
         </DialogContent>
       </Dialog>

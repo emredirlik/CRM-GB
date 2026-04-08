@@ -6797,9 +6797,35 @@ class ExpenseFolderCreate(BaseModel):
     parent_id: Optional[str] = None  # For nested folders
 
 @api_router.get("/expenses")
-async def get_expenses():
-    expenses = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+async def get_expenses(folder_id: str = None):
+    """Get expenses, optionally filtered by folder"""
+    query = {}
+    if folder_id:
+        query["folder_id"] = folder_id
+    expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
     return expenses
+
+class ExpenseUpdate(BaseModel):
+    folder_id: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    date: Optional[str] = None
+
+@api_router.put("/expenses/{expense_id}")
+async def update_expense(expense_id: str, data: ExpenseUpdate):
+    """Update expense (move to folder, edit details)"""
+    update_data = {k: v for k, v in data.dict().items() if v is not None}
+    if not update_data:
+        return {"message": "No changes"}
+    
+    result = await db.expenses.update_one(
+        {"id": expense_id},
+        {"$set": update_data}
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return {"message": "Updated", "id": expense_id}
 
 @api_router.post("/expenses/upload")
 async def upload_expense(
