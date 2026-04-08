@@ -7176,20 +7176,28 @@ async def delete_expense_folder(folder_id: str):
     await db.expenses.update_many({"folder_id": folder_id}, {"$set": {"folder_id": None}})
     return {"message": "Folder deleted"}
 
+class MergePdfsRequest(BaseModel):
+    folder_id: Optional[str] = None
+    expense_ids: Optional[List[str]] = None
+
 @api_router.post("/expenses/merge-pdfs")
-async def merge_expense_pdfs(folder_id: str = None, expense_ids: List[str] = None):
+async def merge_expense_pdfs(data: MergePdfsRequest):
     """Merge multiple expense PDFs into a single PDF"""
     try:
         from PyPDF2 import PdfMerger
         from io import BytesIO
         
+        logger.info(f"Merge request: folder_id={data.folder_id}, expense_ids={data.expense_ids}")
+        
         # Get expenses to merge
-        if folder_id:
-            expenses = await db.expenses.find({"folder_id": folder_id}, {"_id": 0}).to_list(100)
-        elif expense_ids:
-            expenses = await db.expenses.find({"id": {"$in": expense_ids}}, {"_id": 0}).to_list(100)
+        if data.folder_id:
+            expenses = await db.expenses.find({"folder_id": data.folder_id}, {"_id": 0}).to_list(100)
+        elif data.expense_ids:
+            expenses = await db.expenses.find({"id": {"$in": data.expense_ids}}, {"_id": 0}).to_list(100)
         else:
             raise HTTPException(status_code=400, detail="folder_id veya expense_ids gerekli")
+        
+        logger.info(f"Found {len(expenses)} expenses")
         
         if not expenses:
             raise HTTPException(status_code=404, detail="PDF bulunamadı")
@@ -7199,12 +7207,19 @@ async def merge_expense_pdfs(folder_id: str = None, expense_ids: List[str] = Non
         
         for expense in expenses:
             file_path = expense.get("file_path")
-            if file_path and Path(file_path).exists() and file_path.lower().endswith('.pdf'):
-                try:
-                    merger.append(file_path)
-                    merged_count += 1
-                except Exception as e:
-                    logger.warning(f"PDF merge skip {file_path}: {e}")
+            logger.info(f"Checking file: {file_path}")
+            if file_path and Path(file_path).exists():
+                if file_path.lower().endswith('.pdf'):
+                    try:
+                        merger.append(file_path)
+                        merged_count += 1
+                        logger.info(f"Added to merge: {file_path}")
+                    except Exception as e:
+                        logger.warning(f"PDF merge skip {file_path}: {e}")
+                else:
+                    logger.info(f"Not a PDF: {file_path}")
+            else:
+                logger.warning(f"File not found: {file_path}")
         
         if merged_count == 0:
             raise HTTPException(status_code=404, detail="Birleştirilecek PDF bulunamadı")

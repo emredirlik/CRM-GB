@@ -5,49 +5,45 @@ Berlin merkezli baharat fabrikası için B2B CRM - Giderler & Faturalar modülü
 
 ## ✅ Tamamlanan Özellikler
 
-### 1. GB Ausnahmen Excel Formatı ✅
-- 4 Sayfa: Ausgabenübersicht 2026, Hotel, DKV 2026, Kreditkarte 2026
-- Hotel sayfası: Hotelname, Check-In, Check-Out, Land, Nacht, Preis, Adresse, PDF Seite
-- Aylara göre gruplandırma (JANUAR, FEBRUAR, vs.)
-- GESAMT toplam satırı
+### 1. Çoklu Dil Desteği (TR/DE/EN/PL) ✅
+- Tüm butonlar ve metinler çevrildi
+- Sidebar ve menüler tüm dillerde çalışıyor
+- Almanca: "Ausgaben & Rechnungen", "PDF zusammenführen", "Rechnung scannen"
+- Türkçe: "Giderler & Faturalar", "PDF Birleştir", "Fatura Tara"
 
-### 2. Otel Kategorisi Özel Form Alanları ✅
-- Check-In (tarih yerine)
-- Check-Out
-- Gece Sayısı (Nacht)
-- Otel Adı (Hotelname)
-- Mavi kutuda öne çıkarılmış
+### 2. GB Ausnahmen Excel Formatı ✅
+- 4 Sayfa: Ausgabenübersicht, Hotel, DKV, Kreditkarte
+- Hotel: Hotelname, Check-In, Check-Out, Land, Nacht, Preis, Adresse
 
-### 3. Dashboard Modernleştirme ✅
-- Gradient header "Kontrol Paneli"
-- Tarih gösterimi (8 Nisan 2026 Çarşamba)
-- Modern stat kartları (gradient ikonlar)
-- Hover animasyonları
+### 3. Otel Özel Form Alanları ✅
+- Check-In, Check-Out, Gece Sayısı (mavi kutuda)
+- Dinamik form (kategori değişince alanlar değişir)
 
-### 4. Hiyerarşik Yıl/Ay Seçimi ✅
-- YIL dropdown (2024-2027)
-- AY dropdown (Tüm Aylar + 12 ay)
+### 4. PDF Birleştirme ✅
+- Gerçek PDF dosyaları birleştiriliyor
+- Test: 236KB birleşik dosya oluşturuldu
+- NOT: Bozuk/test PDF'ler birleştirilemiyor ("startxref not found")
+
+### 5. Dashboard (Eski Hali Korundu) ✅
+- Basit ve temiz tasarım
+- Gradient değişiklikler geri alındı
+
+### 6. Hiyerarşik Yıl/Ay Seçimi ✅
+- YIL ve AY dropdown'ları
 - Excel ve Rapor filtreleme
-
-### 5. Liste Görünümü Butonları ✅
-- Görüntüle, İndir, Sil butonları HER ZAMAN görünür
-
-### 6. PDF Birleştirme (Klasör Bazlı) ✅
-- Seçili klasördeki tüm PDF'ler birleştirilir
 
 ## API Endpoints
 
+### PDF Birleştirme
+- `POST /api/expenses/merge-pdfs`
+- Body: `{"folder_id": "xxx"}` veya `{"expense_ids": ["id1", "id2"]}`
+
 ### Excel Export
 - `GET /api/expenses/export/excel?year=2026&month=4`
-- Hotel sayfası: Check-In, Check-Out, Nacht alanları
-
-### Upload (Hotel)
-- `POST /api/expenses/upload`
-- Form alanları: check_in, check_out, nights
 
 ## Bekleyen
 - E-posta IMAP/SMTP (CNAME kaydı bekleniyor)
-- Mobil kamera perspektif düzeltme
+- Mobil kamera otomatik belge kesme/perspektif düzeltme (OpenCV gerekli)
 
 ## Gelecek Görevler
 - WhatsApp Business API

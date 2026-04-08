@@ -398,34 +398,30 @@ const Expenses = () => {
 
   const mergePdfs = async () => {
     try {
-      const params = {};
-      if (selectedFolder) {
-        params.folder_id = selectedFolder;
-      } else {
-        // Get all expense IDs from current filter
-        const ids = filteredExpenses.map(e => e.id);
-        if (ids.length === 0) {
-          toast.error('Birleştirilecek PDF yok');
-          return;
-        }
-        params.expense_ids = ids;
+      const ids = filteredExpenses.map(e => e.id);
+      if (ids.length === 0) {
+        toast.error(language === 'de' ? 'Keine PDFs zum Zusammenführen' : 'Birleştirilecek PDF yok');
+        return;
       }
       
-      const response = await axios.post(`${API}/expenses/merge-pdfs`, null, {
-        responseType: 'blob',
-        params
+      const response = await axios.post(`${API}/expenses/merge-pdfs`, {
+        folder_id: selectedFolder || null,
+        expense_ids: selectedFolder ? null : ids
+      }, {
+        responseType: 'blob'
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `birlesik_faturalar_${new Date().toISOString().split('T')[0]}.pdf`);
+      const monthName = selectedMonth ? months.find(m => m.id === selectedMonth)?.name : '';
+      link.setAttribute('download', `birlesik_${selectedYear}${monthName ? '_' + monthName : ''}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('PDF\'ler birleştirildi');
+      toast.success(language === 'de' ? 'PDFs zusammengeführt' : 'PDF\'ler birleştirildi');
     } catch (error) {
-      toast.error('PDF birleştirilemedi: ' + (error.response?.data?.detail || error.message));
+      toast.error(language === 'de' ? 'PDF Zusammenführung fehlgeschlagen' : 'PDF birleştirilemedi');
     }
   };
 
@@ -530,43 +526,43 @@ const Expenses = () => {
         <div>
           <h1 className="text-2xl font-bold font-['Manrope'] flex items-center gap-2">
             <Receipt className="w-7 h-7 text-indigo-600" />
-            {t('expenses')}
+            {t('expensesTitle')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Fatura ve gider yönetimi - PDF yükle, kategorize et, raporla
+            {language === 'de' ? 'Rechnungen und Ausgaben verwalten - PDF hochladen, kategorisieren, berichten' : 'Fatura ve gider yönetimi - PDF yükle, kategorize et, raporla'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setIsFolderOpen(true)}>
             <FolderPlus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Yeni Klasör</span>
+            <span className="hidden sm:inline">{t('newFolder')}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={exportToExcel}>
             <FileSpreadsheet className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Excel</span>
+            <span className="hidden sm:inline">{t('excel')}</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <FileText className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Rapor</span>
+                <span className="hidden sm:inline">{t('report')}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => generateReport('all')}>
-                <FileText className="w-4 h-4 mr-2" /> Tüm Giderler
+                <FileText className="w-4 h-4 mr-2" /> {t('allExpenses')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => generateReport('monthly')}>
-                <Calendar className="w-4 h-4 mr-2" /> Aylık Rapor
+                <Calendar className="w-4 h-4 mr-2" /> {t('monthlyReport')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => generateReport('yearly')}>
-                <FileText className="w-4 h-4 mr-2" /> Yıllık Rapor
+                <FileText className="w-4 h-4 mr-2" /> {t('yearlyReport')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button variant="outline" size="sm" onClick={mergePdfs} className="text-purple-600 border-purple-300 hover:bg-purple-50">
             <FileText className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">PDF Birleştir</span>
+            <span className="hidden sm:inline">{t('mergePdf')}</span>
           </Button>
           <Button 
             size="sm" 
@@ -575,7 +571,7 @@ const Expenses = () => {
             data-testid="scan-invoice-btn"
           >
             <Camera className="w-4 h-4 mr-2" />
-            Fatura Tara
+            {t('scanInvoice')}
           </Button>
           <input 
             ref={cameraInputRef}
@@ -587,7 +583,7 @@ const Expenses = () => {
           />
           <Button onClick={() => setIsUploadOpen(true)} data-testid="upload-pdf-btn">
             <Upload className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">PDF Yükle</span>
+            <span className="hidden sm:inline">{t('uploadPdf')}</span>
           </Button>
         </div>
       </div>

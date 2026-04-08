@@ -392,12 +392,11 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6" data-testid="dashboard-page">
-      {/* Header with greeting */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <p className="text-slate-500 text-sm">Hoş geldiniz</p>
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">{t('dashboard')}</h1>
-          <p className="text-slate-400 mt-1 text-sm">Gewürzberg GmbH • {new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-transparent">{t('dashboard')}</h1>
+          <p className="text-slate-500 mt-1">{t('welcomeTo')} Gewürzberg CRM</p>
         </div>
         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
           {periods.map((p) => (
@@ -416,27 +415,22 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Cards - Premium Glass Style */}
+      {/* Stats Cards - Modern Glass Style */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => (
           <div 
             key={index} 
-            className="relative overflow-hidden bg-gradient-to-br from-white to-slate-50 rounded-2xl p-5 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-slate-100/50 group"
+            className={`relative overflow-hidden bg-white rounded-2xl p-5 cursor-pointer shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 group ${stat.hoverBg}`}
             onClick={() => navigate(stat.link)}
             data-testid={`stat-card-${index}`}
           >
-            <div className={`absolute top-0 right-0 w-32 h-32 ${stat.bgColor} rounded-full -mr-12 -mt-12 opacity-30 group-hover:scale-150 group-hover:opacity-50 transition-all duration-500`} />
-            <div className={`absolute bottom-0 left-0 w-16 h-16 ${stat.bgColor} rounded-full -ml-6 -mb-6 opacity-20`} />
+            <div className={`absolute top-0 right-0 w-24 h-24 ${stat.bgColor} rounded-full -mr-8 -mt-8 opacity-50 group-hover:scale-150 transition-transform duration-500`} />
             <div className="relative">
-              <div className={`w-12 h-12 bg-gradient-to-br ${
-                stat.color === 'text-emerald-600' ? 'from-emerald-400 to-emerald-600' : 'from-indigo-400 to-indigo-600'
-              } rounded-xl flex items-center justify-center mb-3 shadow-lg`}>
-                <stat.icon className="w-6 h-6 text-white" />
+              <div className={`w-10 h-10 ${stat.bgColor} rounded-xl flex items-center justify-center mb-3`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
               <p className="text-sm text-slate-500 font-medium">{stat.label}</p>
-              <p className={`text-2xl md:text-3xl font-bold mt-1 bg-gradient-to-r ${
-                stat.color === 'text-emerald-600' ? 'from-emerald-600 to-emerald-800' : 'from-indigo-600 to-indigo-900'
-              } bg-clip-text text-transparent`}>
+              <p className={`text-2xl md:text-3xl font-bold mt-1 ${stat.color}`}>
                 {stat.isText ? stat.value : stat.value.toLocaleString()}
               </p>
             </div>
