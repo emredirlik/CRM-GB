@@ -580,10 +580,27 @@ const DailyReports = () => {
       return;
     }
 
-    const mailto = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`;
-    window.open(mailto, '_blank');
-    toast.success(t.emailSent || 'Mail uygulaması açıldı');
-    setIsEmailDialogOpen(false);
+    setSendingEmail(true);
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const pdfResponse = await axios.get(`${API}/daily-reports/date/${dateStr}/pdf?lang=${language}`, {
+        responseType: 'blob'
+      });
+      
+      const formData = new FormData();
+      formData.append('to', emailTo);
+      formData.append('subject', emailSubject);
+      formData.append('body', `<p>${emailMessage}</p>`);
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `rapor_${dateStr}.pdf`);
+      
+      const response = await axios.post(`${API}/mail/send-to-drafts`, formData);
+      toast.success(response.data.message);
+      setIsEmailDialogOpen(false);
+    } catch (error) {
+      toast.error(t.error, { description: error.response?.data?.detail || t.emailFailed });
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const getVisitTypeLabel = (value) => {

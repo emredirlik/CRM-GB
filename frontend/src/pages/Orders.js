@@ -383,23 +383,36 @@ const Orders = () => {
     setIsEmailDialogOpen(true);
   };
 
-  // Send order via email - opens user's mail client
+  // Send order via email with PDF attachment - saves to IMAP Drafts
   const sendOrderByEmail = async () => {
-    const bodyByLang = {
-      tr: `Sayın Yetkili,\n\nSiparişiniz hazırlanmıştır.\n\nSaygılarımızla,\nGewürzberg GmbH`,
-      en: `Dear Sir/Madam,\n\nYour order has been prepared.\n\nBest regards,\nGewürzberg GmbH`,
-      de: `Sehr geehrte Damen und Herren,\n\nIhre Bestellung wurde vorbereitet.\n\nMit freundlichen Grüßen,\nGewürzberg GmbH`,
-      pl: `Szanowni Państwo,\n\nPaństwa zamówienie zostało przygotowane.\n\nZ poważaniem,\nGewürzberg GmbH`
-    };
-    
-    const toEmail = emailTo || '';
-    const body = encodeURIComponent(bodyByLang[emailLanguage] || bodyByLang.en);
-    const subject = encodeURIComponent(emailSubject);
-    const mailto = `mailto:${toEmail}?subject=${subject}&body=${body}`;
-    
-    window.open(mailto, '_blank');
-    toast.success(t('success'), { description: 'Mail uygulaması açıldı' });
-    setIsEmailDialogOpen(false);
+    setSendingEmail(true);
+    try {
+      // Get PDF
+      const pdfResponse = await axios.get(`${API}/orders/${selectedOrder.id}/pdf?lang=${emailLanguage}`, {
+        responseType: 'blob'
+      });
+      
+      const bodyByLang = {
+        tr: `<p>Sayın Yetkili,</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla,<br>Gewürzberg GmbH</p>`,
+        en: `<p>Dear Sir/Madam,</p><p>Please find your order attached.</p><p>Best regards,<br>Gewürzberg GmbH</p>`,
+        de: `<p>Sehr geehrte Damen und Herren,</p><p>Im Anhang finden Sie Ihre Bestellung.</p><p>Mit freundlichen Grüßen,<br>Gewürzberg GmbH</p>`,
+        pl: `<p>Szanowni Państwo,</p><p>W załączniku znajduje się Państwa zamówienie.</p><p>Z poważaniem,<br>Gewürzberg GmbH</p>`
+      };
+      
+      const formData = new FormData();
+      formData.append('to', emailTo || '');
+      formData.append('subject', emailSubject);
+      formData.append('body', bodyByLang[emailLanguage] || bodyByLang.en);
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `siparis_${selectedOrder.id.slice(0,8)}.pdf`);
+      
+      const response = await axios.post(`${API}/mail/send-to-drafts`, formData);
+      toast.success(t('success'), { description: response.data.message });
+      setIsEmailDialogOpen(false);
+    } catch (error) {
+      toast.error(t('error'), { description: error.response?.data?.detail || 'Mail hazırlanamadı' });
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   // Calculate days overdue for an order

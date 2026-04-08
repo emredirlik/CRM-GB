@@ -388,12 +388,28 @@ const Specifications = () => {
     }
 
     const lead = leads.find(l => l.id === selectedLeadId);
-    const toEmail = lead?.email || '';
-
-    const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailto, '_blank');
-    toast.success('Mail uygulaması açıldı');
-    setIsEmailDialogOpen(false);
+    setSendingEmail(true);
+    
+    try {
+      // Get PDF
+      const pdfResponse = await axios.get(`${API}/specifications/${selectedSpec.id}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      const formData = new FormData();
+      formData.append('to', lead?.email || '');
+      formData.append('subject', emailSubject);
+      formData.append('body', emailBody);
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `spesifikasyon_${selectedSpec.id.slice(0,8)}.pdf`);
+      
+      const response = await axios.post(`${API}/mail/send-to-drafts`, formData);
+      toast.success(response.data.message);
+      setIsEmailDialogOpen(false);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Mail hazırlanamadı');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const filteredSpecs = specs.filter(spec => {

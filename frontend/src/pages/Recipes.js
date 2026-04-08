@@ -528,12 +528,28 @@ const Recipes = () => {
     }
 
     const lead = leads.find(l => l.id === selectedLeadId);
-    const toEmail = lead?.email || '';
+    setSendingEmail(true);
     
-    const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailto, '_blank');
-    toast.success(txt.success, { description: 'Mail uygulaması açıldı' });
-    setIsEmailDialogOpen(false);
+    try {
+      // Get PDF
+      const pdfResponse = await axios.get(`${API}/recipes/${selectedRecipe.id}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      const formData = new FormData();
+      formData.append('to', lead?.email || '');
+      formData.append('subject', emailSubject);
+      formData.append('body', emailBody);
+      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `recete_${selectedRecipe.id.slice(0,8)}.pdf`);
+      
+      const response = await axios.post(`${API}/mail/send-to-drafts`, formData);
+      toast.success(txt.success, { description: response.data.message });
+      setIsEmailDialogOpen(false);
+    } catch (error) {
+      toast.error(txt.error, { description: error.response?.data?.detail || 'Mail hazırlanamadı' });
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const filteredRecipes = recipes.filter(recipe => {

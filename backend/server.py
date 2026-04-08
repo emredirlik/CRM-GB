@@ -4670,11 +4670,10 @@ async def save_draft(data: dict):
 
 @api_router.post("/mail/send")
 async def send_mail(request: MailSendRequest):
-    """Prepare email and return mailto link to use user's own email client"""
+    """Prepare email and return mailto link"""
     import urllib.parse
     import re
     
-    # Strip HTML tags for mailto body
     body_text = request.body
     body_text = re.sub(r'<br\s*/?>', '\n', body_text)
     body_text = re.sub(r'<p[^>]*>', '', body_text)
@@ -4682,7 +4681,6 @@ async def send_mail(request: MailSendRequest):
     body_text = re.sub(r'<[^>]+>', '', body_text)
     body_text = body_text.replace('&nbsp;', ' ').strip()
     
-    # Save to database
     await db.sent_emails.insert_one({
         "id": str(uuid.uuid4()),
         "to": request.to,
@@ -4691,10 +4689,59 @@ async def send_mail(request: MailSendRequest):
         "date": datetime.now(timezone.utc).isoformat()
     })
     
-    # Return mailto link
     mailto = f"mailto:{request.to}?subject={urllib.parse.quote(request.subject)}&body={urllib.parse.quote(body_text)}"
     
     return {"success": True, "mailto": mailto}
+
+
+@api_router.post("/mail/send-to-drafts")
+async def send_mail_to_drafts(
+    to: str = Form(...),
+    subject: str = Form(...),
+    body: str = Form(...),
+    attachments: List[UploadFile] = File(default=[])
+):
+    """Save email with attachments to IMAP Drafts folder"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings:
+        raise HTTPException(status_code=400, detail="Email ayarları yapılandırılmamış")
+    
+    from_email = settings.get('from_email', settings.get('smtp_username'))
+    from_name = settings.get('from_name', 'Gewürzberg GmbH')
+    
+    msg = MIMEMultipart()
+    msg['From'] = f"{from_name} <{from_email}>"
+    msg['To'] = to
+    msg['Subject'] = subject
+    msg['Date'] = formatdate(localtime=True)
+    
+    # Add body
+    msg.attach(MIMEText(body, 'html', 'utf-8'))
+    
+    # Add attachments
+    for attachment in attachments:
+        content = await attachment.read()
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(content)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="{attachment.filename}"')
+        msg.attach(part)
+    
+    # Save to IMAP Drafts
+    try:
+        import imaplib
+        import time
+        imap_host = settings.get('imap_host', 'imap.ionos.de')
+        imap = imaplib.IMAP4_SSL(imap_host, 993)
+        imap.login(settings['smtp_username'], settings['smtp_password'])
+        imap.append('Drafts', '', imaplib.Time2Internaldate(time.time()), msg.as_bytes())
+        imap.logout()
+        
+        return {"success": True, "message": "Mail ek ile Taslaklar'a kaydedildi. IONOS web mail'den gönderin."}
+    except Exception as e:
+        logger.error(f"IMAP error: {e}")
+        raise HTTPException(status_code=500, detail=f"Taslak kaydedilemedi: {str(e)}")
 
 @api_router.post("/mail/send-with-attachments")
 async def send_mail_with_attachments(
