@@ -517,16 +517,16 @@ const Orders = () => {
                     </div>
                     
                     {/* Main Info */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       {/* Mobile: Show product and company name vertically */}
                       <div className="sm:hidden">
-                        <p className="font-semibold text-sm leading-tight">{formatOrderProducts(order)}</p>
-                        <p className="text-xs text-muted-foreground">{order.company_name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge className={`${statusColors[order.status]} border-0 text-[9px] px-1`}>
+                        <p className="font-semibold text-sm leading-tight truncate">{formatOrderProducts(order)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{order.company_name}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge className={`${statusColors[order.status]} border-0 text-[8px] px-1`}>
                             {statusLabels[language]?.[order.status] || order.status}
                           </Badge>
-                          <span className="text-xs font-medium text-indigo-600">{formatOrderQuantity(order)}</span>
+                          <span className="text-[10px] font-medium text-indigo-600">{formatOrderQuantity(order)}</span>
                         </div>
                       </div>
                       
@@ -607,49 +607,20 @@ const Orders = () => {
                     </div>
                     
                     {/* Actions - Fewer on mobile */}
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      {/* Status dropdown - always visible but smaller */}
-                      <Select 
-                        value={order.status} 
-                        onValueChange={(value) => handleStatusChange(order.id, value)}
-                      >
-                        <SelectTrigger className="w-8 h-7 p-0 justify-center border-0 bg-transparent">
-                          <ChevronDown className="w-3 h-3" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.keys(statusColors).map(status => (
-                            <SelectItem key={status} value={status}>
-                              <Badge className={`${statusColors[status]} border-0 text-xs`}>
-                                {statusLabels[language]?.[status]}
-                              </Badge>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-7 w-7 p-0" title="Önizle">
-                        <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                    <div className="flex items-center gap-0 flex-shrink-0">
+                      <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-6 w-6 p-0" title="Önizle">
+                        <Eye className="w-3 h-3 text-indigo-600" />
                       </Button>
                       
-                      <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-7 w-7 p-0" title="WhatsApp">
-                        <MessageCircle className="w-3.5 h-3.5 text-green-600" />
+                      <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-6 w-6 p-0" title="WhatsApp">
+                        <MessageCircle className="w-3 h-3 text-green-600" />
                       </Button>
                       
-                      {/* Desktop only buttons */}
-                      <div className="hidden sm:flex items-center gap-0.5">
-                        <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-7 w-7 p-0" title="PDF İndir">
-                          <FileDown className="w-3.5 h-3.5 text-blue-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-7 w-7 p-0" title="Email Gönder">
-                          <Mail className="w-3.5 h-3.5 text-purple-600" />
-                        </Button>
-                      </div>
-                      
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-7 w-7 p-0" title="Düzenle">
-                        <Pencil className="w-3.5 h-3.5 text-slate-500" />
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-6 w-6 p-0" title="Düzenle">
+                        <Pencil className="w-3 h-3 text-slate-500" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-7 w-7 p-0" title="Sil">
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-6 w-6 p-0" title="Sil">
+                        <Trash2 className="w-3 h-3 text-red-500" />
                       </Button>
                     </div>
                   </div>

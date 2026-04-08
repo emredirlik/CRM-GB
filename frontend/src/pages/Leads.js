@@ -532,11 +532,11 @@ const Leads = () => {
                     </div>
                     
                     {/* Main Info - Mobile: show more of company name */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 overflow-hidden">
                       {/* Mobile: Stack vertically with full company name */}
                       <div className="sm:hidden">
-                        <p className="font-semibold text-sm leading-tight">{lead.company_name}</p>
-                        <p className="text-xs text-muted-foreground">{lead.city}, {lead.country}</p>
+                        <p className="font-semibold text-sm leading-tight truncate">{lead.company_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name} • {lead.city}</p>
                       </div>
                       
                       {/* Desktop: Grid layout */}
@@ -574,52 +574,43 @@ const Leads = () => {
                       </div>
                     </div>
                     
-                    {/* Actions - All buttons visible, smaller on mobile */}
-                    <div className="flex items-center gap-0.5 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openActivityDialog(lead)}
-                        className="h-7 w-7 p-0"
-                        data-testid={`activity-${lead.id}`}
-                      >
-                        <History className="w-3.5 h-3.5 text-purple-600" />
-                      </Button>
+                    {/* Actions - fewer on mobile */}
+                    <div className="flex items-center gap-0 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openLeadDetails(lead)}
-                        className="h-7 w-7 p-0"
+                        className="h-6 w-6 p-0"
                         data-testid={`preview-${lead.id}`}
                       >
-                        <Eye className="w-3.5 h-3.5 text-gray-600" />
+                        <Eye className="w-3 h-3 text-gray-600" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleSendEmail(lead)}
-                        className="h-7 w-7 p-0"
+                        className="h-6 w-6 p-0"
                         data-testid={`mail-${lead.id}`}
                       >
-                        <Mail className="w-3.5 h-3.5 text-blue-600" />
+                        <Mail className="w-3 h-3 text-blue-600" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditDialog(lead)}
-                        className="h-7 w-7 p-0"
+                        className="h-6 w-6 p-0"
                         data-testid={`edit-${lead.id}`}
                       >
-                        <Pencil className="w-3.5 h-3.5 text-amber-600" />
+                        <Pencil className="w-3 h-3 text-amber-600" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openDeleteDialog(lead)}
-                        className="h-7 w-7 p-0"
+                        className="h-6 w-6 p-0"
                         data-testid={`delete-${lead.id}`}
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                        <Trash2 className="w-3 h-3 text-red-500" />
                       </Button>
                     </div>
                   </div>

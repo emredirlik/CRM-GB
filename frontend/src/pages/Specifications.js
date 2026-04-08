@@ -387,20 +387,16 @@ const Specifications = () => {
       return;
     }
 
-    setSendingEmail(true);
-    try {
-      await axios.post(`${API}/specifications/${selectedSpec.id}/email`, {
-        lead_id: selectedLeadId,
-        subject: emailSubject,
-        body: emailBody
-      });
-      toast.success('Email sent with specification PDF');
-      setIsEmailDialogOpen(false);
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to send email');
-    } finally {
-      setSendingEmail(false);
+    const lead = leads.find(l => l.id === selectedLeadId);
+    if (!lead?.email) {
+      toast.error('Customer has no email address');
+      return;
     }
+
+    const mailto = `mailto:${lead.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    window.open(mailto, '_blank');
+    toast.success('Mail uygulaması açıldı');
+    setIsEmailDialogOpen(false);
   };
 
   const filteredSpecs = specs.filter(spec => {
