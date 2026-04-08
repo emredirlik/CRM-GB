@@ -396,7 +396,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-transparent">{t('dashboard')}</h1>
-          <p className="text-slate-500 mt-1">{t('welcomeTo')} Gewürzberg CRM</p>
+          <p className="text-slate-500 mt-1">{t('welcomeTo')} Gewürzberg CRM <span className="text-indigo-500 font-semibold">v2.1</span></p>
         </div>
         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl">
           {periods.map((p) => (
