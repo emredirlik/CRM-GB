@@ -385,11 +385,6 @@ const Orders = () => {
 
   // Send order via email - opens user's mail client
   const sendOrderByEmail = async () => {
-    if (!emailTo) {
-      toast.error(t('error'), { description: t('recipientSubjectRequired') || 'Email address is required' });
-      return;
-    }
-    
     const bodyByLang = {
       tr: `Sayın Yetkili,\n\nSiparişiniz hazırlanmıştır.\n\nSaygılarımızla,\nGewürzberg GmbH`,
       en: `Dear Sir/Madam,\n\nYour order has been prepared.\n\nBest regards,\nGewürzberg GmbH`,
@@ -397,12 +392,13 @@ const Orders = () => {
       pl: `Szanowni Państwo,\n\nPaństwa zamówienie zostało przygotowane.\n\nZ poważaniem,\nGewürzberg GmbH`
     };
     
+    const toEmail = emailTo || '';
     const body = encodeURIComponent(bodyByLang[emailLanguage] || bodyByLang.en);
     const subject = encodeURIComponent(emailSubject);
-    const mailto = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+    const mailto = `mailto:${toEmail}?subject=${subject}&body=${body}`;
     
     window.open(mailto, '_blank');
-    toast.success(t('success'), { description: t('mailClientOpened') || 'Mail uygulaması açıldı' });
+    toast.success(t('success'), { description: 'Mail uygulaması açıldı' });
     setIsEmailDialogOpen(false);
   };
 
@@ -606,16 +602,20 @@ const Orders = () => {
                       </div>
                     </div>
                     
-                    {/* Actions - Fewer on mobile */}
+                    {/* Actions - All buttons visible */}
                     <div className="flex items-center gap-0 flex-shrink-0">
                       <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-6 w-6 p-0" title="Önizle">
                         <Eye className="w-3 h-3 text-indigo-600" />
                       </Button>
-                      
                       <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-6 w-6 p-0" title="WhatsApp">
                         <MessageCircle className="w-3 h-3 text-green-600" />
                       </Button>
-                      
+                      <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-6 w-6 p-0" title="PDF">
+                        <FileDown className="w-3 h-3 text-blue-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-6 w-6 p-0" title="Email">
+                        <Mail className="w-3 h-3 text-purple-600" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-6 w-6 p-0" title="Düzenle">
                         <Pencil className="w-3 h-3 text-slate-500" />
                       </Button>

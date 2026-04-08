@@ -169,11 +169,8 @@ const Leads = () => {
   };
 
   const handleSendEmail = (lead) => {
-    if (!lead.email) {
-      toast.error('Hata', { description: 'Müşterinin email adresi yok' });
-      return;
-    }
-    const mailto = `mailto:${lead.email}?subject=${encodeURIComponent('Gewürzberg GmbH')}&body=${encodeURIComponent(`Sayın ${lead.first_name || ''} ${lead.last_name || ''},\n\n\n\nSaygılarımızla,\nGewürzberg GmbH`)}`;
+    const toEmail = lead.email || '';
+    const mailto = `mailto:${toEmail}?subject=${encodeURIComponent('Gewürzberg GmbH')}&body=${encodeURIComponent(`Sayın ${lead.first_name || ''} ${lead.last_name || ''},\n\n\n\nSaygılarımızla,\nGewürzberg GmbH`)}`;
     window.open(mailto, '_blank');
   };
 
@@ -574,8 +571,17 @@ const Leads = () => {
                       </div>
                     </div>
                     
-                    {/* Actions - fewer on mobile */}
+                    {/* Actions - all visible */}
                     <div className="flex items-center gap-0 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openActivityDialog(lead)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`activity-${lead.id}`}
+                      >
+                        <History className="w-3 h-3 text-purple-600" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

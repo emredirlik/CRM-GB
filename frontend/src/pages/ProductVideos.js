@@ -304,16 +304,12 @@ const ProductVideos = () => {
       window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
       toast.success('WhatsApp açılıyor...');
     } else {
-      try {
-        await axios.post(`${API}/mail/send`, {
-          to: lead.email,
-          subject: `Video: ${selectedVideo.title}`,
-          body: `${shareData.message || ''}\n\nVideo: ${selectedVideo.url}`
-        });
-        toast.success(t('emailSent'));
-      } catch (error) {
-        toast.error('Mail gönderilemedi');
-      }
+      const toEmail = lead.email || '';
+      const subject = encodeURIComponent(`Video: ${selectedVideo.title}`);
+      const body = encodeURIComponent(`${shareData.message || ''}\n\nVideo: ${selectedVideo.url}`);
+      const mailto = `mailto:${toEmail}?subject=${subject}&body=${body}`;
+      window.open(mailto, '_blank');
+      toast.success('Mail uygulaması açıldı');
     }
     setIsShareOpen(false);
   };

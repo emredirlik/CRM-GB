@@ -528,12 +528,9 @@ const Recipes = () => {
     }
 
     const lead = leads.find(l => l.id === selectedLeadId);
-    if (!lead?.email) {
-      toast.error(txt.error, { description: txt.noEmail });
-      return;
-    }
-
-    const mailto = `mailto:${lead.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    const toEmail = lead?.email || '';
+    
+    const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     window.open(mailto, '_blank');
     toast.success(txt.success, { description: 'Mail uygulaması açıldı' });
     setIsEmailDialogOpen(false);

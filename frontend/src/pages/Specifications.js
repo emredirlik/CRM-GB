@@ -388,12 +388,9 @@ const Specifications = () => {
     }
 
     const lead = leads.find(l => l.id === selectedLeadId);
-    if (!lead?.email) {
-      toast.error('Customer has no email address');
-      return;
-    }
+    const toEmail = lead?.email || '';
 
-    const mailto = `mailto:${lead.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    const mailto = `mailto:${toEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
     window.open(mailto, '_blank');
     toast.success('Mail uygulaması açıldı');
     setIsEmailDialogOpen(false);
