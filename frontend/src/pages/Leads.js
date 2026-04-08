@@ -169,7 +169,12 @@ const Leads = () => {
   };
 
   const handleSendEmail = (lead) => {
-    navigate('/compose', { state: { selectedLead: lead } });
+    if (!lead.email) {
+      toast.error('Hata', { description: 'Müşterinin email adresi yok' });
+      return;
+    }
+    const mailto = `mailto:${lead.email}?subject=${encodeURIComponent('Gewürzberg GmbH')}&body=${encodeURIComponent(`Sayın ${lead.first_name || ''} ${lead.last_name || ''},\n\n\n\nSaygılarımızla,\nGewürzberg GmbH`)}`;
+    window.open(mailto, '_blank');
   };
 
   const downloadLeadPdf = async (leadId) => {
@@ -283,35 +288,29 @@ const Leads = () => {
   };
 
   const sendBulkEmail = async () => {
-    setSendingBulkEmail(true);
-    let sent = 0;
-    let failed = 0;
-
+    // Open mailto with all selected leads
+    const emails = [];
     for (const leadId of selectedLeads) {
       const lead = leads.find(l => l.id === leadId);
       if (lead?.email) {
-        try {
-          await axios.post(`${API}/leads/${leadId}/send-email`, {
-            subject: bulkEmailSubject,
-            body: bulkEmailBody.replace('{company_name}', lead.company_name)
-          });
-          sent++;
-        } catch (error) {
-          failed++;
-        }
+        emails.push(lead.email);
       }
     }
-
-    setSendingBulkEmail(false);
+    
+    if (emails.length === 0) {
+      toast.error('Hata', { description: 'Seçili müşterilerin email adresi yok' });
+      return;
+    }
+    
+    const subject = encodeURIComponent(bulkEmailSubject);
+    const body = encodeURIComponent(bulkEmailBody);
+    const mailto = `mailto:${emails.join(',')}?subject=${subject}&body=${body}`;
+    
+    window.open(mailto, '_blank');
+    toast.success('Başarılı', { description: 'Mail uygulaması açıldı' });
+    
     setIsBulkEmailOpen(false);
     setSelectedLeads(new Set());
-
-    if (sent > 0) {
-      toast.success('Başarılı', { description: `${sent} müşteriye email gönderildi` });
-    }
-    if (failed > 0) {
-      toast.warning('Uyarı', { description: `${failed} email gönderilemedi` });
-    }
   };
 
   // Activity functions

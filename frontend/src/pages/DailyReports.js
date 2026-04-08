@@ -580,21 +580,10 @@ const DailyReports = () => {
       return;
     }
 
-    setSendingEmail(true);
-    try {
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      await axios.post(`${API}/daily-reports/date/${dateStr}/email`, {
-        to_email: emailTo,
-        subject: emailSubject,
-        message: emailMessage
-      });
-      toast.success(t.emailSent);
-      setIsEmailDialogOpen(false);
-    } catch (error) {
-      toast.error(t.error, { description: t.emailFailed });
-    } finally {
-      setSendingEmail(false);
-    }
+    const mailto = `mailto:${emailTo}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailMessage)}`;
+    window.open(mailto, '_blank');
+    toast.success(t.emailSent || 'Mail uygulaması açıldı');
+    setIsEmailDialogOpen(false);
   };
 
   const getVisitTypeLabel = (value) => {

@@ -533,16 +533,10 @@ const Recipes = () => {
       return;
     }
 
-    setSendingEmail(true);
-    try {
-      await axios.post(`${API}/recipes/${selectedRecipe.id}/email?to_email=${encodeURIComponent(lead.email)}`);
-      toast.success(txt.success, { description: txt.emailSent });
-      setIsEmailDialogOpen(false);
-    } catch (error) {
-      toast.error(txt.error, { description: error.response?.data?.detail || txt.emailFailed });
-    } finally {
-      setSendingEmail(false);
-    }
+    const mailto = `mailto:${lead.email}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    window.open(mailto, '_blank');
+    toast.success(txt.success, { description: 'Mail uygulaması açıldı' });
+    setIsEmailDialogOpen(false);
   };
 
   const filteredRecipes = recipes.filter(recipe => {

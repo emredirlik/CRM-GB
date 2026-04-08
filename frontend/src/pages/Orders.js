@@ -383,42 +383,27 @@ const Orders = () => {
     setIsEmailDialogOpen(true);
   };
 
-  // Send order via email to custom address
+  // Send order via email - opens user's mail client
   const sendOrderByEmail = async () => {
     if (!emailTo) {
       toast.error(t('error'), { description: t('recipientSubjectRequired') || 'Email address is required' });
       return;
     }
     
-    setSendingEmail(true);
-    try {
-      // Generate PDF with selected language and send
-      const pdfResponse = await axios.get(`${API}/orders/${selectedOrder.id}/pdf?lang=${emailLanguage}`, {
-        responseType: 'blob'
-      });
-      
-      const bodyByLang = {
-        tr: `<p>Sayın Yetkili,</p><p>Siparişiniz ekte yer almaktadır.</p><p>Saygılarımızla</p>`,
-        en: `<p>Dear Sir/Madam,</p><p>Please find your order attached.</p><p>Best regards</p>`,
-        de: `<p>Sehr geehrte Damen und Herren,</p><p>Im Anhang finden Sie Ihre Bestellung.</p><p>Mit freundlichen Grüßen</p>`,
-        pl: `<p>Szanowni Państwo,</p><p>W załączniku znajduje się Państwa zamówienie.</p><p>Z poważaniem</p>`
-      };
-      
-      const formData = new FormData();
-      formData.append('to', emailTo);
-      formData.append('subject', emailSubject);
-      formData.append('body', bodyByLang[emailLanguage] || bodyByLang.en);
-      formData.append('html', 'true');
-      formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `order_${selectedOrder.id.slice(0,8)}.pdf`);
-      
-      await axios.post(`${API}/mail/send-with-attachments`, formData);
-      toast.success(t('success'), { description: t('mailSent') || 'Email sent' });
-      setIsEmailDialogOpen(false);
-    } catch (error) {
-      toast.error(t('error'), { description: t('emailFailed') || 'Failed to send email' });
-    } finally {
-      setSendingEmail(false);
-    }
+    const bodyByLang = {
+      tr: `Sayın Yetkili,\n\nSiparişiniz hazırlanmıştır.\n\nSaygılarımızla,\nGewürzberg GmbH`,
+      en: `Dear Sir/Madam,\n\nYour order has been prepared.\n\nBest regards,\nGewürzberg GmbH`,
+      de: `Sehr geehrte Damen und Herren,\n\nIhre Bestellung wurde vorbereitet.\n\nMit freundlichen Grüßen,\nGewürzberg GmbH`,
+      pl: `Szanowni Państwo,\n\nPaństwa zamówienie zostało przygotowane.\n\nZ poważaniem,\nGewürzberg GmbH`
+    };
+    
+    const body = encodeURIComponent(bodyByLang[emailLanguage] || bodyByLang.en);
+    const subject = encodeURIComponent(emailSubject);
+    const mailto = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+    
+    window.open(mailto, '_blank');
+    toast.success(t('success'), { description: t('mailClientOpened') || 'Mail uygulaması açıldı' });
+    setIsEmailDialogOpen(false);
   };
 
   // Calculate days overdue for an order
