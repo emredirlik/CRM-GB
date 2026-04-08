@@ -20,6 +20,7 @@ import Settings from "@/pages/Settings";
 import RoutePlanner from "@/pages/RoutePlanner";
 import Specifications from "@/pages/Specifications";
 import DailyReports from "@/pages/DailyReports";
+import Expenses from "@/pages/Expenses";
 import Shipments from "@/pages/Shipments";
 import AdminPage from "@/pages/AdminPage";
 import AIAnalytics from "@/pages/AIAnalytics";
@@ -105,6 +106,7 @@ function AppRoutes() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/route-planner" element={<RoutePlanner />} />
                 <Route path="/daily-reports" element={<DailyReports />} />
+                <Route path="/expenses" element={<Expenses />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/ai-analytics" element={<AIAnalytics />} />
                 <Route path="/customer-segments" element={<CustomerSegmentation />} />

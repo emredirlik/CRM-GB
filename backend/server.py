@@ -2670,30 +2670,54 @@ async def login(request: LoginRequest, response: Response):
     admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
     admin_password = os.environ.get('ADMIN_PASSWORD', '190371')
     
-    if request.username != admin_username or request.password != admin_password:
-        raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
+    # First check if it's the admin user
+    if request.username == admin_username and request.password == admin_password:
+        user_id = "admin-user-id"
+        access_token = create_access_token(user_id, admin_username)
+        
+        response.set_cookie(
+            key="access_token", 
+            value=access_token, 
+            httponly=True, 
+            secure=False, 
+            samesite="lax", 
+            max_age=86400,
+            path="/"
+        )
+        
+        return {
+            "id": user_id,
+            "username": admin_username,
+            "name": "Emre Dirlik",
+            "role": "admin",
+            "token": access_token
+        }
     
-    user_id = "admin-user-id"
-    access_token = create_access_token(user_id, admin_username)
+    # Check database for other users
+    user = await db.users.find_one({"$or": [{"email": request.username}, {"username": request.username}]})
+    if user and bcrypt.checkpw(request.password.encode('utf-8'), user.get('password_hash', '').encode('utf-8')):
+        user_id = user.get('id', str(user.get('_id')))
+        access_token = create_access_token(user_id, user.get('email', request.username))
+        
+        response.set_cookie(
+            key="access_token", 
+            value=access_token, 
+            httponly=True, 
+            secure=False, 
+            samesite="lax", 
+            max_age=86400,
+            path="/"
+        )
+        
+        return {
+            "id": user_id,
+            "username": user.get('email'),
+            "name": user.get('name', user.get('email')),
+            "role": user.get('role', 'user'),
+            "token": access_token
+        }
     
-    # Set cookie
-    response.set_cookie(
-        key="access_token", 
-        value=access_token, 
-        httponly=True, 
-        secure=False, 
-        samesite="lax", 
-        max_age=86400,
-        path="/"
-    )
-    
-    return {
-        "id": user_id,
-        "username": admin_username,
-        "name": "Emre Dirlik",
-        "role": "admin",
-        "token": access_token
-    }
+    raise HTTPException(status_code=401, detail="Geçersiz kullanıcı adı veya şifre")
 
 @api_router.post("/auth/logout")
 async def logout(response: Response):
@@ -6927,6 +6951,243 @@ async def get_doner_news(lang: str = 'de'):
         }
     except Exception as e:
         return {"success": False, "error": str(e), "news": []}
+
+# ===================== EXPENSES ROUTES =====================
+
+class ExpenseCreate(BaseModel):
+    category: str = 'other'
+    description: Optional[str] = ''
+    amount: float = 0
+    date: str
+    folder_id: Optional[str] = None
+
+class ExpenseFolderCreate(BaseModel):
+    name: str
+    category: Optional[str] = 'other'
+
+@api_router.get("/expenses")
+async def get_expenses():
+    expenses = await db.expenses.find({}, {"_id": 0}).sort("date", -1).to_list(1000)
+    return expenses
+
+@api_router.post("/expenses/upload")
+async def upload_expense(
+    file: UploadFile = File(...),
+    category: str = Form("other"),
+    description: str = Form(""),
+    amount: str = Form("0"),
+    date: str = Form(...),
+    folder_id: str = Form(None)
+):
+    expense_id = str(uuid.uuid4())
+    
+    # Save file
+    upload_dir = Path("/app/uploads/expenses")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_path = upload_dir / f"{expense_id}_{file.filename}"
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    expense = {
+        "id": expense_id,
+        "filename": file.filename,
+        "file_path": str(file_path),
+        "category": category,
+        "description": description,
+        "amount": float(amount) if amount else 0,
+        "date": date,
+        "folder_id": folder_id if folder_id else None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.expenses.insert_one(expense)
+    return {"id": expense_id, "message": "Uploaded"}
+
+@api_router.get("/expenses/{expense_id}/download")
+async def download_expense(expense_id: str):
+    expense = await db.expenses.find_one({"id": expense_id})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    file_path = Path(expense.get("file_path", ""))
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path, filename=expense.get("filename", "expense.pdf"))
+
+@api_router.get("/expenses/{expense_id}/view")
+async def view_expense(expense_id: str):
+    expense = await db.expenses.find_one({"id": expense_id})
+    if not expense:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    file_path = Path(expense.get("file_path", ""))
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    return FileResponse(file_path, media_type="application/pdf")
+
+@api_router.delete("/expenses/{expense_id}")
+async def delete_expense(expense_id: str):
+    expense = await db.expenses.find_one({"id": expense_id})
+    if expense:
+        file_path = Path(expense.get("file_path", ""))
+        if file_path.exists():
+            file_path.unlink()
+    
+    await db.expenses.delete_one({"id": expense_id})
+    return {"message": "Deleted"}
+
+@api_router.get("/expense-folders")
+async def get_expense_folders():
+    folders = await db.expense_folders.find({}, {"_id": 0}).to_list(100)
+    return folders
+
+@api_router.post("/expense-folders")
+async def create_expense_folder(data: ExpenseFolderCreate):
+    folder_id = str(uuid.uuid4())
+    folder = {
+        "id": folder_id,
+        "name": data.name,
+        "category": data.category,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.expense_folders.insert_one(folder)
+    return folder
+
+@api_router.get("/expenses/export/excel")
+async def export_expenses_excel(category: str = None, date_filter: str = 'all', date: str = None):
+    """Export expenses to Excel"""
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+        from io import BytesIO
+        
+        query = {}
+        if category:
+            query["category"] = category
+        
+        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+        
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Giderler"
+        
+        # Headers
+        headers = ["Tarih", "Kategori", "Açıklama", "Tutar (€)", "Dosya"]
+        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Data
+        category_names = {"hotel": "Otel", "credit_card": "Kredi Kartı", "dkv": "DKV", "other": "Diğer"}
+        total = 0
+        for row, exp in enumerate(expenses, 2):
+            ws.cell(row=row, column=1, value=exp.get("date", ""))
+            ws.cell(row=row, column=2, value=category_names.get(exp.get("category"), "Diğer"))
+            ws.cell(row=row, column=3, value=exp.get("description", ""))
+            ws.cell(row=row, column=4, value=exp.get("amount", 0))
+            ws.cell(row=row, column=5, value=exp.get("filename", ""))
+            total += exp.get("amount", 0)
+        
+        # Total row
+        total_row = len(expenses) + 2
+        ws.cell(row=total_row, column=3, value="TOPLAM").font = Font(bold=True)
+        ws.cell(row=total_row, column=4, value=total).font = Font(bold=True)
+        
+        # Adjust column widths
+        ws.column_dimensions['A'].width = 12
+        ws.column_dimensions['B'].width = 15
+        ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 12
+        ws.column_dimensions['E'].width = 25
+        
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return Response(
+            content=output.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=giderler.xlsx"}
+        )
+    except Exception as e:
+        logger.error(f"Excel export error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/expenses/report/pdf")
+async def generate_expense_report(category: str = None, date_filter: str = 'all', date: str = None):
+    """Generate expense report PDF"""
+    try:
+        query = {}
+        if category:
+            query["category"] = category
+        
+        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+        
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
+        
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', fontName='DejaVu-Bold', fontSize=18, alignment=1, spaceAfter=20)
+        
+        elements = []
+        elements.append(Paragraph("Gider Raporu", title_style))
+        elements.append(Paragraph(f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
+        elements.append(Spacer(1, 20))
+        
+        # Table
+        category_names = {"hotel": "Otel", "credit_card": "Kredi Kartı", "dkv": "DKV", "other": "Diğer"}
+        data = [["Tarih", "Kategori", "Açıklama", "Tutar"]]
+        total = 0
+        
+        for exp in expenses:
+            data.append([
+                exp.get("date", ""),
+                category_names.get(exp.get("category"), "Diğer"),
+                exp.get("description", "")[:30],
+                f"{exp.get('amount', 0):.2f} €"
+            ])
+            total += exp.get("amount", 0)
+        
+        data.append(["", "", "TOPLAM", f"{total:.2f} €"])
+        
+        table = Table(data, colWidths=[70, 80, 200, 70])
+        table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'DejaVu-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'DejaVu'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4F46E5')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ALIGN', (3, 0), (3, -1), 'RIGHT'),
+            ('FONTNAME', (0, -1), (-1, -1), 'DejaVu-Bold'),
+        ]))
+        elements.append(table)
+        
+        doc.build(elements)
+        buffer.seek(0)
+        
+        return Response(
+            content=buffer.getvalue(),
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=gider_raporu.pdf"}
+        )
+    except Exception as e:
+        logger.error(f"PDF report error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 # Include router after all endpoints are defined
 app.include_router(api_router)

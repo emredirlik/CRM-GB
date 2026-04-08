@@ -314,6 +314,32 @@ const ProductVideos = () => {
     setIsShareOpen(false);
   };
 
+  const downloadVideo = async (video) => {
+    try {
+      toast.info('Video indiriliyor...');
+      const response = await axios.get(`${API}/product-videos/${video.id}/download`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', video.filename || `${video.title}.mp4`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Video indirildi');
+    } catch (error) {
+      // If download endpoint doesn't exist, try direct URL
+      if (video.url) {
+        window.open(video.url, '_blank');
+        toast.success('Video açılıyor...');
+      } else {
+        toast.error('Video indirilemedi');
+      }
+    }
+  };
+
   const openShareDialog = (video) => {
     setSelectedVideo(video);
     setShareData({ 
@@ -537,6 +563,19 @@ const ProductVideos = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); downloadVideo(video); }}>
+                          <FileVideo className="w-4 h-4 mr-2" />
+                          İndir
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openShareDialog(video); }}>
+                          <MessageCircle className="w-4 h-4 mr-2 text-green-600" />
+                          WhatsApp
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openShareDialog(video); }}>
+                          <Mail className="w-4 h-4 mr-2 text-blue-600" />
+                          E-posta
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openMoveDialog(video, 'move'); }}>
                           <Move className="w-4 h-4 mr-2" />
                           Taşı

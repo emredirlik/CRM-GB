@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle, Brain, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle, Brain, Sparkles, Loader2, LayoutGrid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -59,6 +59,7 @@ const Leads = () => {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // list or grid
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState(null);
@@ -423,7 +424,8 @@ const Leads = () => {
       call: 'Telefon',
       email: 'Email',
       order: 'Sipariş',
-      follow_up: 'Takip'
+      follow_up: 'Takip',
+      sample_tested: 'Numune Test Edildi'
     };
     return labels[type] || type;
   };
@@ -484,18 +486,36 @@ const Leads = () => {
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder={`${t('search')}...`}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-          data-testid="search-input"
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={`${t('search')}...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="search-input"
+          />
+        </div>
+        <div className="flex gap-1">
+          <Button 
+            variant={viewMode === 'list' ? 'default' : 'outline'} 
+            size="icon"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant={viewMode === 'grid' ? 'default' : 'outline'} 
+            size="icon"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Leads List */}
+      {/* Leads List/Grid */}
       <div data-testid="leads-table-card">
         {filteredLeads.length === 0 ? (
           <Card>
@@ -506,6 +526,43 @@ const Leads = () => {
               </div>
             </CardContent>
           </Card>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="leads-grid">
+            {filteredLeads.map((lead) => (
+              <Card 
+                key={lead.id} 
+                className={`hover:shadow-md transition-shadow cursor-pointer ${selectedLeads.has(lead.id) ? 'ring-2 ring-orange-400' : ''}`}
+                onClick={() => openLeadDetails(lead)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold">
+                      {lead.first_name?.[0]}{lead.last_name?.[0]}
+                    </div>
+                    <Checkbox
+                      checked={selectedLeads.has(lead.id)}
+                      onCheckedChange={(e) => { e.stopPropagation(); toggleLeadSelection(lead.id); }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <h3 className="font-semibold truncate">{lead.company_name}</h3>
+                  <p className="text-sm text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{lead.city}, {lead.country}</p>
+                  <div className="flex gap-1 mt-3">
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); handleSendEmail(lead); }}>
+                      <Mail className="w-3 h-3 text-blue-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openEditDialog(lead); }}>
+                      <Pencil className="w-3 h-3 text-amber-600" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openDeleteDialog(lead); }}>
+                      <Trash2 className="w-3 h-3 text-red-500" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : (
           <div className="space-y-1" data-testid="leads-table">
             {filteredLeads.map((lead) => (
@@ -635,7 +692,7 @@ const Leads = () => {
               {selectedLead ? t('editLead') : t('addLead')}
             </DialogTitle>
             <DialogDescription>
-              {selectedLead ? 'Update lead information' : 'Add a new lead to your database'}
+              {selectedLead ? t('updateLeadInfo') : t('addNewLead')}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
@@ -765,7 +822,7 @@ const Leads = () => {
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="lead-details-dialog">
           <DialogHeader>
-            <DialogTitle className="font-['Manrope']">Customer Details</DialogTitle>
+            <DialogTitle className="font-['Manrope']">{t('customerDetails')}</DialogTitle>
           </DialogHeader>
           {loadingDetails ? (
             <div className="flex items-center justify-center py-8">
@@ -953,6 +1010,7 @@ const Leads = () => {
                         <SelectItem value="email">{t('email')}</SelectItem>
                         <SelectItem value="order">{t('order')}</SelectItem>
                         <SelectItem value="follow_up">{t('followUp')}</SelectItem>
+                        <SelectItem value="sample_tested">{t('sampleTested') || 'Numune Test Edildi'}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

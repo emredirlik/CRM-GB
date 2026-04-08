@@ -24,7 +24,8 @@ import {
   UserCog,
   Brain,
   Crown,
-  Utensils
+  Utensils,
+  Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -46,6 +47,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/recipes', icon: BookOpen, label: 'recipes' },
     { path: '/food-fairs', icon: Utensils, label: 'foodFairs', highlight: true },
     { path: '/daily-reports', icon: Calendar, label: 'dailyReports' },
+    { path: '/expenses', icon: Receipt, label: 'expenses' },
     { path: '/route-planner', icon: MapPin, label: 'routePlanner' },
     { path: '/mail', icon: Mail, label: 'gewuerzbergMail' },
     { path: '/compose', icon: Sparkles, label: 'aiMailComposer', highlight: true },

@@ -24,6 +24,7 @@ const translations = {
     recipes: 'Reçeteler',
     routePlanner: 'Rota Planlayıcı',
     dailyReports: 'Günlük Raporlar',
+    expenses: 'Giderler & Faturalar',
     foodFairs: 'Gıda Fuarları',
     templates: 'Şablonlar',
     mail: 'Gewürzberg E-Mail',
@@ -42,6 +43,7 @@ const translations = {
     
     // Dashboard
     totalLeads: 'Toplam Müşteri',
+    customerDetails: 'Müşteri Detayları',
     totalOrders: 'Toplam Sipariş',
     emailsSent: 'Gönderilen Mail',
     emailsFailed: 'Başarısız Mail',
@@ -136,6 +138,7 @@ const translations = {
     order: 'Sipariş',
     note: 'Not',
     followUp: 'Takip',
+    sampleTested: 'Numune Test Edildi',
     result: 'Sonuç',
     positive: 'Olumlu',
     negative: 'Olumsuz',
@@ -174,6 +177,8 @@ const translations = {
     
     // Leads
     addLead: 'Müşteri Ekle',
+    addNewLead: 'Veritabanınıza yeni müşteri ekleyin',
+    updateLeadInfo: 'Müşteri bilgilerini güncelleyin',
     editLead: 'Müşteri Düzenle',
     deleteLead: 'Müşteri Sil',
     firstName: 'Ad',
@@ -544,6 +549,7 @@ const translations = {
     recipes: 'Rezepte',
     routePlanner: 'Routenplaner',
     dailyReports: 'Tagesberichte',
+    expenses: 'Ausgaben & Rechnungen',
     foodFairs: 'Lebensmittelmessen',
     templates: 'Vorlagen',
     mail: 'Gewürzberg E-Mail',
@@ -562,6 +568,7 @@ const translations = {
     
     // Dashboard
     totalLeads: 'Gesamtkunden',
+    customerDetails: 'Kundendetails',
     totalOrders: 'Gesamtbestellungen',
     emailsSent: 'Gesendete E-Mails',
     emailsFailed: 'Fehlgeschlagene E-Mails',
@@ -655,6 +662,7 @@ const translations = {
     order: 'Bestellung',
     note: 'Notiz',
     followUp: 'Nachverfolgung',
+    sampleTested: 'Probe Getestet',
     result: 'Ergebnis',
     positive: 'Positiv',
     negative: 'Negativ',
@@ -693,6 +701,8 @@ const translations = {
     
     // Leads
     addLead: 'Kunde hinzufügen',
+    addNewLead: 'Neuen Kunden zur Datenbank hinzufügen',
+    updateLeadInfo: 'Kundeninformationen aktualisieren',
     editLead: 'Kunde bearbeiten',
     deleteLead: 'Kunde löschen',
     firstName: 'Vorname',
@@ -1052,6 +1062,7 @@ const translations = {
     recipes: 'Recipes',
     routePlanner: 'Route Planner',
     dailyReports: 'Daily Reports',
+    expenses: 'Expenses & Invoices',
     foodFairs: 'Food Fairs',
     templates: 'Templates',
     mail: 'Gewürzberg Mail',
@@ -1070,6 +1081,7 @@ const translations = {
     
     // Dashboard
     totalLeads: 'Total Leads',
+    customerDetails: 'Customer Details',
     totalOrders: 'Total Orders',
     emailsSent: 'Emails Sent',
     emailsFailed: 'Failed Emails',
@@ -1163,6 +1175,7 @@ const translations = {
     order: 'Order',
     note: 'Note',
     followUp: 'Follow Up',
+    sampleTested: 'Sample Tested',
     result: 'Result',
     positive: 'Positive',
     negative: 'Negative',
@@ -1201,6 +1214,8 @@ const translations = {
     
     // Leads
     addLead: 'Add Lead',
+    addNewLead: 'Add a new lead to your database',
+    updateLeadInfo: 'Update lead information',
     editLead: 'Edit Lead',
     deleteLead: 'Delete Lead',
     firstName: 'First Name',
@@ -1560,6 +1575,7 @@ const translations = {
     recipes: 'Receptury',
     routePlanner: 'Planowanie trasy',
     dailyReports: 'Raporty dzienne',
+    expenses: 'Wydatki i Faktury',
     foodFairs: 'Targi Spożywcze',
     templates: 'Szablony',
     mail: 'Gewürzberg Poczta',
@@ -1578,6 +1594,7 @@ const translations = {
     
     // Dashboard
     totalLeads: 'Łączna liczba klientów',
+    customerDetails: 'Szczegóły klienta',
     totalOrders: 'Łączna liczba zamówień',
     emailsSent: 'Wysłane e-maile',
     emailsFailed: 'Nieudane e-maile',
@@ -1671,6 +1688,7 @@ const translations = {
     order: 'Zamówienie',
     note: 'Notatka',
     followUp: 'Kontynuacja',
+    sampleTested: 'Próbka Przetestowana',
     result: 'Wynik',
     positive: 'Pozytywny',
     negative: 'Negatywny',
@@ -1709,6 +1727,8 @@ const translations = {
     
     // Leads
     addLead: 'Dodaj klienta',
+    addNewLead: 'Dodaj nowego klienta do bazy danych',
+    updateLeadInfo: 'Zaktualizuj informacje o kliencie',
     editLead: 'Edytuj klienta',
     deleteLead: 'Usuń klienta',
     firstName: 'Imię',

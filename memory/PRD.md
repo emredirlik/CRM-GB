@@ -9,21 +9,40 @@ Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 - ✅ PDF oluşturma ve indirme
 - ✅ Route Planner (localStorage ile veri saklama)
 - ✅ PWA desteği
-- ✅ **E-posta sistemi (.eml dosyası olarak indirme - PDF ekleriyle)** (08.04.2026)
-- ✅ **Mobil dropdown menü (Orders, Leads sayfalarında)** (08.04.2026)
+- ✅ Mail sistemi (IMAP - şu an pasif, CNAME sonrası aktif edilecek)
 
 ## Son Değişiklikler (08.04.2026)
-1. **E-posta Sistemi Güncellendi**: IONOS IMAP yerine .eml dosyası indirme yöntemi. Kullanıcı kendi mail uygulamasında (Outlook, Thunderbird vb.) açıp gönderebilir.
-2. **Mobil Uyumluluk**: Orders ve Leads sayfalarında mobilde dropdown menü (üç nokta) ile tüm aksiyonlar erişilebilir.
+1. **Giderler & Faturalar Sayfası**: Tam fonksiyonel gider yönetimi
+   - Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
+   - PDF yükleme (Drag & Drop destekli)
+   - Klasör oluşturma
+   - Excel ve PDF rapor dışa aktarma
+   - Grid/List görünüm
 
-## Bekleyen Görevler
-- P1: WhatsApp Business API
-- P1: Otomatik Haftalık Email (CRON)
-- P2: AI Otomatik Kategorizasyon
-- P2: Stok Takibi
-- P2: Fatura Yönetimi
+2. **Grid/List Görünüm**: Müşteriler sayfasına eklendi
+
+3. **Aktivite Türü**: "Numune Test Edildi" seçeneği eklendi
+
+4. **Videolar**: İndirme, WhatsApp, E-posta seçenekleri eklendi
+
+5. **Dil Çevirileri**: Eksik çeviriler tamamlandı
+
+6. **Yeni Kullanıcı Girişi**: DB'den kullanıcı kontrolü eklendi
+
+## Bekleyen/Devam Eden Görevler
+- 🔴 E-posta sistemi (CNAME kaydı sonrası aktif edilecek)
+- 🟡 Mobil UI iyileştirmeleri
+- 🟡 Diğer sayfalara Grid/List görünüm
+- 🟡 PDF karakter sorunları kontrolü
+
+## Gelecek Görevler
+- WhatsApp Business API
+- Otomatik Haftalık Email (CRON)
+- AI Otomatik Kategorizasyon
+- Stok Takibi
+- Fatura Yönetimi
 
 ## Teknik Bilgiler
 - Frontend: React + TailwindCSS + Shadcn/UI
 - Backend: FastAPI + MongoDB
-- Mail: .eml dosya indirme (tüm mail clientları destekler)
+- Giderler: /api/expenses, /api/expense-folders endpoints
