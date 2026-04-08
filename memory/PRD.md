@@ -1,54 +1,54 @@
 # Gewürzberg CRM - PRD (08.04.2026)
 
 ## Özet
-Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
+Berlin merkezli baharat fabrikası için B2B CRM - Giderler & Faturalar modülü
 
-## ✅ Son Eklenen Özellikler
+## ✅ Tamamlanan Özellikler
 
-### 1. Klasör Navigasyonu ✅
-- Klasöre tıklayınca içine giriyor
-- Breadcrumb: "Ana Dizin / Klasör Adı"
-- "← Geri" butonu ile üst klasöre dönme
-- Alt klasör sayısı badge ile gösteriliyor
+### 1. Hiyerarşik Yıl/Ay Seçimi ✅
+- Üstte YIL dropdown (2024-2027)
+- Yanında AY dropdown (Tüm Aylar + 12 ay)
+- "2026 (Tüm Yıl)" göstergesi
+- Veriler otomatik filtreleniyor
 
-### 2. PDF Klasöre Taşıma ✅
-- Her gider kartında dropdown menü (üç nokta)
-- "Klasörden Çıkar" seçeneği
-- "X Klasörüne Taşı" seçenekleri
-
-### 3. PDF Önizleme ✅
-- Modal içinde PDF görüntüleme (object/embed tag)
-- "İndir" butonu
-- Geniş modal (max-w-5xl, 80vh yükseklik)
-
-### 4. Aylık/Yıllık Rapor ✅
-- Rapor butonu dropdown menü
-- "Tüm Giderler", "Aylık Rapor", "Yıllık Rapor"
-
-### 5. Alt Klasör (Nested Folders) ✅
-- Klasör içinde klasör oluşturma
-- Parent klasör seçimi
-
-### 6. Excel Export ✅
+### 2. Excel Export (GB Ausnahmen Format) ✅
+- Year ve month parametreleri ile filtreleme
 - 4 sayfa: Ausgabenübersicht, Hotel, DKV, Kreditkarte
-- Tüm gider verileri dahil
+- Türkçe karakter desteği (UTF-8)
+- Dosya adı: `GB_Ausnahmen_2026_Nisan.xlsx`
+
+### 3. PDF Rapor ✅
+- Seçili yıl ve aya göre rapor
+- Dosya adı: `Gider_Raporu_2026_Nisan.pdf`
+
+### 4. Liste Görünümü Butonları ✅
+- Her satırda Görüntüle, İndir, Sil butonları HER ZAMAN görünür
+- Üç nokta menüsü ile klasöre taşıma
+
+### 5. Klasör Navigasyonu ✅
+- Klasöre tıklayınca içine giriyor
+- Breadcrumb navigasyon
+- "← Geri" butonu
+
+### 6. PDF Klasöre Taşıma ✅
+- Dropdown menüde "X'e Taşı" seçenekleri
+
+### 7. PDF Önizleme ✅
+- Modal içinde embed PDF viewer
+- İndir butonu
+
+### 8. PDF Birleştirme ✅
+- Klasör bazlı toplu PDF oluşturma
 
 ## API Endpoints
 
-### Expenses
-- `PUT /api/expenses/{id}` - Gideri güncelle (klasöre taşı)
-- `GET /api/expenses?folder_id=xxx` - Klasöre göre filtrele
-
-### Reports
-- `GET /api/expenses/report/pdf?report_type=monthly&month=4&year=2026`
-- `GET /api/expenses/report/pdf?report_type=yearly&year=2026`
-
-### Folders
-- `POST /api/expense-folders` - `{name, category, parent_id}`
-- `GET /api/expense-folders` - path ve children_count dahil
+### Excel/Report with Year/Month
+- `GET /api/expenses/export/excel?year=2026&month=4`
+- `GET /api/expenses/report/pdf?year=2026&month=4`
 
 ## Bekleyen
 - E-posta IMAP/SMTP (CNAME kaydı bekleniyor)
+- Mobil kamera perspektif düzeltme (gelişmiş CV gerekli)
 
 ## Gelecek Görevler
 - WhatsApp Business API

@@ -7221,15 +7221,33 @@ async def merge_expense_pdfs(folder_id: str = None, expense_ids: List[str] = Non
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/expenses/export/excel")
-async def export_expenses_excel(category: str = None, date_filter: str = 'all', date: str = None):
-    """Export expenses to Excel - GB Ausnahmen 2026 format"""
+async def export_expenses_excel(category: str = None, year: int = None, month: int = None):
+    """Export expenses to Excel - GB Ausnahmen format with year/month filter"""
     try:
         import openpyxl
         from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
         from io import BytesIO
         from collections import defaultdict
         
-        expenses = await db.expenses.find({}, {"_id": 0}).sort("date", 1).to_list(1000)
+        # Build query with year/month filter
+        query = {}
+        target_year = year or datetime.now().year
+        
+        if month:
+            # Filter by specific month
+            start_date = f"{target_year}-{str(month).zfill(2)}-01"
+            if month == 12:
+                end_date = f"{target_year + 1}-01-01"
+            else:
+                end_date = f"{target_year}-{str(month + 1).zfill(2)}-01"
+            query["date"] = {"$gte": start_date, "$lt": end_date}
+        else:
+            # Filter by year
+            start_date = f"{target_year}-01-01"
+            end_date = f"{target_year + 1}-01-01"
+            query["date"] = {"$gte": start_date, "$lt": end_date}
+        
+        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
         
         wb = openpyxl.Workbook()
         

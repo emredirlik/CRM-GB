@@ -64,14 +64,25 @@ const Expenses = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('all'); // all, daily, monthly, yearly
+  const [dateFilter, setDateFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Hierarchical Year/Month selection
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(null); // null = tüm yıl
+  const years = [2024, 2025, 2026, 2027];
+  const months = [
+    { id: 1, name: 'Ocak' }, { id: 2, name: 'Şubat' }, { id: 3, name: 'Mart' },
+    { id: 4, name: 'Nisan' }, { id: 5, name: 'Mayıs' }, { id: 6, name: 'Haziran' },
+    { id: 7, name: 'Temmuz' }, { id: 8, name: 'Ağustos' }, { id: 9, name: 'Eylül' },
+    { id: 10, name: 'Ekim' }, { id: 11, name: 'Kasım' }, { id: 12, name: 'Aralık' }
+  ];
   
   // Dialog states
   const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false); // CamScanner style camera
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
@@ -80,8 +91,8 @@ const Expenses = () => {
   
   // Form states
   const [folderName, setFolderName] = useState('');
-  const [parentFolderId, setParentFolderId] = useState(null); // For nested folders
-  const [reportType, setReportType] = useState('all'); // all, monthly, yearly
+  const [parentFolderId, setParentFolderId] = useState(null);
+  const [reportType, setReportType] = useState('all');
   const [uploadData, setUploadData] = useState({
     category: 'other',
     description: '',
@@ -354,18 +365,21 @@ const Expenses = () => {
         responseType: 'blob',
         params: {
           category: selectedCategory !== 'all' ? selectedCategory : undefined,
-          date_filter: dateFilter,
-          date: selectedDate
+          year: selectedYear,
+          month: selectedMonth || undefined
         }
       });
+      const monthName = selectedMonth ? months.find(m => m.id === selectedMonth)?.name : 'Tum_Yil';
+      const filename = `GB_Ausnahmen_${selectedYear}_${monthName}.xlsx`;
+      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `giderler_${new Date().toISOString().split('T')[0]}.xlsx`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('Excel indirildi');
+      toast.success(`Excel indirildi: ${selectedYear} ${selectedMonth ? months.find(m => m.id === selectedMonth)?.name : 'Tüm Yıl'}`);
     } catch (error) {
       toast.error('Excel oluşturulamadı');
     }
@@ -406,12 +420,11 @@ const Expenses = () => {
 
   const generateReport = async (type = 'all') => {
     try {
-      const now = new Date();
       const params = {
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        report_type: type,
-        month: now.getMonth() + 1,
-        year: now.getFullYear()
+        report_type: type === 'all' ? (selectedMonth ? 'monthly' : 'yearly') : type,
+        month: selectedMonth || undefined,
+        year: selectedYear
       };
       
       const response = await axios.get(`${API}/expenses/report/pdf`, {
@@ -419,11 +432,10 @@ const Expenses = () => {
         params
       });
       
-      const filename = type === 'monthly' 
-        ? `aylik_rapor_${now.getMonth() + 1}_${now.getFullYear()}.pdf`
-        : type === 'yearly'
-        ? `yillik_rapor_${now.getFullYear()}.pdf`
-        : `gider_raporu_${new Date().toISOString().split('T')[0]}.pdf`;
+      const monthName = selectedMonth ? months.find(m => m.id === selectedMonth)?.name : '';
+      const filename = selectedMonth 
+        ? `Gider_Raporu_${selectedYear}_${monthName}.pdf`
+        : `Gider_Raporu_${selectedYear}_Tum_Yil.pdf`;
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -432,7 +444,7 @@ const Expenses = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success(type === 'monthly' ? 'Aylık rapor indirildi' : type === 'yearly' ? 'Yıllık rapor indirildi' : 'Rapor indirildi');
+      toast.success(`Rapor indirildi: ${selectedYear} ${monthName || 'Tüm Yıl'}`);
     } catch (error) {
       toast.error('Rapor oluşturulamadı');
     }
@@ -458,10 +470,29 @@ const Expenses = () => {
     if (selectedCategory !== 'all' && expense.category !== selectedCategory) return false;
     if (searchTerm && !expense.description?.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (selectedFolder && expense.folder_id !== selectedFolder) return false;
+    
+    // Year and Month filtering
+    if (expense.date) {
+      const expenseDate = new Date(expense.date);
+      const expenseYear = expenseDate.getFullYear();
+      const expenseMonth = expenseDate.getMonth() + 1;
+      
+      if (selectedYear && expenseYear !== selectedYear) return false;
+      if (selectedMonth && expenseMonth !== selectedMonth) return false;
+    }
+    
     return true;
   });
 
   const totalAmount = filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+  
+  // Category totals for current filter
+  const categoryTotals = EXPENSE_CATEGORIES.reduce((acc, cat) => {
+    acc[cat.id] = filteredExpenses
+      .filter(e => e.category === cat.id)
+      .reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    return acc;
+  }, {});
 
   const getCategoryInfo = (categoryId) => {
     return EXPENSE_CATEGORIES.find(c => c.id === categoryId) || EXPENSE_CATEGORIES[3];
@@ -562,8 +593,35 @@ const Expenses = () => {
           />
         </div>
         
+        {/* Year Selector */}
+        <Select value={selectedYear?.toString()} onValueChange={(v) => { setSelectedYear(parseInt(v)); setSelectedMonth(null); }}>
+          <SelectTrigger className="w-[100px]">
+            <Calendar className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="Yıl" />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map(year => (
+              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        {/* Month Selector */}
+        <Select value={selectedMonth?.toString() || "all"} onValueChange={(v) => setSelectedMonth(v === "all" ? null : parseInt(v))}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Tüm Aylar" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm Aylar</SelectItem>
+            {months.map(month => (
+              <SelectItem key={month.id} value={month.id.toString()}>{month.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        {/* Category Filter */}
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Kategori" />
           </SelectTrigger>
           <SelectContent>
@@ -573,27 +631,6 @@ const Expenses = () => {
             ))}
           </SelectContent>
         </Select>
-
-        <Select value={dateFilter} onValueChange={setDateFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Tarih" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tümü</SelectItem>
-            <SelectItem value="daily">Günlük</SelectItem>
-            <SelectItem value="monthly">Aylık</SelectItem>
-            <SelectItem value="yearly">Yıllık</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {dateFilter !== 'all' && (
-          <Input
-            type={dateFilter === 'daily' ? 'date' : dateFilter === 'monthly' ? 'month' : 'number'}
-            value={dateFilter === 'yearly' ? new Date().getFullYear() : selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-[150px]"
-          />
-        )}
 
         <div className="flex gap-1 ml-auto">
           <Button 
@@ -613,29 +650,41 @@ const Expenses = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
-          <CardContent className="p-4">
-            <p className="text-sm opacity-80">Toplam Gider</p>
-            <p className="text-2xl font-bold">{totalAmount.toFixed(2)} €</p>
-          </CardContent>
-        </Card>
-        {EXPENSE_CATEGORIES.map(cat => {
-          const catTotal = expenses.filter(e => e.category === cat.id).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-          const CatIcon = cat.icon;
-          return (
-            <Card key={cat.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedCategory(cat.id)}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <CatIcon className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{cat.name}</p>
-                </div>
-                <p className="text-xl font-bold">{catTotal.toFixed(2)} €</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Summary Cards - Year/Month context */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="w-4 h-4" />
+          <span className="font-medium">
+            {selectedYear} {selectedMonth ? `/ ${months.find(m => m.id === selectedMonth)?.name}` : '(Tüm Yıl)'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+            <CardContent className="p-4">
+              <p className="text-sm opacity-80">Toplam Gider</p>
+              <p className="text-2xl font-bold">{totalAmount.toFixed(2)} €</p>
+            </CardContent>
+          </Card>
+          {EXPENSE_CATEGORIES.map(cat => {
+            const catTotal = categoryTotals[cat.id] || 0;
+            const CatIcon = cat.icon;
+            return (
+              <Card 
+                key={cat.id} 
+                className={`cursor-pointer hover:shadow-md transition-shadow ${selectedCategory === cat.id ? 'ring-2 ring-indigo-400' : ''}`} 
+                onClick={() => setSelectedCategory(selectedCategory === cat.id ? 'all' : cat.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <CatIcon className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">{cat.name}</p>
+                  </div>
+                  <p className="text-xl font-bold">{catTotal.toFixed(2)} €</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
       {/* Folders with Navigation */}
@@ -821,37 +870,41 @@ const Expenses = () => {
                       <span className="text-xs text-muted-foreground">{expense.date}</span>
                     </div>
                   </div>
-                  <span className="font-bold text-lg">{expense.amount} €</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }}>
-                        <Eye className="w-4 h-4 mr-2" /> Görüntüle
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => downloadExpense(expense)}>
-                        <Download className="w-4 h-4 mr-2" /> İndir
-                      </DropdownMenuItem>
-                      {folders.length > 0 && (
-                        <>
-                          <DropdownMenuItem onClick={() => handleMoveToFolder(expense.id, null)}>
-                            <Folder className="w-4 h-4 mr-2" /> Klasörden Çıkar
-                          </DropdownMenuItem>
-                          {folders.filter(f => f.id !== expense.folder_id).slice(0, 5).map(folder => (
-                            <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(expense.id, folder.id)}>
-                              <Folder className="w-4 h-4 mr-2 text-blue-500" /> {folder.name}'a Taşı
+                  <span className="font-bold text-lg whitespace-nowrap">{expense.amount} €</span>
+                  
+                  {/* Always visible action buttons */}
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }} title="Görüntüle">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => downloadExpense(expense)} title="İndir">
+                      <Download className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }} title="Sil" className="text-destructive hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {folders.length > 0 && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleMoveToFolder(expense.id, null)}>
+                              <Folder className="w-4 h-4 mr-2" /> Klasörden Çıkar
                             </DropdownMenuItem>
-                          ))}
-                        </>
-                      )}
-                      <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Sil
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                            {folders.filter(f => f.id !== expense.folder_id).slice(0, 5).map(folder => (
+                              <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(expense.id, folder.id)}>
+                                <Folder className="w-4 h-4 mr-2 text-blue-500" /> {folder.name}'a Taşı
+                              </DropdownMenuItem>
+                            ))}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </CardContent>
               </Card>
             );
