@@ -318,30 +318,44 @@ const Expenses = () => {
   };
 
   // Handle DocumentScanner capture (CamScanner style)
-  const handleDocumentScannerCapture = async (file) => {
+  const handleDocumentScannerCapture = async (file, ocrData = null) => {
     setIsScannerOpen(false);
     setScanning(true);
     setIsScanOpen(true);
     
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await axios.post(`${API}/expenses/scan-ocr`, formData);
-      
-      if (response.data && response.data.success !== false) {
-        setOcrResult(response.data);
+      // If OCR data already provided from DocumentScanner (processed by backend)
+      if (ocrData && (ocrData.vendor || ocrData.total || ocrData.date)) {
+        setOcrResult(ocrData);
         setUploadData(prev => ({
           ...prev,
-          description: response.data.vendor || '',
-          amount: response.data.total || '',
-          date: response.data.date || prev.date
+          description: ocrData.vendor || '',
+          amount: ocrData.total || '',
+          date: ocrData.date || prev.date
         }));
         setUploadFiles([file]);
-        toast.success('Fatura başarıyla tarandı!');
+        toast.success('Fatura başarıyla tarandı ve işlendi!');
       } else {
-        setUploadFiles([file]);
-        toast.info('OCR tamamlandı, lütfen verileri kontrol edin.');
+        // Fallback: Send to OCR endpoint if not already processed
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await axios.post(`${API}/expenses/scan-ocr`, formData);
+        
+        if (response.data && response.data.success !== false) {
+          setOcrResult(response.data);
+          setUploadData(prev => ({
+            ...prev,
+            description: response.data.vendor || '',
+            amount: response.data.total || '',
+            date: response.data.date || prev.date
+          }));
+          setUploadFiles([file]);
+          toast.success('Fatura başarıyla tarandı!');
+        } else {
+          setUploadFiles([file]);
+          toast.info('OCR tamamlandı, lütfen verileri kontrol edin.');
+        }
       }
     } catch (error) {
       console.error('DocumentScanner OCR error:', error);
@@ -396,26 +410,37 @@ const Expenses = () => {
     }
   };
 
-  const mergePdfs = async () => {
+  const mergePdfs = async (folderId = null, folderName = null) => {
     try {
-      const ids = filteredExpenses.map(e => e.id);
-      if (ids.length === 0) {
-        toast.error(language === 'de' ? 'Keine PDFs zum Zusammenführen' : 'Birleştirilecek PDF yok');
-        return;
+      // If specific folder selected, use that folder's expenses
+      let requestBody = {};
+      let downloadName = '';
+      
+      if (folderId) {
+        // Merge only that folder's PDFs
+        requestBody = { folder_id: folderId };
+        downloadName = `birlesik_${folderName || 'klasor'}.pdf`;
+      } else {
+        // Merge all filtered expenses (no folder - "Klasörsüz" option)
+        const noFolderExpenses = filteredExpenses.filter(e => !e.folder_id);
+        const ids = noFolderExpenses.map(e => e.id);
+        if (ids.length === 0) {
+          toast.error(language === 'de' ? 'Keine PDFs zum Zusammenführen' : 'Birleştirilecek PDF yok');
+          return;
+        }
+        requestBody = { expense_ids: ids };
+        const monthName = selectedMonth ? months.find(m => m.id === selectedMonth)?.name : '';
+        downloadName = `birlesik_klasorsuz_${selectedYear}${monthName ? '_' + monthName : ''}.pdf`;
       }
       
-      const response = await axios.post(`${API}/expenses/merge-pdfs`, {
-        folder_id: selectedFolder || null,
-        expense_ids: selectedFolder ? null : ids
-      }, {
+      const response = await axios.post(`${API}/expenses/merge-pdfs`, requestBody, {
         responseType: 'blob'
       });
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      const monthName = selectedMonth ? months.find(m => m.id === selectedMonth)?.name : '';
-      link.setAttribute('download', `birlesik_${selectedYear}${monthName ? '_' + monthName : ''}.pdf`);
+      link.setAttribute('download', downloadName);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -560,10 +585,33 @@ const Expenses = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={mergePdfs} className="text-purple-600 border-purple-300 hover:bg-purple-50">
-            <FileText className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('mergePdf')}</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="text-purple-600 border-purple-300 hover:bg-purple-50">
+                <FileText className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t('mergePdf')}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
+              <DropdownMenuItem onClick={() => mergePdfs(null, null)} className="text-gray-600">
+                <FileText className="w-4 h-4 mr-2" />
+                {language === 'de' ? 'Ohne Ordner' : 'Klasörsüz'}
+              </DropdownMenuItem>
+              {folders.length > 0 && (
+                <div className="border-t my-1" />
+              )}
+              {folders.map(folder => (
+                <DropdownMenuItem 
+                  key={folder.id} 
+                  onClick={() => mergePdfs(folder.id, folder.name)}
+                  className="text-purple-600"
+                >
+                  <Folder className="w-4 h-4 mr-2" />
+                  {folder.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button 
             size="sm" 
             onClick={() => setIsScannerOpen(true)} 

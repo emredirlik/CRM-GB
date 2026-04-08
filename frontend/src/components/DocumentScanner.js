@@ -1,18 +1,26 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Camera, X, RotateCcw, Check, Flashlight, ZoomIn, Focus } from 'lucide-react';
+import { Camera, X, RotateCcw, Check, Flashlight, ZoomIn, Focus, ImageIcon, ScanLine, Loader2 } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [capturedImage, setCapturedImage] = useState(null);
+  const [processedImage, setProcessedImage] = useState(null); // OpenCV processed image
+  const [showProcessed, setShowProcessed] = useState(true); // Toggle between original/processed
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState(''); // Status message
   const [facingMode, setFacingMode] = useState('environment');
   const [hasFlash, setHasFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [ocrData, setOcrData] = useState(null); // OCR extracted data
 
   // Start camera when dialog opens
   useEffect(() => {
@@ -81,7 +89,7 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
-  const capturePhoto = useCallback(() => {
+  const capturePhoto = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -95,49 +103,93 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
     // Draw the video frame
     ctx.drawImage(video, 0, 0);
 
-    // Apply some basic image enhancement
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    // Increase contrast and brightness for document scanning
-    const contrast = 1.2;
-    const brightness = 10;
-    
-    for (let i = 0; i < data.length; i += 4) {
-      data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness));
-      data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness));
-      data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness));
-    }
-    
-    ctx.putImageData(imageData, 0, 0);
-
-    // Get the image as data URL
-    const imageUrl = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedImage(imageUrl);
+    // Get the original image as data URL
+    const originalImageUrl = canvas.toDataURL('image/jpeg', 0.9);
+    setCapturedImage(originalImageUrl);
     stopCamera();
+    
+    // Now send to backend for OpenCV processing
+    setIsProcessing(true);
+    setProcessingStep('Belge kenarları algılanıyor...');
+    
+    try {
+      // Convert data URL to blob
+      const response = await fetch(originalImageUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      
+      // Send to backend for CamScanner-style processing
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      setProcessingStep('Perspektif düzeltiliyor...');
+      
+      const processResponse = await axios.post(`${API}/expenses/scan-ocr`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      setProcessingStep('Siyah-beyaz dönüşüm yapılıyor...');
+      
+      if (processResponse.data.processed_image) {
+        // Set the processed image from backend (base64)
+        const processedBase64 = `data:image/png;base64,${processResponse.data.processed_image}`;
+        setProcessedImage(processedBase64);
+        setShowProcessed(true);
+        
+        // Store OCR data
+        setOcrData({
+          vendor: processResponse.data.vendor || '',
+          date: processResponse.data.date || '',
+          total: processResponse.data.total || ''
+        });
+      } else {
+        // Fallback to original if processing failed
+        setProcessedImage(null);
+        setShowProcessed(false);
+      }
+      
+      setProcessingStep('');
+    } catch (error) {
+      console.error('Backend processing error:', error);
+      // Keep original image if backend fails
+      setProcessedImage(null);
+      setShowProcessed(false);
+    } finally {
+      setIsProcessing(false);
+      setProcessingStep('');
+    }
   }, []);
 
   const retakePhoto = () => {
     setCapturedImage(null);
+    setProcessedImage(null);
+    setShowProcessed(true);
+    setOcrData(null);
     startCamera();
   };
 
   const confirmPhoto = async () => {
-    if (!capturedImage) return;
+    // Use processed image if available and selected, otherwise use original
+    const imageToUse = (showProcessed && processedImage) ? processedImage : capturedImage;
+    if (!imageToUse) return;
     
     setIsProcessing(true);
     
     try {
       // Convert data URL to blob
-      const response = await fetch(capturedImage);
+      const response = await fetch(imageToUse);
       const blob = await response.blob();
-      const file = new File([blob], `scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const file = new File([blob], `scan_${Date.now()}.${processedImage ? 'png' : 'jpg'}`, { 
+        type: processedImage ? 'image/png' : 'image/jpeg' 
+      });
       
-      // Call the onCapture callback with the file
-      onCapture(file);
+      // Call the onCapture callback with the file and OCR data
+      onCapture(file, ocrData);
       
       // Close and reset
       setCapturedImage(null);
+      setProcessedImage(null);
+      setOcrData(null);
       onClose();
     } catch (err) {
       console.error('Processing error:', err);
@@ -149,6 +201,9 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
   const handleClose = () => {
     stopCamera();
     setCapturedImage(null);
+    setProcessedImage(null);
+    setOcrData(null);
+    setShowProcessed(true);
     onClose();
   };
 
@@ -178,27 +233,83 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
               </Button>
             </div>
           ) : capturedImage ? (
-            // Show captured image
+            // Show captured/processed image
             <div className="w-full h-full">
+              {/* Processing overlay */}
+              {isProcessing && (
+                <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center">
+                  <Loader2 className="w-12 h-12 text-green-500 animate-spin mb-4" />
+                  <p className="text-white text-lg font-medium">{processingStep || 'İşleniyor...'}</p>
+                  <p className="text-gray-400 text-sm mt-2">CamScanner teknolojisi ile taranıyor</p>
+                </div>
+              )}
+              
+              {/* Display image - processed or original */}
               <img 
-                src={capturedImage} 
+                src={(showProcessed && processedImage) ? processedImage : capturedImage} 
                 alt="Captured" 
                 className="w-full h-full object-contain bg-black"
               />
               
-              {/* Document detection overlay */}
-              <div className="absolute inset-8 border-2 border-green-500 rounded-lg pointer-events-none">
-                <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-green-500 rounded-tl-lg" />
-                <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-green-500 rounded-tr-lg" />
-                <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-green-500 rounded-bl-lg" />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-green-500 rounded-br-lg" />
-              </div>
+              {/* Original/Processed toggle buttons - only show after processing completes */}
+              {!isProcessing && processedImage && (
+                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 flex gap-1 bg-black/70 p-1 rounded-full">
+                  <Button
+                    size="sm"
+                    onClick={() => setShowProcessed(false)}
+                    className={`rounded-full px-4 py-1 text-xs ${!showProcessed 
+                      ? 'bg-white text-black' 
+                      : 'bg-transparent text-white hover:bg-white/20'}`}
+                  >
+                    <ImageIcon className="w-3 h-3 mr-1" />
+                    Orijinal
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowProcessed(true)}
+                    className={`rounded-full px-4 py-1 text-xs ${showProcessed 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-transparent text-white hover:bg-white/20'}`}
+                  >
+                    <ScanLine className="w-3 h-3 mr-1" />
+                    Taranmış
+                  </Button>
+                </div>
+              )}
               
+              {/* Status badge */}
+              {!isProcessing && (
+                <div className="absolute top-16 right-4 z-10">
+                  {processedImage ? (
+                    <span className="bg-green-600 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      {showProcessed ? 'Taranmış' : 'Orijinal'}
+                    </span>
+                  ) : (
+                    <span className="bg-yellow-600 text-white text-xs px-3 py-1 rounded-full">
+                      Orijinal (işleme başarısız)
+                    </span>
+                  )}
+                </div>
+              )}
+              
+              {/* OCR extracted data preview */}
+              {!isProcessing && ocrData && (ocrData.vendor || ocrData.total) && (
+                <div className="absolute left-4 top-16 z-10 bg-black/70 text-white p-3 rounded-lg text-xs max-w-[200px]">
+                  <p className="font-semibold mb-1 text-green-400">Algılanan Bilgiler:</p>
+                  {ocrData.vendor && <p>📍 {ocrData.vendor}</p>}
+                  {ocrData.date && <p>📅 {ocrData.date}</p>}
+                  {ocrData.total && <p>💰 {ocrData.total} €</p>}
+                </div>
+              )}
+              
+              {/* Action buttons */}
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-4">
                 <Button 
                   onClick={retakePhoto}
                   variant="outline"
                   className="bg-white/10 text-white border-white/30 hover:bg-white/20"
+                  disabled={isProcessing}
                 >
                   <RotateCcw className="w-5 h-5 mr-2" />
                   Tekrar Çek
@@ -208,17 +319,8 @@ const DocumentScanner = ({ isOpen, onClose, onCapture }) => {
                   className="bg-green-600 hover:bg-green-700 text-white px-8"
                   disabled={isProcessing}
                 >
-                  {isProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                      İşleniyor...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-5 h-5 mr-2" />
-                      Onayla
-                    </>
-                  )}
+                  <Check className="w-5 h-5 mr-2" />
+                  {showProcessed && processedImage ? 'Taranmışı Kaydet' : 'Orijinali Kaydet'}
                 </Button>
               </div>
             </div>
