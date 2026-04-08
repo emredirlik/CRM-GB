@@ -4751,19 +4751,15 @@ async def send_mail_with_attachments(
     html: str = Form("false"),
     attachments: List[UploadFile] = File(default=[])
 ):
-    """Send email with attachments via SMTP"""
-    settings = await db.company_settings.find_one({}, {"_id": 0})
-    
-    if not settings or not settings.get('smtp_host'):
-        raise HTTPException(status_code=400, detail="SMTP not configured")
+    """Generate .eml file for download - user can open in any mail client"""
+    import base64
     
     try:
         msg = MIMEMultipart()
-        msg['From'] = f"{settings.get('from_name', '')} <{settings.get('from_email', settings['smtp_username'])}>"
+        msg['From'] = 'emre@gewuerzberg.de'
         msg['To'] = to
         msg['Subject'] = subject
         
-        # Use HTML content if html flag is set
         if html.lower() == 'true':
             msg.attach(MIMEText(body, 'html', 'utf-8'))
         else:
@@ -4776,34 +4772,29 @@ async def send_mail_with_attachments(
             part['Content-Disposition'] = f'attachment; filename="{attachment.filename}"'
             msg.attach(part)
         
-        smtp_host = settings['smtp_host']
-        smtp_port = int(settings.get('smtp_port', 587))
+        # Return .eml content as base64 for frontend to download
+        eml_content = msg.as_bytes()
+        eml_base64 = base64.b64encode(eml_content).decode('utf-8')
         
-        if settings.get('use_ssl'):
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port)
-        else:
-            server = smtplib.SMTP(smtp_host, smtp_port)
-            if settings.get('use_tls', True):
-                server.starttls()
-        
-        server.login(settings['smtp_username'], settings['smtp_password'])
-        server.send_message(msg)
-        server.quit()
-        
-        # Log to email_log
+        # Log
         await db.email_log.insert_one({
             "id": str(uuid.uuid4()),
             "to": to,
             "subject": subject,
-            "body": body,
+            "body": body[:500],
             "attachments": [a.filename for a in attachments],
-            "status": "sent",
+            "status": "eml_generated",
             "sent_at": datetime.now(timezone.utc).isoformat()
         })
         
-        return {"success": True, "message": "Email sent with attachments"}
+        return {
+            "success": True, 
+            "message": "E-posta dosyası hazır",
+            "eml_data": eml_base64,
+            "filename": f"email_{to.split('@')[0]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.eml"
+        }
     except Exception as e:
-        logger.error(f"SMTP error: {e}")
+        logger.error(f"EML generation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===================== PRODUCT VIDEOS ROUTES =====================
