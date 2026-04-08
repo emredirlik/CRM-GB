@@ -6977,7 +6977,12 @@ async def upload_expense(
     description: str = Form(""),
     amount: str = Form("0"),
     date: str = Form(...),
-    folder_id: str = Form(None)
+    folder_id: str = Form(None),
+    country: str = Form(""),
+    address: str = Form(""),
+    notes: str = Form(""),
+    local_currency: str = Form(""),
+    invoice_name: str = Form("")
 ):
     expense_id = str(uuid.uuid4())
     
@@ -6999,6 +7004,11 @@ async def upload_expense(
         "amount": float(amount) if amount else 0,
         "date": date,
         "folder_id": folder_id if folder_id else None,
+        "country": country,
+        "address": address,
+        "notes": notes,
+        "local_currency": local_currency,
+        "invoice_name": invoice_name,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -7141,55 +7151,232 @@ async def create_expense_folder(data: ExpenseFolderCreate):
 
 @api_router.get("/expenses/export/excel")
 async def export_expenses_excel(category: str = None, date_filter: str = 'all', date: str = None):
-    """Export expenses to Excel"""
+    """Export expenses to Excel - GB Ausnahmen 2026 format"""
     try:
         import openpyxl
         from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
         from io import BytesIO
+        from collections import defaultdict
         
-        query = {}
-        if category:
-            query["category"] = category
-        
-        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
+        expenses = await db.expenses.find({}, {"_id": 0}).sort("date", 1).to_list(1000)
         
         wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Giderler"
         
-        # Headers
-        headers = ["Tarih", "Kategori", "Açıklama", "Tutar (€)", "Dosya"]
-        header_fill = PatternFill(start_color="4F46E5", end_color="4F46E5", fill_type="solid")
+        # Styles
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
+        month_font = Font(bold=True, size=12)
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
         
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
+        category_names_de = {
+            "hotel": "Hotel", 
+            "credit_card": "Karte 9939", 
+            "dkv": "DKV (Kraftstoff)", 
+            "other": "Sonstige"
+        }
+        
+        month_names_de = {
+            1: "JANUAR", 2: "FEBRUAR", 3: "MÄRZ", 4: "APRIL",
+            5: "MAI", 6: "JUNI", 7: "JULI", 8: "AUGUST",
+            9: "SEPTEMBER", 10: "OKTOBER", 11: "NOVEMBER", 12: "DEZEMBER"
+        }
+        
+        # ========== SHEET 1: Ausgabenübersicht (Main Overview) ==========
+        ws1 = wb.active
+        ws1.title = "Ausgabenübersicht 2026"
+        
+        headers1 = ["Datum", "Kategorie", "Ort / Hotelname", "Land", "Betrag"]
+        for col, h in enumerate(headers1, 1):
+            cell = ws1.cell(row=1, column=col, value=h)
             cell.fill = header_fill
             cell.font = header_font
-            cell.alignment = Alignment(horizontal="center")
+            cell.border = thin_border
         
-        # Data
-        category_names = {"hotel": "Otel", "credit_card": "Kredi Kartı", "dkv": "DKV", "other": "Diğer"}
-        total = 0
-        for row, exp in enumerate(expenses, 2):
-            ws.cell(row=row, column=1, value=exp.get("date", ""))
-            ws.cell(row=row, column=2, value=category_names.get(exp.get("category"), "Diğer"))
-            ws.cell(row=row, column=3, value=exp.get("description", ""))
-            ws.cell(row=row, column=4, value=exp.get("amount", 0))
-            ws.cell(row=row, column=5, value=exp.get("filename", ""))
-            total += exp.get("amount", 0)
+        # Group by month
+        expenses_by_month = defaultdict(list)
+        for exp in expenses:
+            date_str = exp.get("date", "")
+            if date_str:
+                try:
+                    month = int(date_str.split("-")[1]) if "-" in date_str else int(date_str.split(".")[1])
+                    expenses_by_month[month].append(exp)
+                except:
+                    expenses_by_month[0].append(exp)
         
-        # Total row
-        total_row = len(expenses) + 2
-        ws.cell(row=total_row, column=3, value="TOPLAM").font = Font(bold=True)
-        ws.cell(row=total_row, column=4, value=total).font = Font(bold=True)
+        row = 2
+        total_all = 0
+        for month in sorted(expenses_by_month.keys()):
+            if month > 0:
+                ws1.cell(row=row, column=1, value=month_names_de.get(month, f"MONAT {month}"))
+                ws1.cell(row=row, column=1).font = month_font
+                row += 1
+            
+            for exp in expenses_by_month[month]:
+                date_val = exp.get("date", "")
+                if "-" in date_val:
+                    parts = date_val.split("-")
+                    date_val = f"{parts[2]}.{parts[1]}.{parts[0]}"
+                
+                ws1.cell(row=row, column=1, value=date_val)
+                ws1.cell(row=row, column=2, value=category_names_de.get(exp.get("category"), "Sonstige"))
+                ws1.cell(row=row, column=3, value=exp.get("description", ""))
+                ws1.cell(row=row, column=4, value=exp.get("country", ""))
+                amount = exp.get("amount", 0)
+                ws1.cell(row=row, column=5, value=f"{amount:.2f}€".replace(".", ","))
+                total_all += amount
+                row += 1
         
-        # Adjust column widths
-        ws.column_dimensions['A'].width = 12
-        ws.column_dimensions['B'].width = 15
-        ws.column_dimensions['C'].width = 30
-        ws.column_dimensions['D'].width = 12
-        ws.column_dimensions['E'].width = 25
+        # Total
+        row += 1
+        ws1.cell(row=row, column=4, value="GESAMT:").font = Font(bold=True)
+        ws1.cell(row=row, column=5, value=f"{total_all:.2f}€".replace(".", ",")).font = Font(bold=True)
+        
+        ws1.column_dimensions['A'].width = 12
+        ws1.column_dimensions['B'].width = 18
+        ws1.column_dimensions['C'].width = 30
+        ws1.column_dimensions['D'].width = 15
+        ws1.column_dimensions['E'].width = 12
+        
+        # ========== SHEET 2: Hotel ==========
+        ws2 = wb.create_sheet("Hotel")
+        headers2 = ["Hotelname", "Check-In", "Check-Out", "Land", "Nacht", "Preis", "Adresse", "PDF Seite", "Rechnungname"]
+        for col, h in enumerate(headers2, 1):
+            cell = ws2.cell(row=1, column=col, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        hotel_expenses = [e for e in expenses if e.get("category") == "hotel"]
+        row = 2
+        hotel_total = 0
+        for exp in hotel_expenses:
+            date_val = exp.get("date", "")
+            if "-" in date_val:
+                parts = date_val.split("-")
+                date_val = f"{parts[2]}.{parts[1]}.{parts[0]}"
+            
+            ws2.cell(row=row, column=1, value=exp.get("description", ""))
+            ws2.cell(row=row, column=2, value=date_val)
+            ws2.cell(row=row, column=3, value="")  # Check-out
+            ws2.cell(row=row, column=4, value=exp.get("country", ""))
+            ws2.cell(row=row, column=5, value="1")
+            amount = exp.get("amount", 0)
+            ws2.cell(row=row, column=6, value=f"{amount:.2f} €".replace(".", ","))
+            ws2.cell(row=row, column=7, value=exp.get("address", ""))
+            ws2.cell(row=row, column=8, value="")
+            ws2.cell(row=row, column=9, value=exp.get("invoice_name", ""))
+            hotel_total += amount
+            row += 1
+        
+        row += 1
+        ws2.cell(row=row, column=5, value="GESAMT:").font = Font(bold=True)
+        ws2.cell(row=row, column=6, value=f"{hotel_total:.2f} €".replace(".", ",")).font = Font(bold=True)
+        
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+            ws2.column_dimensions[col].width = 15
+        ws2.column_dimensions['A'].width = 25
+        ws2.column_dimensions['G'].width = 35
+        
+        # ========== SHEET 3: DKV ==========
+        ws3 = wb.create_sheet("DKV 2026")
+        headers3 = ["Datum", "Betrag", "Landeswährung", "Land"]
+        for col, h in enumerate(headers3, 1):
+            cell = ws3.cell(row=1, column=col, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        dkv_expenses = [e for e in expenses if e.get("category") == "dkv"]
+        dkv_by_month = defaultdict(list)
+        for exp in dkv_expenses:
+            date_str = exp.get("date", "")
+            if date_str:
+                try:
+                    month = int(date_str.split("-")[1]) if "-" in date_str else int(date_str.split(".")[1])
+                    dkv_by_month[month].append(exp)
+                except:
+                    dkv_by_month[0].append(exp)
+        
+        row = 2
+        dkv_total = 0
+        for month in sorted(dkv_by_month.keys()):
+            if month > 0:
+                ws3.cell(row=row, column=1, value=month_names_de.get(month, ""))
+                ws3.cell(row=row, column=1).font = month_font
+                row += 1
+            
+            for exp in dkv_by_month[month]:
+                date_val = exp.get("date", "")
+                if "-" in date_val:
+                    parts = date_val.split("-")
+                    date_val = f"{parts[2]}.{parts[1]}.{parts[0]}"
+                
+                ws3.cell(row=row, column=1, value=date_val)
+                amount = exp.get("amount", 0)
+                ws3.cell(row=row, column=2, value=f"{amount:.2f} €".replace(".", ","))
+                ws3.cell(row=row, column=3, value=exp.get("local_currency", ""))
+                ws3.cell(row=row, column=4, value=exp.get("country", ""))
+                dkv_total += amount
+                row += 1
+        
+        row += 1
+        ws3.cell(row=row, column=1, value="GESAMT:").font = Font(bold=True)
+        ws3.cell(row=row, column=2, value=f"{dkv_total:.2f} €".replace(".", ",")).font = Font(bold=True)
+        
+        for col in ['A', 'B', 'C', 'D']:
+            ws3.column_dimensions[col].width = 15
+        
+        # ========== SHEET 4: Kreditkarte ==========
+        ws4 = wb.create_sheet("Kreditkarte 2026")
+        headers4 = ["Datum", "Betrag", "Landeswährung", "Notiz"]
+        for col, h in enumerate(headers4, 1):
+            cell = ws4.cell(row=1, column=col, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+        
+        cc_expenses = [e for e in expenses if e.get("category") == "credit_card"]
+        cc_by_month = defaultdict(list)
+        for exp in cc_expenses:
+            date_str = exp.get("date", "")
+            if date_str:
+                try:
+                    month = int(date_str.split("-")[1]) if "-" in date_str else int(date_str.split(".")[1])
+                    cc_by_month[month].append(exp)
+                except:
+                    cc_by_month[0].append(exp)
+        
+        row = 2
+        cc_total = 0
+        for month in sorted(cc_by_month.keys()):
+            if month > 0:
+                ws4.cell(row=row, column=1, value=month_names_de.get(month, ""))
+                ws4.cell(row=row, column=1).font = month_font
+                row += 1
+            
+            for exp in cc_by_month[month]:
+                date_val = exp.get("date", "")
+                if "-" in date_val:
+                    parts = date_val.split("-")
+                    date_val = f"{parts[2]}.{parts[1]}.{parts[0]}"
+                
+                ws4.cell(row=row, column=1, value=date_val)
+                amount = exp.get("amount", 0)
+                ws4.cell(row=row, column=2, value=f"{amount:.2f} €".replace(".", ","))
+                ws4.cell(row=row, column=3, value=exp.get("local_currency", ""))
+                ws4.cell(row=row, column=4, value=exp.get("notes", exp.get("description", "")))
+                cc_total += amount
+                row += 1
+        
+        row += 1
+        ws4.cell(row=row, column=1, value="GESAMT:").font = Font(bold=True)
+        ws4.cell(row=row, column=2, value=f"{cc_total:.2f} €".replace(".", ",")).font = Font(bold=True)
+        
+        for col in ['A', 'B', 'C', 'D']:
+            ws4.column_dimensions[col].width = 18
+        ws4.column_dimensions['D'].width = 40
         
         output = BytesIO()
         wb.save(output)
@@ -7198,7 +7385,7 @@ async def export_expenses_excel(category: str = None, date_filter: str = 'all', 
         return Response(
             content=output.getvalue(),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=giderler.xlsx"}
+            headers={"Content-Disposition": "attachment; filename=GB_Ausnahmen_2026.xlsx"}
         )
     except Exception as e:
         logger.error(f"Excel export error: {e}")

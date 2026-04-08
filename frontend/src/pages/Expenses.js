@@ -83,7 +83,12 @@ const Expenses = () => {
     description: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
-    folder_id: ''
+    folder_id: '',
+    country: '',
+    address: '',
+    notes: '',
+    local_currency: '',
+    invoice_name: ''
   });
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -153,6 +158,11 @@ const Expenses = () => {
         formData.append('description', uploadData.description);
         formData.append('amount', uploadData.amount || '0');
         formData.append('date', uploadData.date);
+        formData.append('country', uploadData.country || '');
+        formData.append('address', uploadData.address || '');
+        formData.append('notes', uploadData.notes || '');
+        formData.append('local_currency', uploadData.local_currency || '');
+        formData.append('invoice_name', uploadData.invoice_name || '');
         if (uploadData.folder_id) {
           formData.append('folder_id', uploadData.folder_id);
         }
@@ -637,8 +647,35 @@ const Expenses = () => {
             </div>
 
             <div>
-              <Label>Açıklama</Label>
-              <Input value={uploadData.description} onChange={(e) => setUploadData({...uploadData, description: e.target.value})} placeholder="Fatura açıklaması" />
+              <Label>Açıklama / Ort / Hotelname</Label>
+              <Input value={uploadData.description} onChange={(e) => setUploadData({...uploadData, description: e.target.value})} placeholder="Otel adı veya açıklama" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Ülke (Land)</Label>
+                <Input value={uploadData.country} onChange={(e) => setUploadData({...uploadData, country: e.target.value})} placeholder="Türkei, Deutschland..." />
+              </div>
+              <div>
+                <Label>Yerel Para Birimi</Label>
+                <Input value={uploadData.local_currency} onChange={(e) => setUploadData({...uploadData, local_currency: e.target.value})} placeholder="1700 TRY" />
+              </div>
+            </div>
+
+            <div>
+              <Label>Adres</Label>
+              <Input value={uploadData.address} onChange={(e) => setUploadData({...uploadData, address: e.target.value})} placeholder="Tam adres" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Fatura Adı</Label>
+                <Input value={uploadData.invoice_name} onChange={(e) => setUploadData({...uploadData, invoice_name: e.target.value})} placeholder="Fatura sahibi" />
+              </div>
+              <div>
+                <Label>Notlar</Label>
+                <Input value={uploadData.notes} onChange={(e) => setUploadData({...uploadData, notes: e.target.value})} placeholder="Ek notlar" />
+              </div>
             </div>
 
             {folders.length > 0 && (

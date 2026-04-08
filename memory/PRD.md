@@ -5,61 +5,68 @@ Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 
 ## Tamamlanan Özellikler (08.04.2026)
 
-### Temel Modüller
-- ✅ Dashboard, Müşteriler, Siparişler, Reçeteler, Spesifikasyonlar, Günlük Raporlar
-- ✅ Çoklu dil desteği (TR, EN, DE, PL)
-- ✅ PDF oluşturma ve indirme
-- ✅ Route Planner (localStorage ile veri saklama)
-- ✅ PWA desteği
-
-### Giderler & Faturalar (YENİ)
+### Giderler & Faturalar (TAM FONKSİYONEL - GB AUSNAHMEN FORMATI)
 - ✅ Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
 - ✅ PDF yükleme (Drag & Drop destekli)
 - ✅ Klasör oluşturma
 - ✅ Mobil Fatura Tarama (OCR) - Kamera ile tarama
-- ✅ Otomatik veri çekme: Tarih, Firma, Tutar
-- ✅ Excel rapor dışa aktarma
+- ✅ Detaylı form alanları:
+  - Açıklama / Ort / Hotelname
+  - Ülke (Land)
+  - Yerel Para Birimi (TRY, PLN vb.)
+  - Adres
+  - Fatura Adı
+  - Notlar
+- ✅ **Excel Rapor - GB Ausnahmen 2026 Formatı:**
+  - Sheet 1: Ausgabenübersicht 2026 (Genel Özet)
+  - Sheet 2: Hotel (Otel giderleri)
+  - Sheet 3: DKV 2026 (Yakıt giderleri)
+  - Sheet 4: Kreditkarte 2026 (Kredi kartı)
+  - Aylık gruplandırma (JANUAR, FEBRUAR...)
+  - GESAMT toplamları
+  - Almanca sütun başlıkları
 - ✅ PDF rapor oluşturma
 - ✅ Grid/List görünüm
 
-### Grid/List Görünüm (YENİ)
-- ✅ Müşteriler sayfası
-- ✅ Siparişler sayfası
-- ✅ Reçeteler sayfası
-- ✅ Tüm aksiyonlar (Düzenle, Sil, Görüntüle vb.) kartlarda erişilebilir
+### Grid/List Görünüm
+- ✅ Müşteriler
+- ✅ Siparişler  
+- ✅ Reçeteler
+- Tüm aksiyonlar kartlarda erişilebilir
 
-### Videolar Sayfası (GÜNCELLENDİ)
+### Videolar Sayfası
 - ✅ Video indirme
 - ✅ WhatsApp ile paylaşma
 - ✅ E-posta ile paylaşma
 
 ### Aktivite Geçmişi
-- ✅ "Numune Test Edildi" aktivite türü eklendi
+- ✅ "Numune Test Edildi" aktivite türü
 
 ### UI/UX İyileştirmeleri
-- ✅ AI Chatbox navigasyonu engellemeyecek şekilde yukarı kaydırıldı
+- ✅ AI Chatbox yukarı kaydırıldı
 - ✅ Mobil tam uyumluluk
 
 ### Düzeltilen Hatalar
-- ✅ Müşteri düzenleme crash sorunu (ÇÖZÜLDÜ)
-- ✅ Yeni kullanıcı giriş hatası (DB kontrolü eklendi)
-- ✅ Dil senkronizasyonu (eksik çeviriler tamamlandı)
+- ✅ Müşteri düzenleme crash sorunu
+- ✅ Yeni kullanıcı giriş hatası
+- ✅ Dil senkronizasyonu
 
 ## Bekleyen Görevler
 - 🔴 E-posta sistemi (CNAME kaydı bekleniyor)
-- 🟡 "Made with Emergent" yazısı (görünmüyor, kontrol edilmeli)
-- 🟡 GB Ausnahmen 2026.ods formatına uygun Excel (örnek dosya bekleniyor)
 
 ## Gelecek Görevler
 - WhatsApp Business API
-- Otomatik Haftalık Email (CRON)
-- AI Otomatik Kategorizasyon
 - Stok Takibi
 - Fatura Yönetimi
 
-## API Endpoints
-- `/api/expenses` - Giderler CRUD
-- `/api/expense-folders` - Klasörler
-- `/api/expenses/scan-ocr` - Fatura tarama (OCR)
-- `/api/expenses/export/excel` - Excel dışa aktarma
-- `/api/expenses/report/pdf` - PDF rapor
+## API Endpoints - Giderler
+```
+GET  /api/expenses              - Tüm giderler
+POST /api/expenses/upload       - PDF yükle (detaylı alanlar)
+GET  /api/expenses/{id}/view    - PDF görüntüle
+GET  /api/expenses/{id}/download- PDF indir
+DEL  /api/expenses/{id}         - Gider sil
+POST /api/expenses/scan-ocr     - Fatura tara (OCR)
+GET  /api/expenses/export/excel - GB Ausnahmen Excel
+GET  /api/expenses/report/pdf   - PDF rapor
+```
