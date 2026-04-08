@@ -540,82 +540,88 @@ const Expenses = () => {
 
   return (
     <div 
-      className="p-4 md:p-6 space-y-4" 
+      className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto" 
       data-testid="expenses-page"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       ref={dropRef}
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Modern Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b">
         <div>
-          <h1 className="text-2xl font-bold font-['Manrope'] flex items-center gap-2">
-            <Receipt className="w-7 h-7 text-indigo-600" />
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
+              <Receipt className="w-6 h-6 text-white" />
+            </div>
             {t('expensesTitle')}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {language === 'de' ? 'Rechnungen und Ausgaben verwalten - PDF hochladen, kategorisieren, berichten' : 'Fatura ve gider yönetimi - PDF yükle, kategorize et, raporla'}
+          <p className="text-muted-foreground mt-2">
+            {language === 'de' ? 'Rechnungen und Ausgaben verwalten' : 'Fatura ve gider yönetimi'}
           </p>
         </div>
+        
+        {/* Action Buttons - Grouped */}
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsFolderOpen(true)}>
-            <FolderPlus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('newFolder')}</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToExcel}>
-            <FileSpreadsheet className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t('excel')}</span>
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <FileText className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('report')}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => generateReport('all')}>
-                <FileText className="w-4 h-4 mr-2" /> {t('allExpenses')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => generateReport('monthly')}>
-                <Calendar className="w-4 h-4 mr-2" /> {t('monthlyReport')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => generateReport('yearly')}>
-                <FileText className="w-4 h-4 mr-2" /> {t('yearlyReport')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="text-purple-600 border-purple-300 hover:bg-purple-50">
-                <FileText className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">{t('mergePdf')}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
-              <DropdownMenuItem onClick={() => mergePdfs(null, null)} className="text-gray-600">
-                <FileText className="w-4 h-4 mr-2" />
-                {language === 'de' ? 'Ohne Ordner' : 'Klasörsüz'}
-              </DropdownMenuItem>
-              {folders.length > 0 && (
-                <div className="border-t my-1" />
-              )}
-              {folders.map(folder => (
-                <DropdownMenuItem 
-                  key={folder.id} 
-                  onClick={() => mergePdfs(folder.id, folder.name)}
-                  className="text-purple-600"
-                >
-                  <Folder className="w-4 h-4 mr-2" />
-                  {folder.name}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            <Button variant="ghost" size="sm" onClick={() => setIsFolderOpen(true)} className="hover:bg-white">
+              <FolderPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('newFolder')}</span>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={exportToExcel} className="hover:bg-white">
+              <FileSpreadsheet className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">{t('excel')}</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="hover:bg-white">
+                  <FileText className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('report')}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => generateReport('all')}>
+                  <FileText className="w-4 h-4 mr-2" /> {t('allExpenses')}
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem onClick={() => generateReport('monthly')}>
+                  <Calendar className="w-4 h-4 mr-2" /> {t('monthlyReport')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => generateReport('yearly')}>
+                  <FileText className="w-4 h-4 mr-2" /> {t('yearlyReport')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-purple-600 hover:bg-purple-50">
+                  <FileText className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('mergePdf')}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
+                <DropdownMenuItem onClick={() => mergePdfs(null, null)} className="text-gray-600">
+                  <FileText className="w-4 h-4 mr-2" />
+                  {language === 'de' ? 'Ohne Ordner' : 'Klasörsüz'}
+                </DropdownMenuItem>
+                {folders.length > 0 && <div className="border-t my-1" />}
+                {folders.map(folder => (
+                  <DropdownMenuItem 
+                    key={folder.id} 
+                    onClick={() => mergePdfs(folder.id, folder.name)}
+                    className="text-purple-600"
+                  >
+                    <Folder className="w-4 h-4 mr-2" />
+                    {folder.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          {/* Primary Actions */}
           <Button 
             size="sm" 
             onClick={() => setIsScannerOpen(true)} 
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md"
             data-testid="scan-invoice-btn"
           >
             <Camera className="w-4 h-4 mr-2" />
@@ -629,75 +635,80 @@ const Expenses = () => {
             className="hidden"
             onChange={handleScanCapture}
           />
-          <Button onClick={() => setIsUploadOpen(true)} data-testid="upload-pdf-btn">
+          <Button 
+            onClick={() => setIsUploadOpen(true)} 
+            data-testid="upload-pdf-btn"
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-md"
+          >
             <Upload className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">{t('uploadPdf')}</span>
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
+      {/* Modern Filters Bar */}
+      <div className="flex flex-wrap gap-3 items-center p-4 bg-gray-50/80 rounded-xl border">
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Gider ara..."
+            placeholder={language === 'de' ? 'Suchen...' : 'Ara...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-white border-gray-200 focus:border-indigo-400 focus:ring-indigo-400"
           />
         </div>
         
-        {/* Year Selector */}
-        <Select value={selectedYear?.toString()} onValueChange={(v) => { setSelectedYear(parseInt(v)); setSelectedMonth(null); }}>
-          <SelectTrigger className="w-[100px]">
-            <Calendar className="w-4 h-4 mr-2" />
-            <SelectValue placeholder="Yıl" />
-          </SelectTrigger>
-          <SelectContent>
-            {years.map(year => (
-              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        {/* Month Selector */}
-        <Select value={selectedMonth?.toString() || "all"} onValueChange={(v) => setSelectedMonth(v === "all" ? null : parseInt(v))}>
-          <SelectTrigger className="w-[130px]">
-            <SelectValue placeholder="Tüm Aylar" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tüm Aylar</SelectItem>
-            {months.map(month => (
-              <SelectItem key={month.id} value={month.id.toString()}>{month.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        {/* Category Filter */}
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Kategori" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tüm Kategoriler</SelectItem>
-            {EXPENSE_CATEGORIES.map(cat => (
-              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 items-center">
+          <Select value={selectedYear?.toString()} onValueChange={(v) => { setSelectedYear(parseInt(v)); setSelectedMonth(null); }}>
+            <SelectTrigger className="w-[100px] bg-white">
+              <Calendar className="w-4 h-4 mr-2 text-indigo-500" />
+              <SelectValue placeholder="Yıl" />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map(year => (
+                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={selectedMonth?.toString() || "all"} onValueChange={(v) => setSelectedMonth(v === "all" ? null : parseInt(v))}>
+            <SelectTrigger className="w-[130px] bg-white">
+              <SelectValue placeholder="Tüm Aylar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{language === 'de' ? 'Alle Monate' : 'Tüm Aylar'}</SelectItem>
+              {months.map(month => (
+                <SelectItem key={month.id} value={month.id.toString()}>{month.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[150px] bg-white">
+              <SelectValue placeholder="Kategori" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{language === 'de' ? 'Alle Kategorien' : 'Tüm Kategoriler'}</SelectItem>
+              {EXPENSE_CATEGORIES.map(cat => (
+                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        <div className="flex gap-1 ml-auto">
+        <div className="flex gap-1 ml-auto bg-white p-1 rounded-lg border">
           <Button 
-            variant={viewMode === 'grid' ? 'default' : 'outline'} 
+            variant={viewMode === 'grid' ? 'default' : 'ghost'} 
             size="icon"
+            className="h-8 w-8"
             onClick={() => setViewMode('grid')}
           >
             <LayoutGrid className="w-4 h-4" />
           </Button>
           <Button 
-            variant={viewMode === 'list' ? 'default' : 'outline'} 
+            variant={viewMode === 'list' ? 'default' : 'ghost'} 
             size="icon"
+            className="h-8 w-8"
             onClick={() => setViewMode('list')}
           >
             <List className="w-4 h-4" />
@@ -705,173 +716,204 @@ const Expenses = () => {
         </div>
       </div>
 
-      {/* Summary Cards - Year/Month context */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="w-4 h-4" />
-          <span className="font-medium">
-            {selectedYear} {selectedMonth ? `/ ${months.find(m => m.id === selectedMonth)?.name}` : '(Tüm Yıl)'}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
-            <CardContent className="p-4">
-              <p className="text-sm opacity-80">Toplam Gider</p>
-              <p className="text-2xl font-bold">{totalAmount.toFixed(2)} €</p>
-            </CardContent>
-          </Card>
-          {EXPENSE_CATEGORIES.map(cat => {
-            const catTotal = categoryTotals[cat.id] || 0;
-            const CatIcon = cat.icon;
-            return (
-              <Card 
-                key={cat.id} 
-                className={`cursor-pointer hover:shadow-md transition-shadow ${selectedCategory === cat.id ? 'ring-2 ring-indigo-400' : ''}`} 
-                onClick={() => setSelectedCategory(selectedCategory === cat.id ? 'all' : cat.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CatIcon className="w-4 h-4 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">{cat.name}</p>
+      {/* Summary Cards - Modern Style */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="bg-gradient-to-br from-indigo-500 via-indigo-600 to-purple-700 text-white shadow-lg border-0 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <CardContent className="p-5 relative">
+            <div className="flex items-center gap-2 mb-2">
+              <Euro className="w-5 h-5 opacity-80" />
+              <p className="text-sm font-medium opacity-90">{language === 'de' ? 'Gesamt' : 'Toplam Gider'}</p>
+            </div>
+            <p className="text-3xl font-bold">{totalAmount.toFixed(2)} €</p>
+            <p className="text-xs mt-2 opacity-70">
+              {selectedYear} {selectedMonth ? `/ ${months.find(m => m.id === selectedMonth)?.name}` : ''}
+            </p>
+          </CardContent>
+        </Card>
+        
+        {EXPENSE_CATEGORIES.map(cat => {
+          const catTotal = categoryTotals[cat.id] || 0;
+          const CatIcon = cat.icon;
+          const isSelected = selectedCategory === cat.id;
+          return (
+            <Card 
+              key={cat.id} 
+              className={`cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 ${
+                isSelected 
+                  ? 'ring-2 ring-indigo-500 bg-indigo-50 border-indigo-200' 
+                  : 'hover:border-indigo-200 bg-white'
+              }`}
+              onClick={() => setSelectedCategory(isSelected ? 'all' : cat.id)}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`p-2 rounded-lg ${cat.color}`}>
+                    <CatIcon className="w-4 h-4" />
                   </div>
-                  <p className="text-xl font-bold">{catTotal.toFixed(2)} €</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                  {isSelected && <CheckCircle className="w-4 h-4 text-indigo-500" />}
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">{cat.name}</p>
+                <p className="text-2xl font-bold mt-1">{catTotal.toFixed(2)} €</p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Folders with Navigation */}
-      <div className="space-y-2">
-        {/* Breadcrumb Navigation */}
-        {currentFolderPath.length > 0 && (
-          <div className="flex items-center gap-2 text-sm">
-            <Button variant="ghost" size="sm" onClick={goToRootFolder} className="h-7 px-2">
-              <Folder className="w-4 h-4 mr-1" />
-              Ana Dizin
-            </Button>
-            {currentFolderPath.map((folder, idx) => (
-              <React.Fragment key={folder.id}>
-                <span className="text-muted-foreground">/</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => {
-                    const newPath = currentFolderPath.slice(0, idx + 1);
-                    setCurrentFolderPath(newPath);
-                    setSelectedFolder(folder.id);
-                  }}
-                  className="h-7 px-2"
-                >
-                  {folder.name}
-                </Button>
-              </React.Fragment>
-            ))}
-          </div>
-        )}
-        
-        {/* Folder Buttons */}
-        <div className="flex flex-wrap gap-2">
+      {/* Folders Navigation - Modern Style */}
+      <Card className="border-0 shadow-sm bg-white/80 backdrop-blur">
+        <CardContent className="p-4">
+          {/* Breadcrumb */}
           {currentFolderPath.length > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={goToParentFolder}
-              className="border-dashed"
-            >
-              <Folder className="w-4 h-4 mr-2" />
-              ← Geri
-            </Button>
-          )}
-          
-          {currentFolderPath.length === 0 && (
-            <Button 
-              variant={selectedFolder === null ? 'default' : 'outline'} 
-              size="sm"
-              onClick={() => setSelectedFolder(null)}
-            >
-              <Folder className="w-4 h-4 mr-2" />
-              Tümü
-            </Button>
-          )}
-          
-          {/* Show folders that belong to current parent */}
-          {folders
-            .filter(f => {
-              if (currentFolderPath.length === 0) return !f.parent_id;
-              return f.parent_id === currentFolderPath[currentFolderPath.length - 1]?.id;
-            })
-            .map(folder => (
-            <div key={folder.id} className="relative group">
-              <Button 
-                variant={selectedFolder === folder.id ? 'default' : 'outline'} 
-                size="sm"
-                onClick={() => enterFolder(folder)}
-                onDoubleClick={() => enterFolder(folder)}
-              >
-                <Folder className="w-4 h-4 mr-2" />
-                {folder.name}
-                {folder.children_count > 0 && (
-                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                    {folder.children_count}
-                  </Badge>
-                )}
+            <div className="flex items-center gap-2 text-sm mb-3 pb-3 border-b">
+              <Button variant="ghost" size="sm" onClick={goToRootFolder} className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                <Folder className="w-4 h-4 mr-1" />
+                Ana Dizin
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+              {currentFolderPath.map((folder, idx) => (
+                <React.Fragment key={folder.id}>
+                  <span className="text-muted-foreground">/</span>
                   <Button 
                     variant="ghost" 
-                    size="icon" 
-                    className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-white shadow border opacity-0 group-hover:opacity-100 transition-opacity"
+                    size="sm" 
+                    onClick={() => {
+                      const newPath = currentFolderPath.slice(0, idx + 1);
+                      setCurrentFolderPath(newPath);
+                      setSelectedFolder(folder.id);
+                    }}
+                    className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50"
                   >
-                    <MoreVertical className="w-3 h-3" />
+                    {folder.name}
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => enterFolder(folder)}>
-                    <Folder className="w-4 h-4 mr-2" /> Klasöre Gir
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)}>
-                    <Trash2 className="w-4 h-4 mr-2 text-red-500" /> Sil
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </React.Fragment>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          )}
+          
+          {/* Folder Pills */}
+          <div className="flex flex-wrap gap-2">
+            {currentFolderPath.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={goToParentFolder}
+                className="border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50"
+              >
+                <Folder className="w-4 h-4 mr-2" />
+                ← Geri
+              </Button>
+            )}
+            
+            {currentFolderPath.length === 0 && (
+              <Button 
+                variant={selectedFolder === null ? 'default' : 'outline'} 
+                size="sm"
+                onClick={() => setSelectedFolder(null)}
+                className={selectedFolder === null ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
+              >
+                <Folder className="w-4 h-4 mr-2" />
+                Tümü
+              </Button>
+            )}
+            
+            {folders
+              .filter(f => {
+                if (currentFolderPath.length === 0) return !f.parent_id;
+                return f.parent_id === currentFolderPath[currentFolderPath.length - 1]?.id;
+              })
+              .map(folder => (
+              <div key={folder.id} className="relative group">
+                <Button 
+                  variant={selectedFolder === folder.id ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => enterFolder(folder)}
+                  onDoubleClick={() => enterFolder(folder)}
+                  className={selectedFolder === folder.id ? 'bg-indigo-600 hover:bg-indigo-700' : 'hover:border-indigo-300'}
+                >
+                  <Folder className="w-4 h-4 mr-2" />
+                  {folder.name}
+                  {folder.children_count > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-indigo-100 text-indigo-700">
+                      {folder.children_count}
+                    </Badge>
+                  )}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute -right-1 -top-1 h-5 w-5 rounded-full bg-white shadow border opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <MoreVertical className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => enterFolder(folder)}>
+                      <Folder className="w-4 h-4 mr-2" /> Klasöre Gir
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600">
+                      <Trash2 className="w-4 h-4 mr-2" /> Sil
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Expenses Grid/List */}
       {filteredExpenses.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg">
-          <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-          <p className="text-muted-foreground">Henüz gider yok</p>
-          <p className="text-sm text-muted-foreground mt-1">PDF dosyalarını sürükleyip bırakın veya yükle butonuna tıklayın</p>
-        </div>
+        <Card className="border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50/50 to-purple-50/50">
+          <CardContent className="py-16 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 bg-indigo-100 rounded-full flex items-center justify-center">
+              <Receipt className="w-10 h-10 text-indigo-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              {language === 'de' ? 'Keine Ausgaben' : 'Henüz gider yok'}
+            </h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              {language === 'de' 
+                ? 'Ziehen Sie PDF-Dateien hierher oder klicken Sie auf "Hochladen"' 
+                : 'PDF dosyalarını sürükleyip bırakın veya yükle butonuna tıklayın'}
+            </p>
+            <div className="flex gap-3 justify-center mt-6">
+              <Button onClick={() => setIsScannerOpen(true)} variant="outline" className="border-green-300 text-green-600 hover:bg-green-50">
+                <Camera className="w-4 h-4 mr-2" />
+                {t('scanInvoice')}
+              </Button>
+              <Button onClick={() => setIsUploadOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                <Upload className="w-4 h-4 mr-2" />
+                {t('uploadPdf')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : viewMode === 'grid' ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredExpenses.map(expense => {
             const catInfo = getCategoryInfo(expense.category);
             return (
-              <Card key={expense.id} className="group cursor-pointer hover:shadow-md transition-shadow relative">
+              <Card key={expense.id} className="group cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-200 relative overflow-hidden">
                 <CardContent className="p-3">
-                  <div className="aspect-[3/4] bg-slate-100 rounded-lg mb-2 flex items-center justify-center relative">
-                    <FileText className="w-12 h-12 text-slate-400" />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 rounded-lg">
-                      <Button size="icon" variant="secondary" onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }}>
-                        <Eye className="w-4 h-4" />
+                  <div className="aspect-[3/4] bg-gradient-to-br from-slate-100 to-slate-50 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+                    <FileText className="w-12 h-12 text-slate-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4 gap-2">
+                      <Button size="sm" variant="secondary" className="h-8" onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }}>
+                        <Eye className="w-4 h-4 mr-1" /> Görüntüle
                       </Button>
-                      <Button size="icon" variant="secondary" onClick={() => downloadExpense(expense)}>
+                      <Button size="sm" variant="secondary" className="h-8" onClick={() => downloadExpense(expense)}>
                         <Download className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
-                  <Badge className={`${catInfo.color} text-xs mb-1`}>{catInfo.name}</Badge>
-                  <p className="text-sm font-medium truncate">{expense.description || expense.filename}</p>
-                  <div className="flex justify-between items-center mt-1">
+                  <Badge className={`${catInfo.color} text-xs mb-2`}>{catInfo.name}</Badge>
+                  <p className="text-sm font-medium truncate text-gray-800">{expense.description || expense.filename}</p>
+                  <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
                     <span className="text-xs text-muted-foreground">{expense.date}</span>
-                    <span className="font-semibold text-sm">{expense.amount} €</span>
+                    <span className="font-bold text-indigo-600">{expense.amount} €</span>
                   </div>
                 </CardContent>
                 {/* Dropdown menu for grid cards */}
