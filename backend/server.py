@@ -6840,6 +6840,10 @@ async def upload_expense(
     notes: str = Form(""),
     local_currency: str = Form(""),
     invoice_name: str = Form(""),
+    # Hotel specific fields
+    check_in: str = Form(""),
+    check_out: str = Form(""),
+    nights: str = Form("1"),
     auto_extract: str = Form("true")
 ):
     import re
@@ -6930,6 +6934,10 @@ async def upload_expense(
         "notes": notes,
         "local_currency": local_currency,
         "invoice_name": invoice_name,
+        # Hotel specific
+        "check_in": check_in if check_in else extracted_date,
+        "check_out": check_out,
+        "nights": int(nights) if nights else 1,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -7333,42 +7341,64 @@ async def export_expenses_excel(category: str = None, year: int = None, month: i
         
         # ========== SHEET 2: Hotel ==========
         ws2 = wb.create_sheet("Hotel")
-        headers2 = ["Hotelname", "Check-In", "Check-Out", "Land", "Nacht", "Preis", "Adresse", "PDF Seite", "Rechnungname"]
+        headers2 = ["Hotelname", "Check-In", "Check-Out", "Land", "Nacht", "Preis", "Adresse", "PDF Seite"]
         for col, h in enumerate(headers2, 1):
             cell = ws2.cell(row=1, column=col, value=h)
             cell.fill = header_fill
             cell.font = header_font
         
         hotel_expenses = [e for e in expenses if e.get("category") == "hotel"]
+        
+        # Group hotels by month
+        hotels_by_month = defaultdict(list)
+        for exp in hotel_expenses:
+            date_str = exp.get("check_in") or exp.get("date", "")
+            if date_str:
+                try:
+                    month = int(date_str.split("-")[1]) if "-" in date_str else int(date_str.split(".")[1])
+                    hotels_by_month[month].append(exp)
+                except:
+                    hotels_by_month[0].append(exp)
+        
         row = 2
         hotel_total = 0
-        for exp in hotel_expenses:
-            date_val = exp.get("date", "")
-            if "-" in date_val:
-                parts = date_val.split("-")
-                date_val = f"{parts[2]}.{parts[1]}.{parts[0]}"
+        for month_num in sorted(hotels_by_month.keys()):
+            if month_num > 0:
+                ws2.cell(row=row, column=1, value=month_names_de.get(month_num, f"MONAT {month_num}"))
+                ws2.cell(row=row, column=1).font = month_font
+                row += 1
             
-            ws2.cell(row=row, column=1, value=exp.get("description", ""))
-            ws2.cell(row=row, column=2, value=date_val)
-            ws2.cell(row=row, column=3, value="")  # Check-out
-            ws2.cell(row=row, column=4, value=exp.get("country", ""))
-            ws2.cell(row=row, column=5, value="1")
-            amount = exp.get("amount", 0)
-            ws2.cell(row=row, column=6, value=f"{amount:.2f} €".replace(".", ","))
-            ws2.cell(row=row, column=7, value=exp.get("address", ""))
-            ws2.cell(row=row, column=8, value="")
-            ws2.cell(row=row, column=9, value=exp.get("invoice_name", ""))
-            hotel_total += amount
-            row += 1
+            for exp in hotels_by_month[month_num]:
+                # Format dates
+                check_in = exp.get("check_in") or exp.get("date", "")
+                check_out = exp.get("check_out", "")
+                if "-" in check_in:
+                    parts = check_in.split("-")
+                    check_in = f"{parts[2]}.{parts[1]}.{parts[0]}"
+                if "-" in check_out:
+                    parts = check_out.split("-")
+                    check_out = f"{parts[2]}.{parts[1]}.{parts[0]}"
+                
+                ws2.cell(row=row, column=1, value=exp.get("description", ""))
+                ws2.cell(row=row, column=2, value=check_in)
+                ws2.cell(row=row, column=3, value=check_out)
+                ws2.cell(row=row, column=4, value=exp.get("country", ""))
+                ws2.cell(row=row, column=5, value=str(exp.get("nights", 1)))
+                amount = float(exp.get("amount", 0))
+                ws2.cell(row=row, column=6, value=f"{amount:.2f} €".replace(".", ","))
+                ws2.cell(row=row, column=7, value=exp.get("address", ""))
+                ws2.cell(row=row, column=8, value="")
+                hotel_total += amount
+                row += 1
         
         row += 1
         ws2.cell(row=row, column=5, value="GESAMT:").font = Font(bold=True)
         ws2.cell(row=row, column=6, value=f"{hotel_total:.2f} €".replace(".", ",")).font = Font(bold=True)
         
-        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']:
+        for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
             ws2.column_dimensions[col].width = 15
         ws2.column_dimensions['A'].width = 25
-        ws2.column_dimensions['G'].width = 35
+        ws2.column_dimensions['G'].width = 40
         
         # ========== SHEET 3: DKV ==========
         ws3 = wb.create_sheet("DKV 2026")

@@ -103,7 +103,11 @@ const Expenses = () => {
     address: '',
     notes: '',
     local_currency: '',
-    invoice_name: ''
+    invoice_name: '',
+    // Hotel specific
+    check_in: new Date().toISOString().split('T')[0],
+    check_out: '',
+    nights: '1'
   });
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -219,13 +223,19 @@ const Expenses = () => {
         formData.append('category', uploadData.category);
         formData.append('description', uploadData.description);
         formData.append('amount', uploadData.amount || '0');
-        formData.append('date', uploadData.date || '');
+        formData.append('date', uploadData.category === 'hotel' ? uploadData.check_in : (uploadData.date || ''));
         formData.append('country', uploadData.country || '');
         formData.append('address', uploadData.address || '');
         formData.append('notes', uploadData.notes || '');
         formData.append('local_currency', uploadData.local_currency || '');
         formData.append('invoice_name', uploadData.invoice_name || '');
         formData.append('auto_extract', 'true');
+        // Hotel specific fields
+        if (uploadData.category === 'hotel') {
+          formData.append('check_in', uploadData.check_in || '');
+          formData.append('check_out', uploadData.check_out || '');
+          formData.append('nights', uploadData.nights || '1');
+        }
         if (uploadData.folder_id) {
           formData.append('folder_id', uploadData.folder_id);
         }
@@ -244,7 +254,8 @@ const Expenses = () => {
       setUploadFiles([]);
       setUploadData({
         category: 'other', description: '', amount: '', date: new Date().toISOString().split('T')[0],
-        folder_id: '', country: '', address: '', notes: '', local_currency: '', invoice_name: ''
+        folder_id: '', country: '', address: '', notes: '', local_currency: '', invoice_name: '',
+        check_in: new Date().toISOString().split('T')[0], check_out: '', nights: '1'
       });
       setIsUploadOpen(false);
       fetchExpenses();
@@ -996,10 +1007,24 @@ const Expenses = () => {
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Tarih</Label>
-                <Input type="date" className="h-9" value={uploadData.date} onChange={(e) => setUploadData({...uploadData, date: e.target.value})} />
+                <Label className="text-xs">{uploadData.category === 'hotel' ? 'Check-In' : 'Tarih'}</Label>
+                <Input type="date" className="h-9" value={uploadData.category === 'hotel' ? uploadData.check_in : uploadData.date} onChange={(e) => setUploadData({...uploadData, [uploadData.category === 'hotel' ? 'check_in' : 'date']: e.target.value})} />
               </div>
             </div>
+
+            {/* Hotel specific fields */}
+            {uploadData.category === 'hotel' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div>
+                  <Label className="text-xs text-blue-700">Check-Out</Label>
+                  <Input type="date" className="h-9" value={uploadData.check_out} onChange={(e) => setUploadData({...uploadData, check_out: e.target.value})} />
+                </div>
+                <div>
+                  <Label className="text-xs text-blue-700">Gece Sayısı (Nacht)</Label>
+                  <Input type="number" min="1" className="h-9" value={uploadData.nights} onChange={(e) => setUploadData({...uploadData, nights: e.target.value})} />
+                </div>
+              </div>
+            )}
 
             <div>
               <Label className="text-xs">Tutar (€)</Label>
@@ -1007,8 +1032,8 @@ const Expenses = () => {
             </div>
 
             <div>
-              <Label className="text-xs">Açıklama / Ort / Hotelname</Label>
-              <Input className="h-9" value={uploadData.description} onChange={(e) => setUploadData({...uploadData, description: e.target.value})} placeholder="Otel adı veya açıklama" />
+              <Label className="text-xs">{uploadData.category === 'hotel' ? 'Otel Adı (Hotelname)' : 'Açıklama / Ort'}</Label>
+              <Input className="h-9" value={uploadData.description} onChange={(e) => setUploadData({...uploadData, description: e.target.value})} placeholder={uploadData.category === 'hotel' ? 'Örn: Air Hotel Galaxy' : 'Açıklama'} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
