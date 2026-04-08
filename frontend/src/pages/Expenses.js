@@ -151,31 +151,45 @@ const Expenses = () => {
     
     setUploading(true);
     try {
+      let extractedInfo = null;
       for (const file of uploadFiles) {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('category', uploadData.category);
         formData.append('description', uploadData.description);
         formData.append('amount', uploadData.amount || '0');
-        formData.append('date', uploadData.date);
+        formData.append('date', uploadData.date || '');
         formData.append('country', uploadData.country || '');
         formData.append('address', uploadData.address || '');
         formData.append('notes', uploadData.notes || '');
         formData.append('local_currency', uploadData.local_currency || '');
         formData.append('invoice_name', uploadData.invoice_name || '');
+        formData.append('auto_extract', 'true');
         if (uploadData.folder_id) {
           formData.append('folder_id', uploadData.folder_id);
         }
         
-        await axios.post(`${API}/expenses/upload`, formData);
+        const response = await axios.post(`${API}/expenses/upload`, formData);
+        if (response.data.extracted) {
+          extractedInfo = response.data.extracted;
+        }
       }
       
-      toast.success(`${uploadFiles.length} dosya yüklendi`);
+      if (extractedInfo && (extractedInfo.date || extractedInfo.amount)) {
+        toast.success(`Yüklendi! Çıkarılan: ${extractedInfo.date || ''} - ${extractedInfo.amount || ''}€`);
+      } else {
+        toast.success(`${uploadFiles.length} dosya yüklendi`);
+      }
       setUploadFiles([]);
+      setUploadData({
+        category: 'other', description: '', amount: '', date: new Date().toISOString().split('T')[0],
+        folder_id: '', country: '', address: '', notes: '', local_currency: '', invoice_name: ''
+      });
       setIsUploadOpen(false);
       fetchExpenses();
     } catch (error) {
-      toast.error('Yükleme hatası');
+      console.error('Upload error:', error);
+      toast.error('Yükleme hatası: ' + (error.response?.data?.detail || error.message));
     } finally {
       setUploading(false);
     }

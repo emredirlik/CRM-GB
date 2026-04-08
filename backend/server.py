@@ -6976,14 +6976,16 @@ async def upload_expense(
     category: str = Form("other"),
     description: str = Form(""),
     amount: str = Form("0"),
-    date: str = Form(...),
+    date: str = Form(""),
     folder_id: str = Form(None),
     country: str = Form(""),
     address: str = Form(""),
     notes: str = Form(""),
     local_currency: str = Form(""),
-    invoice_name: str = Form("")
+    invoice_name: str = Form(""),
+    auto_extract: str = Form("true")
 ):
+    import re
     expense_id = str(uuid.uuid4())
     
     # Save file
@@ -6995,14 +6997,76 @@ async def upload_expense(
     with open(file_path, "wb") as f:
         f.write(content)
     
+    # Auto-extract data from PDF if enabled and fields are empty
+    extracted_date = date or datetime.now().strftime("%Y-%m-%d")
+    extracted_amount = amount
+    extracted_description = description
+    
+    if auto_extract.lower() == "true" and file.filename.lower().endswith('.pdf'):
+        try:
+            text = ""
+            try:
+                import fitz
+                pdf_doc = fitz.open(str(file_path))
+                for page in pdf_doc:
+                    text += page.get_text()
+                pdf_doc.close()
+            except:
+                try:
+                    import pdfplumber
+                    with pdfplumber.open(str(file_path)) as pdf:
+                        for page in pdf.pages:
+                            text += page.extract_text() or ""
+                except:
+                    pass
+            
+            if text:
+                # Extract date if not provided
+                if not date:
+                    date_patterns = [r'(\d{2}[./-]\d{2}[./-]\d{4})', r'(\d{4}[./-]\d{2}[./-]\d{2})']
+                    for pattern in date_patterns:
+                        match = re.search(pattern, text)
+                        if match:
+                            date_str = match.group(1)
+                            parts = re.split(r'[./-]', date_str)
+                            if len(parts[0]) == 4:
+                                extracted_date = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+                            else:
+                                extracted_date = f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+                            break
+                
+                # Extract amount if not provided or zero
+                if not amount or amount == "0":
+                    amount_patterns = [
+                        r'(?:Total|Summe|Toplam|Gesamt|Betrag|Endbetrag|Zu zahlen)[\s:]*€?\s*([\d]+[.,]\d{2})',
+                        r'([\d]+[.,]\d{2})\s*(?:€|EUR)',
+                        r'€\s*([\d]+[.,]\d{2})'
+                    ]
+                    for pattern in amount_patterns:
+                        matches = re.findall(pattern, text, re.IGNORECASE)
+                        if matches:
+                            amounts = [float(m.replace(',', '.')) for m in matches]
+                            extracted_amount = str(max(amounts))
+                            break
+                
+                # Extract description/vendor if not provided
+                if not description:
+                    lines = [l.strip() for l in text.split('\n') if l.strip() and len(l.strip()) > 4]
+                    for line in lines[:10]:
+                        if len(line) > 5 and not re.match(r'^[\d\s.,-€]+$', line):
+                            extracted_description = line[:60]
+                            break
+        except Exception as e:
+            logger.warning(f"PDF auto-extract failed: {e}")
+    
     expense = {
         "id": expense_id,
         "filename": file.filename,
         "file_path": str(file_path),
         "category": category,
-        "description": description,
-        "amount": float(amount) if amount else 0,
-        "date": date,
+        "description": extracted_description,
+        "amount": float(extracted_amount) if extracted_amount else 0,
+        "date": extracted_date,
         "folder_id": folder_id if folder_id else None,
         "country": country,
         "address": address,
@@ -7013,7 +7077,15 @@ async def upload_expense(
     }
     
     await db.expenses.insert_one(expense)
-    return {"id": expense_id, "message": "Uploaded"}
+    return {
+        "id": expense_id, 
+        "message": "Uploaded",
+        "extracted": {
+            "date": extracted_date,
+            "amount": extracted_amount,
+            "description": extracted_description
+        }
+    }
 
 @api_router.get("/expenses/{expense_id}/download")
 async def download_expense(expense_id: str):
@@ -7052,85 +7124,121 @@ async def delete_expense(expense_id: str):
 
 @api_router.post("/expenses/scan-ocr")
 async def scan_expense_ocr(file: UploadFile = File(...)):
-    """Process scanned image with basic OCR to extract date, vendor, and total"""
+    """Process scanned image or PDF with OCR to extract date, vendor, and total"""
     import re
     
     try:
-        # Save uploaded image temporarily
         upload_dir = Path("/app/uploads/scans")
         upload_dir.mkdir(parents=True, exist_ok=True)
         
-        temp_path = upload_dir / f"scan_{uuid.uuid4()}.{file.filename.split('.')[-1]}"
         content = await file.read()
-        with open(temp_path, "wb") as f:
-            f.write(content)
+        filename = file.filename.lower()
         
-        # Basic OCR using pytesseract if available
         extracted_data = {
             "vendor": "",
             "date": datetime.now().strftime("%Y-%m-%d"),
-            "total": ""
+            "total": "",
+            "success": True
         }
         
-        try:
-            import pytesseract
-            from PIL import Image
-            
-            img = Image.open(temp_path)
-            text = pytesseract.image_to_string(img, lang='deu+tur+eng')
-            
-            # Extract date patterns (DD.MM.YYYY, DD/MM/YYYY, YYYY-MM-DD)
+        text = ""
+        
+        # Handle PDF files
+        if filename.endswith('.pdf'):
+            try:
+                import fitz  # PyMuPDF
+                pdf_doc = fitz.open(stream=content, filetype="pdf")
+                for page in pdf_doc:
+                    text += page.get_text()
+                pdf_doc.close()
+            except:
+                try:
+                    # Fallback: try pdfplumber
+                    import pdfplumber
+                    from io import BytesIO
+                    with pdfplumber.open(BytesIO(content)) as pdf:
+                        for page in pdf.pages:
+                            text += page.extract_text() or ""
+                except:
+                    logger.warning("PDF text extraction failed")
+        else:
+            # Handle image files with OCR
+            try:
+                import pytesseract
+                from PIL import Image
+                from io import BytesIO
+                
+                img = Image.open(BytesIO(content))
+                # Quick OCR with limited config for speed
+                text = pytesseract.image_to_string(img, lang='deu+tur+eng', config='--psm 6')
+            except Exception as e:
+                logger.warning(f"OCR failed: {e}")
+        
+        if text:
+            # Extract date patterns
             date_patterns = [
                 r'(\d{2}[./-]\d{2}[./-]\d{4})',
-                r'(\d{4}[./-]\d{2}[./-]\d{2})'
+                r'(\d{4}[./-]\d{2}[./-]\d{2})',
+                r'(\d{2}\.\d{2}\.\d{2})'  # Short date format
             ]
             for pattern in date_patterns:
                 match = re.search(pattern, text)
                 if match:
                     date_str = match.group(1)
-                    # Convert to YYYY-MM-DD
-                    if '.' in date_str or '/' in date_str:
-                        parts = re.split(r'[./]', date_str)
-                        if len(parts[0]) == 4:
-                            extracted_data["date"] = f"{parts[0]}-{parts[1]}-{parts[2]}"
-                        else:
-                            extracted_data["date"] = f"{parts[2]}-{parts[1]}-{parts[0]}"
-                    else:
-                        extracted_data["date"] = date_str
+                    try:
+                        if '.' in date_str or '/' in date_str:
+                            parts = re.split(r'[./-]', date_str)
+                            if len(parts[0]) == 4:
+                                extracted_data["date"] = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+                            elif len(parts[2]) == 2:
+                                year = f"20{parts[2]}" if int(parts[2]) < 50 else f"19{parts[2]}"
+                                extracted_data["date"] = f"{year}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+                            else:
+                                extracted_data["date"] = f"{parts[2]}-{parts[1].zfill(2)}-{parts[0].zfill(2)}"
+                    except:
+                        pass
                     break
             
-            # Extract total amount (look for patterns like "Total: 123.45" or "Summe: 123,45")
+            # Extract amount - more patterns
             amount_patterns = [
-                r'(?:Total|Summe|Toplam|Gesamt|TOTAL)[\s:]*€?\s*([\d.,]+)',
-                r'€\s*([\d.,]+)',
-                r'([\d]+[.,]\d{2})\s*€'
+                r'(?:Total|Summe|Toplam|Gesamt|TOTAL|Betrag|EUR|EURO|Gesamtsumme|Endbetrag|Zu zahlen)[\s:]*€?\s*([\d]+[.,]\d{2})',
+                r'([\d]+[.,]\d{2})\s*(?:€|EUR|EURO)',
+                r'€\s*([\d]+[.,]\d{2})',
+                r'[\s]([\d]{1,4}[.,]\d{2})[\s€]'
             ]
             for pattern in amount_patterns:
-                match = re.search(pattern, text, re.IGNORECASE)
-                if match:
-                    amount = match.group(1).replace(',', '.')
-                    extracted_data["total"] = amount
+                matches = re.findall(pattern, text, re.IGNORECASE)
+                if matches:
+                    # Take the largest amount (usually the total)
+                    amounts = [float(m.replace(',', '.')) for m in matches if m]
+                    if amounts:
+                        extracted_data["total"] = str(max(amounts))
                     break
             
-            # Extract first line as vendor name (simple heuristic)
-            lines = [l.strip() for l in text.split('\n') if l.strip() and len(l.strip()) > 3]
-            if lines:
-                extracted_data["vendor"] = lines[0][:50]
-                
-        except ImportError:
-            logger.warning("pytesseract not available, returning empty OCR data")
-        except Exception as ocr_error:
-            logger.error(f"OCR processing error: {ocr_error}")
-        
-        # Clean up temp file
-        if temp_path.exists():
-            temp_path.unlink()
+            # Extract vendor/hotel name - look for common patterns
+            lines = [l.strip() for l in text.split('\n') if l.strip() and len(l.strip()) > 4]
+            vendor_patterns = [
+                r'(?:Hotel|Motel|Inn|Gasthof|Pension)\s+([A-Za-zäöüÄÖÜß\s]+)',
+                r'([A-Z][A-Za-zäöüÄÖÜß\s]+(?:Hotel|GmbH|AG|Ltd|Inc))',
+            ]
+            for pattern in vendor_patterns:
+                match = re.search(pattern, text)
+                if match:
+                    extracted_data["vendor"] = match.group(1).strip()[:50]
+                    break
+            
+            # Fallback: use first meaningful line as vendor
+            if not extracted_data["vendor"] and lines:
+                for line in lines[:5]:
+                    if len(line) > 5 and not re.match(r'^[\d\s.,-]+$', line):
+                        extracted_data["vendor"] = line[:50]
+                        break
         
         return extracted_data
         
     except Exception as e:
         logger.error(f"Scan OCR error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"vendor": "", "date": datetime.now().strftime("%Y-%m-%d"), "total": "", "success": False, "error": str(e)}
 
 @api_router.get("/expense-folders")
 async def get_expense_folders():
@@ -7147,7 +7255,8 @@ async def create_expense_folder(data: ExpenseFolderCreate):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.expense_folders.insert_one(folder)
-    return folder
+    # Return without _id
+    return {"id": folder_id, "name": data.name, "category": data.category}
 
 @api_router.get("/expenses/export/excel")
 async def export_expenses_excel(category: str = None, date_filter: str = 'all', date: str = None):
