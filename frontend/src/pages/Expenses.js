@@ -40,7 +40,7 @@ import { toast } from 'sonner';
 import { 
   Receipt, Upload, Folder, FolderPlus, FileText, Trash2, 
   Eye, Download, Search, Plus, MoreVertical, Calendar,
-  CreditCard, Building2, Fuel, LayoutGrid, List, Euro, FileSpreadsheet, Camera, ScanLine
+  CreditCard, Building2, Fuel, LayoutGrid, List, Euro, FileSpreadsheet, Camera, ScanLine, CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -353,20 +353,24 @@ const Expenses = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setIsFolderOpen(true)}>
-            <FolderPlus className="w-4 h-4 mr-2" />
+            <FolderPlus className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Yeni Klasör</span>
           </Button>
           <Button variant="outline" size="sm" onClick={exportToExcel}>
-            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            <FileSpreadsheet className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Excel</span>
           </Button>
           <Button variant="outline" size="sm" onClick={generateReport}>
-            <FileText className="w-4 h-4 mr-2" />
+            <FileText className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Rapor</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => cameraInputRef.current?.click()} className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
-            <Camera className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Fatura Tara</span>
+          <Button 
+            size="sm" 
+            onClick={() => cameraInputRef.current?.click()} 
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <ScanLine className="w-4 h-4 mr-2" />
+            Fatura Tara
           </Button>
           <input 
             ref={cameraInputRef}
@@ -377,7 +381,7 @@ const Expenses = () => {
             onChange={handleScanCapture}
           />
           <Button onClick={() => setIsUploadOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">PDF Yükle</span>
           </Button>
         </div>
@@ -700,6 +704,113 @@ const Expenses = () => {
             <Button onClick={handleUpload} disabled={uploading}>
               {uploading ? 'Yükleniyor...' : 'Yükle'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Scan Dialog - CamScanner Style */}
+      <Dialog open={isScanOpen} onOpenChange={setIsScanOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ScanLine className="w-5 h-5 text-green-600" />
+              Fatura Tarama
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {scanning ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                <p className="text-sm text-muted-foreground">Fatura taranıyor ve analiz ediliyor...</p>
+                <p className="text-xs text-muted-foreground mt-1">OCR ile veriler çıkarılıyor</p>
+              </div>
+            ) : ocrResult ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Tarama Başarılı
+                  </h4>
+                  <p className="text-sm text-green-700">Aşağıdaki veriler otomatik olarak algılandı. Kontrol edip düzeltebilirsiniz.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Firma / Yer</Label>
+                    <Input 
+                      value={uploadData.description} 
+                      onChange={(e) => setUploadData({...uploadData, description: e.target.value})}
+                      placeholder="Algılanan firma adı"
+                    />
+                  </div>
+                  <div>
+                    <Label>Tarih</Label>
+                    <Input 
+                      type="date"
+                      value={uploadData.date} 
+                      onChange={(e) => setUploadData({...uploadData, date: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Tutar (€)</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={uploadData.amount} 
+                      onChange={(e) => setUploadData({...uploadData, amount: e.target.value})}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <Label>Kategori</Label>
+                    <Select value={uploadData.category} onValueChange={(v) => setUploadData({...uploadData, category: v})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXPENSE_CATEGORIES.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Ülke</Label>
+                  <Input 
+                    value={uploadData.country} 
+                    onChange={(e) => setUploadData({...uploadData, country: e.target.value})}
+                    placeholder="Türkei, Deutschland..."
+                  />
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="border-2 border-dashed border-green-300 rounded-lg p-8 text-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                <p className="font-semibold text-green-700">Fatura Fotoğrafı Çek</p>
+                <p className="text-sm text-muted-foreground mt-1">Kamera açılacak, faturayı çerçeveye alın</p>
+                <p className="text-xs text-muted-foreground mt-2">Otomatik kenar algılama ve OCR yapılacak</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsScanOpen(false); setOcrResult(null); }}>
+              İptal
+            </Button>
+            {ocrResult && (
+              <Button onClick={() => { setIsScanOpen(false); setIsUploadOpen(true); }} className="bg-green-600 hover:bg-green-700">
+                Devam Et
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

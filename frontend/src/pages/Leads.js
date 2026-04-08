@@ -531,32 +531,29 @@ const Leads = () => {
             {filteredLeads.map((lead) => (
               <Card 
                 key={lead.id} 
-                className={`hover:shadow-md transition-shadow cursor-pointer ${selectedLeads.has(lead.id) ? 'ring-2 ring-orange-400' : ''}`}
+                className={`hover:shadow-lg transition-all cursor-pointer ${selectedLeads.has(lead.id) ? 'ring-2 ring-indigo-500 bg-indigo-50' : ''}`}
                 onClick={() => openLeadDetails(lead)}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold">
-                      {lead.first_name?.[0]}{lead.last_name?.[0]}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                      {lead.company_name?.[0]?.toUpperCase() || 'C'}
                     </div>
-                    <Checkbox
-                      checked={selectedLeads.has(lead.id)}
-                      onCheckedChange={(e) => { e.stopPropagation(); toggleLeadSelection(lead.id); }}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold truncate text-sm">{lead.company_name}</h3>
+                      <p className="text-xs text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
+                    </div>
                   </div>
-                  <h3 className="font-semibold truncate">{lead.company_name}</h3>
-                  <p className="text-sm text-muted-foreground truncate">{lead.first_name} {lead.last_name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{lead.city}, {lead.country}</p>
-                  <div className="flex gap-1 mt-3">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); handleSendEmail(lead); }}>
-                      <Mail className="w-3 h-3 text-blue-600" />
+                  <p className="text-xs text-muted-foreground mb-3">{lead.city}, {lead.country}</p>
+                  <div className="flex gap-1 pt-2 border-t">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); handleSendEmail(lead); }}>
+                      <Mail className="w-4 h-4 text-blue-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openEditDialog(lead); }}>
-                      <Pencil className="w-3 h-3 text-amber-600" />
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); openEditDialog(lead); }}>
+                      <Pencil className="w-4 h-4 text-amber-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); openDeleteDialog(lead); }}>
-                      <Trash2 className="w-3 h-3 text-red-500" />
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); openDeleteDialog(lead); }}>
+                      <Trash2 className="w-4 h-4 text-red-500" />
                     </Button>
                   </div>
                 </CardContent>
