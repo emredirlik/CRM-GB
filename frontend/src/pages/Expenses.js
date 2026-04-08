@@ -336,6 +336,39 @@ const Expenses = () => {
     }
   };
 
+  const mergePdfs = async () => {
+    try {
+      const params = {};
+      if (selectedFolder) {
+        params.folder_id = selectedFolder;
+      } else {
+        // Get all expense IDs from current filter
+        const ids = filteredExpenses.map(e => e.id);
+        if (ids.length === 0) {
+          toast.error('Birleştirilecek PDF yok');
+          return;
+        }
+        params.expense_ids = ids;
+      }
+      
+      const response = await axios.post(`${API}/expenses/merge-pdfs`, null, {
+        responseType: 'blob',
+        params
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `birlesik_faturalar_${new Date().toISOString().split('T')[0]}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('PDF\'ler birleştirildi');
+    } catch (error) {
+      toast.error('PDF birleştirilemedi: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const generateReport = async () => {
     try {
       const response = await axios.get(`${API}/expenses/report/pdf`, {
@@ -427,6 +460,10 @@ const Expenses = () => {
           <Button variant="outline" size="sm" onClick={generateReport}>
             <FileText className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Rapor</span>
+          </Button>
+          <Button variant="outline" size="sm" onClick={mergePdfs} className="text-purple-600 border-purple-300 hover:bg-purple-50">
+            <FileText className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">PDF Birleştir</span>
           </Button>
           <Button 
             size="sm" 

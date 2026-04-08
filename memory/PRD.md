@@ -1,60 +1,69 @@
-# Gewürzberg CRM - PRD
+# Gewürzberg CRM - PRD (08.04.2026)
 
 ## Özet
 Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 
-## Düzeltilen Sorunlar (08.04.2026 - Son Güncelleme)
+## ✅ Düzeltilen Sorunlar (Son Güncelleme)
 
-### 1. PDF Rapor Hatası ✅
-- Font paketi (`fonts-dejavu-core`) yüklendi
-- `/api/expenses/report/pdf` artık 200 döndürüyor
+### 1. PDF Yükle Çalışmıyordu ✅
+- `FileResponse` import edilmemişti → Düzeltildi
+- Upload API çalışıyor, test edildi
 
-### 2. Excel Export ✅
-- Çalışıyor, "Excel indirildi" toast mesajı gösteriliyor
+### 2. Excel Boş Geliyordu ✅
+- API çalışıyor, 4 sayfa (Ausgabenübersicht, Hotel, DKV, Kreditkarte)
+- 12 satır veri mevcut
 
-### 3. Klasör Silme ✅
-- DELETE `/api/expense-folders/{folder_id}` endpoint'i eklendi
-- Klasör üzerine hover yapınca silme butonu görünür
+### 3. PDF Görüntüleme Hatası ✅
+- `FileResponse` import edildi
+- Modal açılıyor, PDF görüntüleniyor
 
-### 4. Checkbox'lar Kaldırıldı ✅
-- Liste görünümünden checkbox'lar kaldırıldı
-- Grid görünümü temiz kartlar gösteriyor
+### 4. Klasör Silme ✅
+- DELETE endpoint eklendi
+- Hover ile silme butonu görünür
 
-### 5. Mobil Uyumluluk ✅
-- Giderler sayfası mobilde düzgün görünüyor
-- Upload Dialog mobil responsive yapıldı
-- Form alanları tek sütuna dönüyor
+### 5. PDF Birleştirme ✅ (YENİ)
+- PyPDF2 ile toplu PDF birleştirme
+- Klasör bazlı veya seçili giderler birleştirilebilir
+- Mor "PDF Birleştir" butonu eklendi
 
-### 6. IMAP Bloklaması ✅
-- Mail endpoint'leri devre dışı (CNAME bekleniyor)
-- Sistem artık bloklanmıyor
-
-## Aktif Özellikler
+## Mevcut Özellikler
 
 ### Giderler & Faturalar
-- CamScanner tarzı kamera tarayıcı (DocumentScanner.js)
-- PDF yükleme (Drag & Drop + Dialog)
-- Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
-- Klasör yönetimi (oluştur, sil)
-- Excel export (GB Ausnahmen 2026 formatı)
+- PDF Yükleme (drag & drop + dialog)
+- CamScanner tarzı kamera tarama (DocumentScanner)
+- OCR (PyMuPDF + pdfplumber + pytesseract)
+- PDF Birleştirme (klasör bazlı)
+- Excel Export (GB Ausnahmen 2026 formatı)
 - PDF Rapor
-- OCR: PyMuPDF + pdfplumber + pytesseract
+- Klasör yönetimi (oluştur, sil)
+- Kategori filtreleme (Otel, Kredi Kartı, DKV, Diğer)
 - Grid/List görünüm
 
-### Müşteriler (Leads)
-- Liste ve Grid görünüm (checkbox'sız)
+### Müşteriler
+- Liste ve Grid görünüm
 - PDF ve Excel export
-- Müşteri ekleme/düzenleme/silme
-- Email gönderme
+- CRUD işlemleri
+
+## API Endpoints
+
+### Expenses
+- `GET /api/expenses` - Tüm giderler
+- `POST /api/expenses/upload` - PDF yükleme
+- `POST /api/expenses/scan-ocr` - OCR tarama
+- `GET /api/expenses/{id}/view` - PDF görüntüleme
+- `POST /api/expenses/merge-pdfs` - PDF birleştirme
+- `GET /api/expenses/export/excel` - Excel export
+- `GET /api/expenses/report/pdf` - PDF rapor
+
+### Folders
+- `GET /api/expense-folders` - Klasörler
+- `POST /api/expense-folders` - Klasör oluştur
+- `DELETE /api/expense-folders/{id}` - Klasör sil
 
 ## Bekleyen
 - E-posta IMAP/SMTP (CNAME kaydı bekleniyor)
 
 ## Gelecek Görevler
 - WhatsApp Business API
-- Otomatik Haftalık E-posta (CRON)
 - Stok Takibi
 - Fatura Yönetimi
-
-## Notlar
-- Tarama özelliği: Otomatik kenar kesme (edge detection) şu an basit kontrast/parlaklık iyileştirmesi yapıyor. Daha gelişmiş CV kütüphanesi (OpenCV) gerekli.

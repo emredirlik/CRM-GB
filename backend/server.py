@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Response, Request, Depends, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -7111,6 +7111,58 @@ async def delete_expense_folder(folder_id: str):
         {"$set": {"folder_id": None}}
     )
     return {"message": "Folder deleted"}
+
+@api_router.post("/expenses/merge-pdfs")
+async def merge_expense_pdfs(folder_id: str = None, expense_ids: List[str] = None):
+    """Merge multiple expense PDFs into a single PDF"""
+    try:
+        from PyPDF2 import PdfMerger
+        from io import BytesIO
+        
+        # Get expenses to merge
+        if folder_id:
+            expenses = await db.expenses.find({"folder_id": folder_id}, {"_id": 0}).to_list(100)
+        elif expense_ids:
+            expenses = await db.expenses.find({"id": {"$in": expense_ids}}, {"_id": 0}).to_list(100)
+        else:
+            raise HTTPException(status_code=400, detail="folder_id veya expense_ids gerekli")
+        
+        if not expenses:
+            raise HTTPException(status_code=404, detail="PDF bulunamadı")
+        
+        merger = PdfMerger()
+        merged_count = 0
+        
+        for expense in expenses:
+            file_path = expense.get("file_path")
+            if file_path and Path(file_path).exists() and file_path.lower().endswith('.pdf'):
+                try:
+                    merger.append(file_path)
+                    merged_count += 1
+                except Exception as e:
+                    logger.warning(f"PDF merge skip {file_path}: {e}")
+        
+        if merged_count == 0:
+            raise HTTPException(status_code=404, detail="Birleştirilecek PDF bulunamadı")
+        
+        output = BytesIO()
+        merger.write(output)
+        merger.close()
+        output.seek(0)
+        
+        filename = f"birlesik_faturalar_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        
+        return StreamingResponse(
+            output,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"PDF merge error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/expenses/export/excel")
 async def export_expenses_excel(category: str = None, date_filter: str = 'all', date: str = None):
