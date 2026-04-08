@@ -7040,6 +7040,88 @@ async def delete_expense(expense_id: str):
     await db.expenses.delete_one({"id": expense_id})
     return {"message": "Deleted"}
 
+@api_router.post("/expenses/scan-ocr")
+async def scan_expense_ocr(file: UploadFile = File(...)):
+    """Process scanned image with basic OCR to extract date, vendor, and total"""
+    import re
+    
+    try:
+        # Save uploaded image temporarily
+        upload_dir = Path("/app/uploads/scans")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        temp_path = upload_dir / f"scan_{uuid.uuid4()}.{file.filename.split('.')[-1]}"
+        content = await file.read()
+        with open(temp_path, "wb") as f:
+            f.write(content)
+        
+        # Basic OCR using pytesseract if available
+        extracted_data = {
+            "vendor": "",
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "total": ""
+        }
+        
+        try:
+            import pytesseract
+            from PIL import Image
+            
+            img = Image.open(temp_path)
+            text = pytesseract.image_to_string(img, lang='deu+tur+eng')
+            
+            # Extract date patterns (DD.MM.YYYY, DD/MM/YYYY, YYYY-MM-DD)
+            date_patterns = [
+                r'(\d{2}[./-]\d{2}[./-]\d{4})',
+                r'(\d{4}[./-]\d{2}[./-]\d{2})'
+            ]
+            for pattern in date_patterns:
+                match = re.search(pattern, text)
+                if match:
+                    date_str = match.group(1)
+                    # Convert to YYYY-MM-DD
+                    if '.' in date_str or '/' in date_str:
+                        parts = re.split(r'[./]', date_str)
+                        if len(parts[0]) == 4:
+                            extracted_data["date"] = f"{parts[0]}-{parts[1]}-{parts[2]}"
+                        else:
+                            extracted_data["date"] = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                    else:
+                        extracted_data["date"] = date_str
+                    break
+            
+            # Extract total amount (look for patterns like "Total: 123.45" or "Summe: 123,45")
+            amount_patterns = [
+                r'(?:Total|Summe|Toplam|Gesamt|TOTAL)[\s:]*€?\s*([\d.,]+)',
+                r'€\s*([\d.,]+)',
+                r'([\d]+[.,]\d{2})\s*€'
+            ]
+            for pattern in amount_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    amount = match.group(1).replace(',', '.')
+                    extracted_data["total"] = amount
+                    break
+            
+            # Extract first line as vendor name (simple heuristic)
+            lines = [l.strip() for l in text.split('\n') if l.strip() and len(l.strip()) > 3]
+            if lines:
+                extracted_data["vendor"] = lines[0][:50]
+                
+        except ImportError:
+            logger.warning("pytesseract not available, returning empty OCR data")
+        except Exception as ocr_error:
+            logger.error(f"OCR processing error: {ocr_error}")
+        
+        # Clean up temp file
+        if temp_path.exists():
+            temp_path.unlink()
+        
+        return extracted_data
+        
+    except Exception as e:
+        logger.error(f"Scan OCR error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/expense-folders")
 async def get_expense_folders():
     folders = await db.expense_folders.find({}, {"_id": 0}).to_list(100)
@@ -7125,6 +7207,14 @@ async def export_expenses_excel(category: str = None, date_filter: str = 'all', 
 @api_router.get("/expenses/report/pdf")
 async def generate_expense_report(category: str = None, date_filter: str = 'all', date: str = None):
     """Generate expense report PDF"""
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.lib import colors
+    
     try:
         query = {}
         if category:

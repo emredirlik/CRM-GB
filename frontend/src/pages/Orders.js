@@ -32,7 +32,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock, ChevronDown, LayoutGrid, List, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -101,6 +107,7 @@ const Orders = () => {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // list or grid
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -490,19 +497,37 @@ const Orders = () => {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder={t('searchOrders')}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-          data-testid="search-orders"
-        />
+      {/* Search & View Toggle */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder={t('searchOrders')}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+            data-testid="search-orders"
+          />
+        </div>
+        <div className="flex gap-1">
+          <Button 
+            variant={viewMode === 'list' ? 'default' : 'outline'} 
+            size="icon"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="w-4 h-4" />
+          </Button>
+          <Button 
+            variant={viewMode === 'grid' ? 'default' : 'outline'} 
+            size="icon"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
-      {/* Orders List */}
+      {/* Orders List/Grid */}
       <div data-testid="orders-table-card">
         {filteredOrders.length === 0 ? (
           <Card>
@@ -513,6 +538,56 @@ const Orders = () => {
               </div>
             </CardContent>
           </Card>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" data-testid="orders-grid">
+            {filteredOrders.map((order) => {
+              const lead = leads.find(l => l.id === order.lead_id);
+              return (
+                <Card key={order.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => openPreview(order)}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge className={statusColors[order.status]}>
+                        {statusLabels[language]?.[order.status] || order.status}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openPreview(order); }}>
+                            <Eye className="w-4 h-4 mr-2" /> {t('preview')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); sendWhatsApp(order.id); }}>
+                            <MessageCircle className="w-4 h-4 mr-2 text-green-600" /> WhatsApp
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); downloadPdf(order.id); }}>
+                            <FileDown className="w-4 h-4 mr-2 text-blue-600" /> PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEmailDialog(order); }}>
+                            <Mail className="w-4 h-4 mr-2 text-purple-600" /> Email
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(order); }}>
+                            <Pencil className="w-4 h-4 mr-2" /> {t('edit')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openDeleteDialog(order); }} className="text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" /> {t('delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <h3 className="font-semibold truncate">{lead?.company_name || 'Müşteri'}</h3>
+                    <p className="text-sm text-muted-foreground truncate">{order.items?.map(i => i.product_name).join(', ')}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-muted-foreground">{order.created_at?.split('T')[0]}</span>
+                      <span className="font-bold text-indigo-600">{order.total_amount?.toFixed(2)} €</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         ) : (
           <div className="space-y-1" data-testid="orders-table">
             {filteredOrders.map((order) => (

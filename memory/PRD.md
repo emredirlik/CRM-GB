@@ -3,37 +3,52 @@
 ## Özet
 Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 
-## Tamamlanan Özellikler
+## Tamamlanan Özellikler (08.04.2026)
+
+### Temel Modüller
 - ✅ Dashboard, Müşteriler, Siparişler, Reçeteler, Spesifikasyonlar, Günlük Raporlar
 - ✅ Çoklu dil desteği (TR, EN, DE, PL)
 - ✅ PDF oluşturma ve indirme
 - ✅ Route Planner (localStorage ile veri saklama)
 - ✅ PWA desteği
-- ✅ Mail sistemi (IMAP - şu an pasif, CNAME sonrası aktif edilecek)
 
-## Son Değişiklikler (08.04.2026)
-1. **Giderler & Faturalar Sayfası**: Tam fonksiyonel gider yönetimi
-   - Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
-   - PDF yükleme (Drag & Drop destekli)
-   - Klasör oluşturma
-   - Excel ve PDF rapor dışa aktarma
-   - Grid/List görünüm
+### Giderler & Faturalar (YENİ)
+- ✅ Kategoriler: Otel, Kredi Kartı, DKV, Diğer Giderler
+- ✅ PDF yükleme (Drag & Drop destekli)
+- ✅ Klasör oluşturma
+- ✅ Mobil Fatura Tarama (OCR) - Kamera ile tarama
+- ✅ Otomatik veri çekme: Tarih, Firma, Tutar
+- ✅ Excel rapor dışa aktarma
+- ✅ PDF rapor oluşturma
+- ✅ Grid/List görünüm
 
-2. **Grid/List Görünüm**: Müşteriler sayfasına eklendi
+### Grid/List Görünüm (YENİ)
+- ✅ Müşteriler sayfası
+- ✅ Siparişler sayfası
+- ✅ Reçeteler sayfası
+- ✅ Tüm aksiyonlar (Düzenle, Sil, Görüntüle vb.) kartlarda erişilebilir
 
-3. **Aktivite Türü**: "Numune Test Edildi" seçeneği eklendi
+### Videolar Sayfası (GÜNCELLENDİ)
+- ✅ Video indirme
+- ✅ WhatsApp ile paylaşma
+- ✅ E-posta ile paylaşma
 
-4. **Videolar**: İndirme, WhatsApp, E-posta seçenekleri eklendi
+### Aktivite Geçmişi
+- ✅ "Numune Test Edildi" aktivite türü eklendi
 
-5. **Dil Çevirileri**: Eksik çeviriler tamamlandı
+### UI/UX İyileştirmeleri
+- ✅ AI Chatbox navigasyonu engellemeyecek şekilde yukarı kaydırıldı
+- ✅ Mobil tam uyumluluk
 
-6. **Yeni Kullanıcı Girişi**: DB'den kullanıcı kontrolü eklendi
+### Düzeltilen Hatalar
+- ✅ Müşteri düzenleme crash sorunu (ÇÖZÜLDÜ)
+- ✅ Yeni kullanıcı giriş hatası (DB kontrolü eklendi)
+- ✅ Dil senkronizasyonu (eksik çeviriler tamamlandı)
 
-## Bekleyen/Devam Eden Görevler
-- 🔴 E-posta sistemi (CNAME kaydı sonrası aktif edilecek)
-- 🟡 Mobil UI iyileştirmeleri
-- 🟡 Diğer sayfalara Grid/List görünüm
-- 🟡 PDF karakter sorunları kontrolü
+## Bekleyen Görevler
+- 🔴 E-posta sistemi (CNAME kaydı bekleniyor)
+- 🟡 "Made with Emergent" yazısı (görünmüyor, kontrol edilmeli)
+- 🟡 GB Ausnahmen 2026.ods formatına uygun Excel (örnek dosya bekleniyor)
 
 ## Gelecek Görevler
 - WhatsApp Business API
@@ -42,7 +57,9 @@ Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 - Stok Takibi
 - Fatura Yönetimi
 
-## Teknik Bilgiler
-- Frontend: React + TailwindCSS + Shadcn/UI
-- Backend: FastAPI + MongoDB
-- Giderler: /api/expenses, /api/expense-folders endpoints
+## API Endpoints
+- `/api/expenses` - Giderler CRUD
+- `/api/expense-folders` - Klasörler
+- `/api/expenses/scan-ocr` - Fatura tarama (OCR)
+- `/api/expenses/export/excel` - Excel dışa aktarma
+- `/api/expenses/report/pdf` - PDF rapor

@@ -159,7 +159,7 @@ const AIChatWidget = () => {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg z-50"
+        className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-lg z-50"
         data-testid="ai-chat-button"
       >
         <Sparkles className="w-6 h-6" />
@@ -170,8 +170,8 @@ const AIChatWidget = () => {
   return (
     <Card className={`fixed z-50 shadow-2xl border-2 border-purple-200 transition-all duration-300 ${
       isMinimized 
-        ? 'bottom-6 right-6 w-80 h-14' 
-        : 'bottom-6 right-6 w-96 h-[500px]'
+        ? 'bottom-20 right-6 w-80 h-14' 
+        : 'bottom-20 right-6 w-96 h-[500px]'
     }`}>
       {/* Header */}
       <CardHeader className="p-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-t-lg">

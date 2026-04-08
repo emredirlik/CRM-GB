@@ -40,7 +40,7 @@ import { toast } from 'sonner';
 import { 
   Receipt, Upload, Folder, FolderPlus, FileText, Trash2, 
   Eye, Download, Search, Plus, MoreVertical, Calendar,
-  CreditCard, Building2, Fuel, LayoutGrid, List, Euro, FileSpreadsheet
+  CreditCard, Building2, Fuel, LayoutGrid, List, Euro, FileSpreadsheet, Camera, ScanLine
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -69,9 +69,12 @@ const Expenses = () => {
   // Dialog states
   const [isFolderOpen, setIsFolderOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isScanOpen, setIsScanOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [ocrResult, setOcrResult] = useState(null);
   
   // Form states
   const [folderName, setFolderName] = useState('');
@@ -86,6 +89,7 @@ const Expenses = () => {
   const [uploading, setUploading] = useState(false);
   
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const dropRef = useRef(null);
 
   useEffect(() => {
@@ -176,6 +180,44 @@ const Expenses = () => {
       fetchExpenses();
     } catch (error) {
       toast.error('Silinemedi');
+    }
+  };
+
+  // Handle camera/scan for mobile
+  const handleScanCapture = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setScanning(true);
+    setIsScanOpen(true);
+    
+    try {
+      // Upload image for OCR processing
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axios.post(`${API}/expenses/scan-ocr`, formData);
+      
+      if (response.data) {
+        setOcrResult(response.data);
+        // Auto-fill form with OCR results
+        setUploadData(prev => ({
+          ...prev,
+          description: response.data.vendor || '',
+          amount: response.data.total || '',
+          date: response.data.date || prev.date
+        }));
+        // Convert scanned image to uploadable file
+        setUploadFiles([file]);
+        toast.success('Fatura tarandı! Verileri kontrol edin.');
+      }
+    } catch (error) {
+      console.error('OCR error:', error);
+      toast.error('Tarama başarısız. Manuel giriş yapın.');
+      // Still allow manual entry
+      setUploadFiles([file]);
+    } finally {
+      setScanning(false);
     }
   };
 
@@ -302,19 +344,31 @@ const Expenses = () => {
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={() => setIsFolderOpen(true)}>
             <FolderPlus className="w-4 h-4 mr-2" />
-            Yeni Klasör
+            <span className="hidden sm:inline">Yeni Klasör</span>
           </Button>
           <Button variant="outline" size="sm" onClick={exportToExcel}>
             <FileSpreadsheet className="w-4 h-4 mr-2" />
-            Excel
+            <span className="hidden sm:inline">Excel</span>
           </Button>
           <Button variant="outline" size="sm" onClick={generateReport}>
             <FileText className="w-4 h-4 mr-2" />
-            Rapor
+            <span className="hidden sm:inline">Rapor</span>
           </Button>
+          <Button variant="outline" size="sm" onClick={() => cameraInputRef.current?.click()} className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100">
+            <Camera className="w-4 h-4 mr-2" />
+            <span className="hidden sm:inline">Fatura Tara</span>
+          </Button>
+          <input 
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleScanCapture}
+          />
           <Button onClick={() => setIsUploadOpen(true)}>
             <Upload className="w-4 h-4 mr-2" />
-            PDF Yükle
+            <span className="hidden sm:inline">PDF Yükle</span>
           </Button>
         </div>
       </div>
