@@ -3928,21 +3928,186 @@ class MailSendRequest(BaseModel):
 
 @api_router.get("/mail/inbox")
 async def get_mail_inbox(page: int = 1, limit: int = 20, folder: str = "INBOX"):
-    """Fetch emails from IMAP inbox - DISABLED until CNAME configured"""
-    # IMAP bağlantısı devre dışı - kullanıcı CNAME ayarını yapana kadar
-    return {
-        "status": "pending_cname",
-        "emails": [],
-        "total": 0,
-        "page": page,
-        "pages": 0,
-        "message": "E-posta sistemi CNAME kaydı bekleniyor"
-    }
+    """Fetch emails from IMAP inbox with pagination"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('imap_host'):
+        return {
+            "status": "not_configured",
+            "emails": [],
+            "total": 0,
+            "page": page,
+            "pages": 0,
+            "message": "IMAP settings not configured"
+        }
+    
+    try:
+        # Connect to IMAP server
+        imap_host = settings.get('imap_host', 'imap.ionos.de')
+        imap_port = int(settings.get('imap_port', 993))
+        imap_user = settings.get('smtp_username')
+        imap_pass = settings.get('smtp_password')
+        
+        if not imap_user or not imap_pass:
+            return {"status": "error", "emails": [], "total": 0, "page": page, "pages": 0, "message": "IMAP credentials not configured"}
+        
+        logger.info(f"Connecting to IMAP: {imap_host}:{imap_port} as {imap_user}")
+        
+        # Try SSL connection first (port 993)
+        try:
+            mail = imaplib.IMAP4_SSL(imap_host, imap_port)
+        except Exception as ssl_error:
+            logger.warning(f"SSL connection failed, trying STARTTLS: {ssl_error}")
+            mail = imaplib.IMAP4(imap_host, 143)
+            mail.starttls()
+        
+        mail.login(imap_user, imap_pass)
+        
+        # Select folder
+        try:
+            mail.select(folder)
+        except:
+            mail.select('INBOX')
+        
+        # Fetch all email IDs
+        _, message_numbers = mail.search(None, 'ALL')
+        all_email_ids = message_numbers[0].split()
+        total_emails = len(all_email_ids)
+        total_pages = max(1, (total_emails + limit - 1) // limit)
+        
+        # Calculate pagination slice
+        start_idx = max(0, total_emails - (page * limit))
+        end_idx = total_emails - ((page - 1) * limit)
+        email_ids = all_email_ids[start_idx:end_idx]
+        
+        emails = []
+        for eid in reversed(email_ids):
+            _, msg_data = mail.fetch(eid, '(BODY.PEEK[HEADER] FLAGS BODYSTRUCTURE)')
+            for response_part in msg_data:
+                if isinstance(response_part, tuple):
+                    msg = email.message_from_bytes(response_part[1])
+                    
+                    # Decode subject
+                    subject = ''
+                    if msg['Subject']:
+                        decoded = decode_header(msg['Subject'])
+                        for part, charset in decoded:
+                            if isinstance(part, bytes):
+                                subject += part.decode(charset or 'utf-8', errors='replace')
+                            else:
+                                subject += part
+                    
+                    # Decode from
+                    from_header = msg.get('From', '')
+                    from_name = ''
+                    from_email_addr = from_header
+                    if '<' in from_header:
+                        from_name = from_header.split('<')[0].strip().strip('"')
+                        from_email_addr = from_header.split('<')[1].strip('>')
+                    
+                    # Check flags
+                    is_read = b'\\Seen' in response_part[0]
+                    
+                    # Check for attachments
+                    has_attachments = False
+                    attachment_count = 0
+                    body_struct_str = str(response_part[0])
+                    if 'ATTACHMENT' in body_struct_str.upper():
+                        has_attachments = True
+                        attachment_count = body_struct_str.upper().count('ATTACHMENT')
+                    
+                    emails.append({
+                        "id": eid.decode(),
+                        "subject": subject,
+                        "from_name": from_name,
+                        "from_email": from_email_addr,
+                        "date": msg.get('Date', ''),
+                        "body": '',
+                        "snippet": subject[:100] if subject else '',
+                        "is_read": is_read,
+                        "has_attachments": has_attachments,
+                        "attachmentCount": attachment_count
+                    })
+        
+        mail.logout()
+        return {
+            "status": "connected", 
+            "emails": emails,
+            "total": total_emails,
+            "page": page,
+            "pages": total_pages,
+            "limit": limit
+        }
+        
+    except Exception as e:
+        logger.error(f"IMAP error: {e}")
+        return {"status": "error", "emails": [], "total": 0, "page": page, "pages": 0, "message": str(e)}
 
 @api_router.get("/mail/body/{email_id}")
 async def get_email_body(email_id: str):
-    """Fetch email body on demand - DISABLED until CNAME configured"""
-    raise HTTPException(status_code=503, detail="E-posta sistemi CNAME kaydı bekleniyor")
+    """Fetch email body on demand"""
+    settings = await db.company_settings.find_one({}, {"_id": 0})
+    
+    if not settings or not settings.get('imap_host'):
+        raise HTTPException(status_code=400, detail="IMAP not configured")
+    
+    try:
+        mail = imaplib.IMAP4_SSL(settings['imap_host'], int(settings.get('imap_port', 993)))
+        mail.login(settings['smtp_username'], settings['smtp_password'])
+        mail.select('INBOX')
+        
+        _, msg_data = mail.fetch(email_id.encode(), '(RFC822)')
+        for response_part in msg_data:
+            if isinstance(response_part, tuple):
+                msg = email.message_from_bytes(response_part[1])
+                
+                body = ''
+                html_body = ''
+                attachments = []
+                
+                if msg.is_multipart():
+                    for part in msg.walk():
+                        content_type = part.get_content_type()
+                        content_disposition = str(part.get('Content-Disposition', ''))
+                        
+                        if 'attachment' in content_disposition or part.get_filename():
+                            filename = part.get_filename()
+                            if filename:
+                                if '=?' in filename:
+                                    decoded = decode_header(filename)
+                                    filename = ''.join([
+                                        t[0].decode(t[1] or 'utf-8') if isinstance(t[0], bytes) else t[0]
+                                        for t in decoded
+                                    ])
+                                attachments.append({
+                                    'filename': filename,
+                                    'content_type': content_type,
+                                    'size': len(part.get_payload(decode=True) or b'')
+                                })
+                        elif content_type == 'text/plain' and not body:
+                            try:
+                                body = part.get_payload(decode=True).decode('utf-8', errors='replace')
+                            except:
+                                body = str(part.get_payload())
+                        elif content_type == 'text/html' and not html_body:
+                            try:
+                                html_body = part.get_payload(decode=True).decode('utf-8', errors='replace')
+                            except:
+                                html_body = str(part.get_payload())
+                else:
+                    try:
+                        body = msg.get_payload(decode=True).decode('utf-8', errors='replace')
+                    except:
+                        body = str(msg.get_payload())
+                
+                mail.logout()
+                return {"body": html_body or body, "plain": body, "attachments": attachments}
+        
+        mail.logout()
+        return {"body": "", "plain": "", "attachments": []}
+    except Exception as e:
+        logger.error(f"Get email body error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Multi-language support for AI features
@@ -6989,8 +7154,10 @@ async def delete_expense(expense_id: str):
 
 @api_router.post("/expenses/scan-ocr")
 async def scan_expense_ocr(file: UploadFile = File(...)):
-    """Process scanned image or PDF with OCR to extract date, vendor, and total"""
+    """Process scanned image or PDF with OCR - CamScanner style document processing"""
     import re
+    import cv2
+    import numpy as np
     
     try:
         upload_dir = Path("/app/uploads/scans")
@@ -7003,10 +7170,12 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
             "vendor": "",
             "date": datetime.now().strftime("%Y-%m-%d"),
             "total": "",
-            "success": True
+            "success": True,
+            "processed_image": None  # Base64 processed image
         }
         
         text = ""
+        processed_image_base64 = None
         
         # Handle PDF files
         if filename.endswith('.pdf'):
@@ -7018,7 +7187,6 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
                 pdf_doc.close()
             except:
                 try:
-                    # Fallback: try pdfplumber
                     import pdfplumber
                     from io import BytesIO
                     with pdfplumber.open(BytesIO(content)) as pdf:
@@ -7027,17 +7195,120 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
                 except:
                     logger.warning("PDF text extraction failed")
         else:
-            # Handle image files with OCR
+            # Handle image files - CamScanner style processing
             try:
-                import pytesseract
                 from PIL import Image
                 from io import BytesIO
+                import base64
                 
-                img = Image.open(BytesIO(content))
-                # Quick OCR with limited config for speed
-                text = pytesseract.image_to_string(img, lang='deu+tur+eng', config='--psm 6')
+                # Load image with OpenCV
+                nparr = np.frombuffer(content, np.uint8)
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                original = img.copy()
+                
+                # === CAMSCANNER STYLE PROCESSING ===
+                
+                # 1. Convert to grayscale
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                
+                # 2. Apply Gaussian blur to reduce noise
+                blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+                
+                # 3. Edge detection for document boundary
+                edges = cv2.Canny(blurred, 50, 200)
+                
+                # 4. Find contours (document boundary)
+                contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                
+                # 5. Find largest rectangular contour (document)
+                doc_contour = None
+                max_area = 0
+                for contour in contours:
+                    area = cv2.contourArea(contour)
+                    if area > max_area and area > (img.shape[0] * img.shape[1] * 0.1):  # At least 10% of image
+                        peri = cv2.arcLength(contour, True)
+                        approx = cv2.approxPolyDP(contour, 0.02 * peri, True)
+                        if len(approx) == 4:  # Rectangle
+                            doc_contour = approx
+                            max_area = area
+                
+                # 6. Perspective correction if document found
+                if doc_contour is not None:
+                    # Order points: top-left, top-right, bottom-right, bottom-left
+                    pts = doc_contour.reshape(4, 2)
+                    rect = np.zeros((4, 2), dtype="float32")
+                    
+                    # Sum and diff to find corners
+                    s = pts.sum(axis=1)
+                    rect[0] = pts[np.argmin(s)]  # top-left
+                    rect[2] = pts[np.argmax(s)]  # bottom-right
+                    
+                    diff = np.diff(pts, axis=1)
+                    rect[1] = pts[np.argmin(diff)]  # top-right
+                    rect[3] = pts[np.argmax(diff)]  # bottom-left
+                    
+                    # Calculate new dimensions
+                    widthA = np.linalg.norm(rect[2] - rect[3])
+                    widthB = np.linalg.norm(rect[1] - rect[0])
+                    maxWidth = int(max(widthA, widthB))
+                    
+                    heightA = np.linalg.norm(rect[1] - rect[2])
+                    heightB = np.linalg.norm(rect[0] - rect[3])
+                    maxHeight = int(max(heightA, heightB))
+                    
+                    # Perspective transform
+                    dst = np.array([
+                        [0, 0],
+                        [maxWidth - 1, 0],
+                        [maxWidth - 1, maxHeight - 1],
+                        [0, maxHeight - 1]
+                    ], dtype="float32")
+                    
+                    M = cv2.getPerspectiveTransform(rect, dst)
+                    warped = cv2.warpPerspective(original, M, (maxWidth, maxHeight))
+                    gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+                
+                # 7. Adaptive thresholding for black & white document look
+                processed = cv2.adaptiveThreshold(
+                    gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                    cv2.THRESH_BINARY, 21, 10
+                )
+                
+                # 8. Denoise
+                processed = cv2.fastNlMeansDenoising(processed, None, 10, 7, 21)
+                
+                # 9. Sharpen edges
+                kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+                processed = cv2.filter2D(processed, -1, kernel)
+                
+                # Save processed image
+                processed_filename = f"processed_{uuid.uuid4().hex[:8]}.png"
+                processed_path = upload_dir / processed_filename
+                cv2.imwrite(str(processed_path), processed)
+                
+                # Convert to base64 for frontend preview
+                _, buffer = cv2.imencode('.png', processed)
+                processed_image_base64 = base64.b64encode(buffer).decode('utf-8')
+                
+                # OCR on processed image
+                import pytesseract
+                pil_img = Image.fromarray(processed)
+                text = pytesseract.image_to_string(pil_img, lang='deu+tur+eng', config='--psm 6')
+                
+                extracted_data["processed_image"] = processed_image_base64
+                extracted_data["processed_file"] = processed_filename
+                
             except Exception as e:
-                logger.warning(f"OCR failed: {e}")
+                logger.warning(f"Image processing failed: {e}")
+                # Fallback to simple OCR
+                try:
+                    import pytesseract
+                    from PIL import Image
+                    from io import BytesIO
+                    img = Image.open(BytesIO(content))
+                    text = pytesseract.image_to_string(img, lang='deu+tur+eng', config='--psm 6')
+                except:
+                    pass
         
         if text:
             # Extract date patterns
