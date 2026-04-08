@@ -591,30 +591,10 @@ const DailyReports = () => {
       formData.append('to', emailTo);
       formData.append('subject', emailSubject);
       formData.append('body', `<p>${emailMessage}</p>`);
-      formData.append('html', 'true');
       formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `rapor_${dateStr}.pdf`);
       
-      const response = await axios.post(`${API}/mail/send-with-attachments`, formData);
-      
-      if (response.data.eml_data) {
-        const byteCharacters = atob(response.data.eml_data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'message/rfc822' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = response.data.filename || 'email.eml';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }
-      
-      toast.success('E-posta dosyası indirildi');
+      const response = await axios.post(`${API}/mail/send-to-drafts`, formData);
+      toast.success(response.data.message);
       setIsEmailDialogOpen(false);
     } catch (error) {
       toast.error(t.error, { description: error.response?.data?.detail || t.emailFailed });

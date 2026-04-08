@@ -31,14 +31,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock, ChevronDown, MoreVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, ShoppingCart, Package, FileDown, MessageCircle, X, Eye, Euro, CreditCard, Mail, Bell, Clock, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -389,7 +383,7 @@ const Orders = () => {
     setIsEmailDialogOpen(true);
   };
 
-  // Send order via email - downloads .eml file for user's mail client
+  // Send order via email with PDF attachment - saves to IMAP Drafts
   const sendOrderByEmail = async () => {
     setSendingEmail(true);
     try {
@@ -409,31 +403,10 @@ const Orders = () => {
       formData.append('to', emailTo || '');
       formData.append('subject', emailSubject);
       formData.append('body', bodyByLang[emailLanguage] || bodyByLang.en);
-      formData.append('html', 'true');
       formData.append('attachments', new Blob([pdfResponse.data], { type: 'application/pdf' }), `siparis_${selectedOrder.id.slice(0,8)}.pdf`);
       
-      const response = await axios.post(`${API}/mail/send-with-attachments`, formData);
-      
-      // Download .eml file
-      if (response.data.eml_data) {
-        const byteCharacters = atob(response.data.eml_data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'message/rfc822' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = response.data.filename || 'email.eml';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }
-      
-      toast.success(t('success'), { description: 'E-posta dosyası indirildi. Mail uygulamanızda açın.' });
+      const response = await axios.post(`${API}/mail/send-to-drafts`, formData);
+      toast.success(t('success'), { description: response.data.message });
       setIsEmailDialogOpen(false);
     } catch (error) {
       toast.error(t('error'), { description: error.response?.data?.detail || 'Mail hazırlanamadı' });
@@ -642,60 +615,26 @@ const Orders = () => {
                       </div>
                     </div>
                     
-                    {/* Actions - Desktop: inline buttons, Mobile: dropdown */}
+                    {/* Actions - All buttons visible */}
                     <div className="flex items-center gap-0 flex-shrink-0">
-                      {/* Desktop buttons */}
-                      <div className="hidden sm:flex items-center gap-0">
-                        <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-6 w-6 p-0" title="Önizle">
-                          <Eye className="w-3 h-3 text-indigo-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-6 w-6 p-0" title="WhatsApp">
-                          <MessageCircle className="w-3 h-3 text-green-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-6 w-6 p-0" title="PDF">
-                          <FileDown className="w-3 h-3 text-blue-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-6 w-6 p-0" title="Email">
-                          <Mail className="w-3 h-3 text-purple-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-6 w-6 p-0" title="Düzenle">
-                          <Pencil className="w-3 h-3 text-slate-500" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-6 w-6 p-0" title="Sil">
-                          <Trash2 className="w-3 h-3 text-red-500" />
-                        </Button>
-                      </div>
-                      
-                      {/* Mobile dropdown */}
-                      <div className="sm:hidden">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openPreview(order)}>
-                              <Eye className="w-4 h-4 mr-2 text-indigo-600" /> {t('preview') || 'Önizle'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => sendWhatsApp(order.id)}>
-                              <MessageCircle className="w-4 h-4 mr-2 text-green-600" /> WhatsApp
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => downloadPdf(order.id)}>
-                              <FileDown className="w-4 h-4 mr-2 text-blue-600" /> PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEmailDialog(order)}>
-                              <Mail className="w-4 h-4 mr-2 text-purple-600" /> Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(order)}>
-                              <Pencil className="w-4 h-4 mr-2 text-slate-500" /> {t('edit') || 'Düzenle'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDeleteDialog(order)} className="text-red-600">
-                              <Trash2 className="w-4 h-4 mr-2" /> {t('delete') || 'Sil'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => openPreview(order)} className="h-6 w-6 p-0" title="Önizle">
+                        <Eye className="w-3 h-3 text-indigo-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => sendWhatsApp(order.id)} className="h-6 w-6 p-0" title="WhatsApp">
+                        <MessageCircle className="w-3 h-3 text-green-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => downloadPdf(order.id)} className="h-6 w-6 p-0" title="PDF">
+                        <FileDown className="w-3 h-3 text-blue-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEmailDialog(order)} className="h-6 w-6 p-0" title="Email">
+                        <Mail className="w-3 h-3 text-purple-600" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(order)} className="h-6 w-6 p-0" title="Düzenle">
+                        <Pencil className="w-3 h-3 text-slate-500" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(order)} className="h-6 w-6 p-0" title="Sil">
+                        <Trash2 className="w-3 h-3 text-red-500" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

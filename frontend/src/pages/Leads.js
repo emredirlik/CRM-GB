@@ -33,14 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle, Brain, Sparkles, Loader2, MoreVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, Mail, Users, Search, FileDown, Eye, MapPin, Navigation, History, Phone, CalendarPlus, CheckCircle, XCircle, Clock, AlertCircle, Brain, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -577,54 +571,53 @@ const Leads = () => {
                       </div>
                     </div>
                     
-                    {/* Actions - Desktop: inline, Mobile: dropdown */}
+                    {/* Actions - all visible */}
                     <div className="flex items-center gap-0 flex-shrink-0">
-                      {/* Desktop buttons */}
-                      <div className="hidden sm:flex items-center gap-0">
-                        <Button variant="ghost" size="sm" onClick={() => openActivityDialog(lead)} className="h-6 w-6 p-0" data-testid={`activity-${lead.id}`}>
-                          <History className="w-3 h-3 text-purple-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openLeadDetails(lead)} className="h-6 w-6 p-0" data-testid={`preview-${lead.id}`}>
-                          <Eye className="w-3 h-3 text-gray-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleSendEmail(lead)} className="h-6 w-6 p-0" data-testid={`mail-${lead.id}`}>
-                          <Mail className="w-3 h-3 text-blue-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openEditDialog(lead)} className="h-6 w-6 p-0" data-testid={`edit-${lead.id}`}>
-                          <Pencil className="w-3 h-3 text-amber-600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => openDeleteDialog(lead)} className="h-6 w-6 p-0" data-testid={`delete-${lead.id}`}>
-                          <Trash2 className="w-3 h-3 text-red-500" />
-                        </Button>
-                      </div>
-                      
-                      {/* Mobile dropdown */}
-                      <div className="sm:hidden">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openActivityDialog(lead)}>
-                              <History className="w-4 h-4 mr-2 text-purple-600" /> {t('activities')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openLeadDetails(lead)}>
-                              <Eye className="w-4 h-4 mr-2 text-gray-600" /> {t('preview')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleSendEmail(lead)}>
-                              <Mail className="w-4 h-4 mr-2 text-blue-600" /> Email
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openEditDialog(lead)}>
-                              <Pencil className="w-4 h-4 mr-2 text-amber-600" /> {t('edit')}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDeleteDialog(lead)} className="text-red-600">
-                              <Trash2 className="w-4 h-4 mr-2" /> {t('delete')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openActivityDialog(lead)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`activity-${lead.id}`}
+                      >
+                        <History className="w-3 h-3 text-purple-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openLeadDetails(lead)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`preview-${lead.id}`}
+                      >
+                        <Eye className="w-3 h-3 text-gray-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSendEmail(lead)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`mail-${lead.id}`}
+                      >
+                        <Mail className="w-3 h-3 text-blue-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(lead)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`edit-${lead.id}`}
+                      >
+                        <Pencil className="w-3 h-3 text-amber-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(lead)}
+                        className="h-6 w-6 p-0"
+                        data-testid={`delete-${lead.id}`}
+                      >
+                        <Trash2 className="w-3 h-3 text-red-500" />
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
