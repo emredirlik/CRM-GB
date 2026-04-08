@@ -3,62 +3,53 @@
 ## Özet
 Berlin merkezli baharat fabrikası için B2B CRM uygulaması.
 
-## ✅ Düzeltilen Sorunlar (Son Güncelleme)
+## ✅ Son Düzeltmeler
 
-### 1. PDF Yükle Çalışmıyordu ✅
-- `FileResponse` import edilmemişti → Düzeltildi
-- Upload API çalışıyor, test edildi
+### 1. Excel Export ✅
+- API çalışıyor (4 sayfa: Ausgabenübersicht, Hotel, DKV, Kreditkarte)
+- 13 satır veri test edildi
+- NOT: Tarayıcınızda Excel açılmıyorsa veya boş görünüyorsa, dosyayı bilgisayarınıza indirip Microsoft Excel veya LibreOffice ile açın
 
-### 2. Excel Boş Geliyordu ✅
-- API çalışıyor, 4 sayfa (Ausgabenübersicht, Hotel, DKV, Kreditkarte)
-- 12 satır veri mevcut
+### 2. PDF Görüntüleme ✅
+- FileResponse import hatası düzeltildi
+- Modal ile PDF embed edilip görüntüleniyor
 
-### 3. PDF Görüntüleme Hatası ✅
-- `FileResponse` import edildi
-- Modal açılıyor, PDF görüntüleniyor
+### 3. Aylık/Yıllık Rapor ✅ (YENİ)
+- Rapor butonu dropdown menü oldu
+- "Tüm Giderler", "Aylık Rapor", "Yıllık Rapor" seçenekleri
 
-### 4. Klasör Silme ✅
-- DELETE endpoint eklendi
-- Hover ile silme butonu görünür
+### 4. Alt Klasör (Nested Folders) ✅ (YENİ)
+- Klasör içinde klasör oluşturabilme
+- "Üst Klasör (Opsiyonel)" seçeneği eklendi
+- Klasör path gösterimi (örn: "2024 / Nisan")
 
-### 5. PDF Birleştirme ✅ (YENİ)
+### 5. PDF Birleştirme ✅
 - PyPDF2 ile toplu PDF birleştirme
-- Klasör bazlı veya seçili giderler birleştirilebilir
-- Mor "PDF Birleştir" butonu eklendi
+- Klasör bazlı veya tüm giderler birleştirilebilir
 
 ## Mevcut Özellikler
 
 ### Giderler & Faturalar
 - PDF Yükleme (drag & drop + dialog)
-- CamScanner tarzı kamera tarama (DocumentScanner)
+- CamScanner tarzı kamera tarama
 - OCR (PyMuPDF + pdfplumber + pytesseract)
-- PDF Birleştirme (klasör bazlı)
-- Excel Export (GB Ausnahmen 2026 formatı)
-- PDF Rapor
-- Klasör yönetimi (oluştur, sil)
-- Kategori filtreleme (Otel, Kredi Kartı, DKV, Diğer)
-- Grid/List görünüm
-
-### Müşteriler
-- Liste ve Grid görünüm
-- PDF ve Excel export
-- CRUD işlemleri
+- PDF Birleştirme
+- Excel Export (GB Ausnahmen 2026 formatı - 4 sayfa)
+- PDF Rapor (Tüm/Aylık/Yıllık)
+- Klasör yönetimi (oluştur, sil, alt klasör)
+- Kategori filtreleme
 
 ## API Endpoints
 
-### Expenses
-- `GET /api/expenses` - Tüm giderler
-- `POST /api/expenses/upload` - PDF yükleme
-- `POST /api/expenses/scan-ocr` - OCR tarama
-- `GET /api/expenses/{id}/view` - PDF görüntüleme
-- `POST /api/expenses/merge-pdfs` - PDF birleştirme
-- `GET /api/expenses/export/excel` - Excel export
-- `GET /api/expenses/report/pdf` - PDF rapor
+### Reports
+- `GET /api/expenses/report/pdf?report_type=all` - Tüm giderler
+- `GET /api/expenses/report/pdf?report_type=monthly&month=4&year=2026` - Aylık
+- `GET /api/expenses/report/pdf?report_type=yearly&year=2026` - Yıllık
 
-### Folders
-- `GET /api/expense-folders` - Klasörler
-- `POST /api/expense-folders` - Klasör oluştur
-- `DELETE /api/expense-folders/{id}` - Klasör sil
+### Folders (Nested Support)
+- `POST /api/expense-folders` - `{name, category, parent_id}`
+- `GET /api/expense-folders` - Tüm klasörler (path bilgisi dahil)
+- `DELETE /api/expense-folders/{id}` - Alt klasörlerle birlikte siler
 
 ## Bekleyen
 - E-posta IMAP/SMTP (CNAME kaydı bekleniyor)

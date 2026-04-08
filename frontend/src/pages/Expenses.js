@@ -80,6 +80,8 @@ const Expenses = () => {
   
   // Form states
   const [folderName, setFolderName] = useState('');
+  const [parentFolderId, setParentFolderId] = useState(null); // For nested folders
+  const [reportType, setReportType] = useState('all'); // all, monthly, yearly
   const [uploadData, setUploadData] = useState({
     category: 'other',
     description: '',
@@ -134,10 +136,12 @@ const Expenses = () => {
     try {
       await axios.post(`${API}/expense-folders`, { 
         name: folderName,
-        category: selectedCategory !== 'all' ? selectedCategory : 'other'
+        category: selectedCategory !== 'all' ? selectedCategory : 'other',
+        parent_id: parentFolderId || null
       });
       toast.success('Klasör oluşturuldu');
       setFolderName('');
+      setParentFolderId(null);
       setIsFolderOpen(false);
       fetchFolders();
     } catch (error) {
@@ -369,24 +373,35 @@ const Expenses = () => {
     }
   };
 
-  const generateReport = async () => {
+  const generateReport = async (type = 'all') => {
     try {
+      const now = new Date();
+      const params = {
+        category: selectedCategory !== 'all' ? selectedCategory : undefined,
+        report_type: type,
+        month: now.getMonth() + 1,
+        year: now.getFullYear()
+      };
+      
       const response = await axios.get(`${API}/expenses/report/pdf`, {
         responseType: 'blob',
-        params: {
-          category: selectedCategory !== 'all' ? selectedCategory : undefined,
-          date_filter: dateFilter,
-          date: selectedDate
-        }
+        params
       });
+      
+      const filename = type === 'monthly' 
+        ? `aylik_rapor_${now.getMonth() + 1}_${now.getFullYear()}.pdf`
+        : type === 'yearly'
+        ? `yillik_rapor_${now.getFullYear()}.pdf`
+        : `gider_raporu_${new Date().toISOString().split('T')[0]}.pdf`;
+      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `gider_raporu_${new Date().toISOString().split('T')[0]}.pdf`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('Rapor indirildi');
+      toast.success(type === 'monthly' ? 'Aylık rapor indirildi' : type === 'yearly' ? 'Yıllık rapor indirildi' : 'Rapor indirildi');
     } catch (error) {
       toast.error('Rapor oluşturulamadı');
     }
@@ -457,10 +472,25 @@ const Expenses = () => {
             <FileSpreadsheet className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Excel</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={generateReport}>
-            <FileText className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Rapor</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <FileText className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Rapor</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => generateReport('all')}>
+                <FileText className="w-4 h-4 mr-2" /> Tüm Giderler
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => generateReport('monthly')}>
+                <Calendar className="w-4 h-4 mr-2" /> Aylık Rapor
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => generateReport('yearly')}>
+                <FileText className="w-4 h-4 mr-2" /> Yıllık Rapor
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={mergePdfs} className="text-purple-600 border-purple-300 hover:bg-purple-50">
             <FileText className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">PDF Birleştir</span>
@@ -707,9 +737,30 @@ const Expenses = () => {
               <Label>Klasör Adı</Label>
               <Input value={folderName} onChange={(e) => setFolderName(e.target.value)} placeholder="Örn: Nisan 2024" />
             </div>
+            {folders.length > 0 && (
+              <div>
+                <Label>Üst Klasör (Opsiyonel)</Label>
+                <Select value={parentFolderId || "root"} onValueChange={(v) => setParentFolderId(v === "root" ? null : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Ana dizin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="root">Ana Dizin (Kök)</SelectItem>
+                    {folders.map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.path || f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Bir klasörün içinde alt klasör oluşturmak için üst klasör seçin
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFolderOpen(false)}>İptal</Button>
+            <Button variant="outline" onClick={() => { setIsFolderOpen(false); setParentFolderId(null); }}>İptal</Button>
             <Button onClick={handleCreateFolder}>Oluştur</Button>
           </DialogFooter>
         </DialogContent>

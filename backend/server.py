@@ -6794,6 +6794,7 @@ class ExpenseCreate(BaseModel):
 class ExpenseFolderCreate(BaseModel):
     name: str
     category: Optional[str] = 'other'
+    parent_id: Optional[str] = None  # For nested folders
 
 @api_router.get("/expenses")
 async def get_expenses():
@@ -7071,8 +7072,31 @@ async def scan_expense_ocr(file: UploadFile = File(...)):
         return {"vendor": "", "date": datetime.now().strftime("%Y-%m-%d"), "total": "", "success": False, "error": str(e)}
 
 @api_router.get("/expense-folders")
-async def get_expense_folders():
-    folders = await db.expense_folders.find({}, {"_id": 0}).to_list(100)
+async def get_expense_folders(parent_id: str = None):
+    """Get expense folders, optionally filtered by parent"""
+    query = {"parent_id": parent_id} if parent_id else {}
+    folders = await db.expense_folders.find(query, {"_id": 0}).to_list(100)
+    
+    # Build folder tree structure
+    all_folders = await db.expense_folders.find({}, {"_id": 0}).to_list(100)
+    folder_map = {f["id"]: f for f in all_folders}
+    
+    # Add children count and path
+    for folder in folders:
+        children = [f for f in all_folders if f.get("parent_id") == folder["id"]]
+        folder["children_count"] = len(children)
+        # Build path
+        path = [folder["name"]]
+        current = folder
+        while current.get("parent_id"):
+            parent = folder_map.get(current["parent_id"])
+            if parent:
+                path.insert(0, parent["name"])
+                current = parent
+            else:
+                break
+        folder["path"] = " / ".join(path)
+    
     return folders
 
 @api_router.post("/expense-folders")
@@ -7082,34 +7106,40 @@ async def create_expense_folder(data: ExpenseFolderCreate):
         "id": folder_id,
         "name": data.name,
         "category": data.category,
+        "parent_id": data.parent_id,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.expense_folders.insert_one(folder)
-    # Return without _id
-    return {"id": folder_id, "name": data.name, "category": data.category}
+    return {"id": folder_id, "name": data.name, "category": data.category, "parent_id": data.parent_id}
 
 @api_router.put("/expense-folders/{folder_id}")
 async def update_expense_folder(folder_id: str, data: ExpenseFolderCreate):
     """Update expense folder"""
     result = await db.expense_folders.update_one(
         {"id": folder_id},
-        {"$set": {"name": data.name, "category": data.category}}
+        {"$set": {"name": data.name, "category": data.category, "parent_id": data.parent_id}}
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Folder not found")
-    return {"id": folder_id, "name": data.name, "category": data.category}
+    return {"id": folder_id, "name": data.name, "category": data.category, "parent_id": data.parent_id}
 
 @api_router.delete("/expense-folders/{folder_id}")
 async def delete_expense_folder(folder_id: str):
-    """Delete expense folder"""
+    """Delete expense folder and its children"""
+    # First delete all child folders recursively
+    async def delete_children(parent_id):
+        children = await db.expense_folders.find({"parent_id": parent_id}, {"_id": 0}).to_list(100)
+        for child in children:
+            await delete_children(child["id"])
+            await db.expense_folders.delete_one({"id": child["id"]})
+            await db.expenses.update_many({"folder_id": child["id"]}, {"$set": {"folder_id": None}})
+    
+    await delete_children(folder_id)
+    
     result = await db.expense_folders.delete_one({"id": folder_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Folder not found")
-    # Also update expenses that were in this folder
-    await db.expenses.update_many(
-        {"folder_id": folder_id},
-        {"$set": {"folder_id": None}}
-    )
+    await db.expenses.update_many({"folder_id": folder_id}, {"$set": {"folder_id": None}})
     return {"message": "Folder deleted"}
 
 @api_router.post("/expenses/merge-pdfs")
@@ -7407,8 +7437,15 @@ async def export_expenses_excel(category: str = None, date_filter: str = 'all', 
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/expenses/report/pdf")
-async def generate_expense_report(category: str = None, date_filter: str = 'all', date: str = None):
-    """Generate expense report PDF"""
+async def generate_expense_report(
+    category: str = None, 
+    date_filter: str = 'all', 
+    date: str = None,
+    report_type: str = 'all',  # all, monthly, yearly
+    month: int = None,
+    year: int = None
+):
+    """Generate expense report PDF - supports all, monthly, yearly"""
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -7422,6 +7459,26 @@ async def generate_expense_report(category: str = None, date_filter: str = 'all'
         if category:
             query["category"] = category
         
+        # Date filtering based on report_type
+        current_year = datetime.now().year
+        current_month = datetime.now().month
+        
+        if report_type == 'monthly':
+            target_month = month or current_month
+            target_year = year or current_year
+            # Filter by month
+            start_date = f"{target_year}-{str(target_month).zfill(2)}-01"
+            if target_month == 12:
+                end_date = f"{target_year + 1}-01-01"
+            else:
+                end_date = f"{target_year}-{str(target_month + 1).zfill(2)}-01"
+            query["date"] = {"$gte": start_date, "$lt": end_date}
+        elif report_type == 'yearly':
+            target_year = year or current_year
+            start_date = f"{target_year}-01-01"
+            end_date = f"{target_year + 1}-01-01"
+            query["date"] = {"$gte": start_date, "$lt": end_date}
+        
         expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
         
         buffer = BytesIO()
@@ -7432,9 +7489,22 @@ async def generate_expense_report(category: str = None, date_filter: str = 'all'
         
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle('Title', fontName='DejaVu-Bold', fontSize=18, alignment=1, spaceAfter=20)
+        subtitle_style = ParagraphStyle('Subtitle', fontName='DejaVu', fontSize=12, alignment=1, spaceAfter=10)
         
         elements = []
-        elements.append(Paragraph("Gider Raporu", title_style))
+        
+        # Title based on report type
+        month_names = {1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan", 5: "Mayıs", 6: "Haziran",
+                      7: "Temmuz", 8: "Ağustos", 9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"}
+        
+        if report_type == 'monthly':
+            title = f"Aylık Gider Raporu - {month_names.get(target_month, '')} {target_year}"
+        elif report_type == 'yearly':
+            title = f"Yıllık Gider Raporu - {target_year}"
+        else:
+            title = "Gider Raporu"
+        
+        elements.append(Paragraph(title, title_style))
         elements.append(Paragraph(f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
         elements.append(Spacer(1, 20))
         
