@@ -48,15 +48,29 @@ import DocumentScanner from '@/components/DocumentScanner';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const EXPENSE_CATEGORIES = [
-  { id: 'hotel', name: 'Otel', icon: Building2, color: 'bg-blue-100 text-blue-700' },
-  { id: 'credit_card', name: 'Kredi Kartı', icon: CreditCard, color: 'bg-purple-100 text-purple-700' },
-  { id: 'dkv', name: 'DKV', icon: Fuel, color: 'bg-orange-100 text-orange-700' },
-  { id: 'other', name: 'Diğer Giderler', icon: Receipt, color: 'bg-gray-100 text-gray-700' },
+const EXPENSE_CATEGORIES_BASE = [
+  { id: 'hotel', icon: Building2, color: 'bg-blue-100 text-blue-700' },
+  { id: 'credit_card', icon: CreditCard, color: 'bg-purple-100 text-purple-700' },
+  { id: 'dkv', icon: Fuel, color: 'bg-orange-100 text-orange-700' },
+  { id: 'other', icon: Receipt, color: 'bg-gray-100 text-gray-700' },
 ];
+
+const getCategoryNames = (lang) => ({
+  hotel: lang === 'de' ? 'Hotel' : lang === 'en' ? 'Hotel' : 'Otel',
+  credit_card: lang === 'de' ? 'Kreditkarte' : lang === 'en' ? 'Credit Card' : 'Kredi Kartı',
+  dkv: 'DKV',
+  other: lang === 'de' ? 'Sonstige' : lang === 'en' ? 'Other Expenses' : 'Diğer Giderler',
+});
 
 const Expenses = () => {
   const { t, language } = useLanguage();
+  
+  // Dynamic category names based on language
+  const EXPENSE_CATEGORIES = EXPENSE_CATEGORIES_BASE.map(cat => ({
+    ...cat,
+    name: getCategoryNames(language)[cat.id]
+  }));
+  
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -556,7 +570,7 @@ const Expenses = () => {
             {t('expensesTitle')}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {language === 'de' ? 'Rechnungen und Ausgaben verwalten' : 'Fatura ve gider yönetimi'}
+            {language === 'de' ? 'Rechnungen und Ausgaben verwalten' : language === 'en' ? 'Invoice and expense management' : 'Fatura ve gider yönetimi'}
           </p>
         </div>
         
@@ -600,7 +614,7 @@ const Expenses = () => {
               <DropdownMenuContent align="end" className="w-56 max-h-64 overflow-y-auto">
                 <DropdownMenuItem onClick={() => mergePdfs(null, null)} className="text-gray-600">
                   <FileText className="w-4 h-4 mr-2" />
-                  {language === 'de' ? 'Ohne Ordner' : 'Klasörsüz'}
+                  {language === 'de' ? 'Ohne Ordner' : language === 'en' ? 'No Folder' : 'Klasörsüz'}
                 </DropdownMenuItem>
                 {folders.length > 0 && <div className="border-t my-1" />}
                 {folders.map(folder => (
@@ -651,7 +665,7 @@ const Expenses = () => {
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder={language === 'de' ? 'Suchen...' : 'Ara...'}
+            placeholder={language === 'de' ? 'Suchen...' : language === 'en' ? 'Search...' : 'Ara...'}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 bg-white border-gray-200 focus:border-indigo-400 focus:ring-indigo-400"
@@ -676,7 +690,7 @@ const Expenses = () => {
               <SelectValue placeholder="Tüm Aylar" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{language === 'de' ? 'Alle Monate' : 'Tüm Aylar'}</SelectItem>
+              <SelectItem value="all">{language === 'de' ? 'Alle Monate' : language === 'en' ? 'All Months' : 'Tüm Aylar'}</SelectItem>
               {months.map(month => (
                 <SelectItem key={month.id} value={month.id.toString()}>{month.name}</SelectItem>
               ))}
@@ -688,7 +702,7 @@ const Expenses = () => {
               <SelectValue placeholder="Kategori" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{language === 'de' ? 'Alle Kategorien' : 'Tüm Kategoriler'}</SelectItem>
+              <SelectItem value="all">{language === 'de' ? 'Alle Kategorien' : language === 'en' ? 'All Categories' : 'Tüm Kategoriler'}</SelectItem>
               {EXPENSE_CATEGORIES.map(cat => (
                 <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
               ))}
@@ -723,7 +737,7 @@ const Expenses = () => {
           <CardContent className="p-5 relative">
             <div className="flex items-center gap-2 mb-2">
               <Euro className="w-5 h-5 opacity-80" />
-              <p className="text-sm font-medium opacity-90">{language === 'de' ? 'Gesamt' : 'Toplam Gider'}</p>
+              <p className="text-sm font-medium opacity-90">{language === 'de' ? 'Gesamt' : language === 'en' ? 'Total Expense' : 'Toplam Gider'}</p>
             </div>
             <p className="text-3xl font-bold">{totalAmount.toFixed(2)} €</p>
             <p className="text-xs mt-2 opacity-70">
@@ -769,7 +783,7 @@ const Expenses = () => {
             <div className="flex items-center gap-2 text-sm mb-3 pb-3 border-b">
               <Button variant="ghost" size="sm" onClick={goToRootFolder} className="h-7 px-2 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
                 <Folder className="w-4 h-4 mr-1" />
-                Ana Dizin
+                {language === 'de' ? 'Hauptverzeichnis' : language === 'en' ? 'Root' : 'Ana Dizin'}
               </Button>
               {currentFolderPath.map((folder, idx) => (
                 <React.Fragment key={folder.id}>
@@ -801,7 +815,7 @@ const Expenses = () => {
                 className="border-dashed border-indigo-300 text-indigo-600 hover:bg-indigo-50"
               >
                 <Folder className="w-4 h-4 mr-2" />
-                ← Geri
+                ← {language === 'de' ? 'Zurück' : language === 'en' ? 'Back' : 'Geri'}
               </Button>
             )}
             
@@ -813,7 +827,7 @@ const Expenses = () => {
                 className={selectedFolder === null ? 'bg-indigo-600 hover:bg-indigo-700' : ''}
               >
                 <Folder className="w-4 h-4 mr-2" />
-                Tümü
+                {language === 'de' ? 'Alle' : language === 'en' ? 'All' : 'Tümü'}
               </Button>
             )}
             
@@ -851,10 +865,10 @@ const Expenses = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => enterFolder(folder)}>
-                      <Folder className="w-4 h-4 mr-2" /> Klasöre Gir
+                      <Folder className="w-4 h-4 mr-2" /> {language === 'de' ? 'Ordner öffnen' : language === 'en' ? 'Enter Folder' : 'Klasöre Gir'}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleDeleteFolder(folder.id)} className="text-red-600">
-                      <Trash2 className="w-4 h-4 mr-2" /> Sil
+                      <Trash2 className="w-4 h-4 mr-2" /> {language === 'de' ? 'Löschen' : language === 'en' ? 'Delete' : 'Sil'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -872,11 +886,13 @@ const Expenses = () => {
               <Receipt className="w-10 h-10 text-indigo-500" />
             </div>
             <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              {language === 'de' ? 'Keine Ausgaben' : 'Henüz gider yok'}
+                {language === 'de' ? 'Keine Ausgaben' : language === 'en' ? 'No expenses yet' : 'Henüz gider yok'}
             </h3>
             <p className="text-muted-foreground max-w-md mx-auto">
               {language === 'de' 
                 ? 'Ziehen Sie PDF-Dateien hierher oder klicken Sie auf "Hochladen"' 
+                : language === 'en'
+                ? 'Drag and drop PDF files here or click upload'
                 : 'PDF dosyalarını sürükleyip bırakın veya yükle butonuna tıklayın'}
             </p>
             <div className="flex gap-3 justify-center mt-6">
@@ -902,7 +918,7 @@ const Expenses = () => {
                     <FileText className="w-12 h-12 text-slate-300" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4 gap-2">
                       <Button size="sm" variant="secondary" className="h-8" onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }}>
-                        <Eye className="w-4 h-4 mr-1" /> Görüntüle
+                        <Eye className="w-4 h-4 mr-1" /> {language === 'de' ? 'Anzeigen' : language === 'en' ? 'View' : 'Görüntüle'}
                       </Button>
                       <Button size="sm" variant="secondary" className="h-8" onClick={() => downloadExpense(expense)}>
                         <Download className="w-4 h-4" />
@@ -929,22 +945,22 @@ const Expenses = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }}>
-                      <Eye className="w-4 h-4 mr-2" /> Görüntüle
+                      <Eye className="w-4 h-4 mr-2" /> {language === 'de' ? 'Anzeigen' : language === 'en' ? 'View' : 'Görüntüle'}
                     </DropdownMenuItem>
                     {folders.length > 0 && (
                       <>
                         <DropdownMenuItem onClick={() => handleMoveToFolder(expense.id, null)}>
-                          <Folder className="w-4 h-4 mr-2" /> Klasörden Çıkar
+                          <Folder className="w-4 h-4 mr-2" /> {language === 'de' ? 'Aus Ordner entfernen' : language === 'en' ? 'Remove from Folder' : 'Klasörden Çıkar'}
                         </DropdownMenuItem>
                         {folders.filter(f => f.id !== expense.folder_id).slice(0, 5).map(folder => (
                           <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(expense.id, folder.id)}>
-                            <Folder className="w-4 h-4 mr-2 text-blue-500" /> {folder.name}'a Taşı
+                            <Folder className="w-4 h-4 mr-2 text-blue-500" /> {language === 'de' ? `In ${folder.name} verschieben` : language === 'en' ? `Move to ${folder.name}` : `${folder.name}'a Taşı`}
                           </DropdownMenuItem>
                         ))}
                       </>
                     )}
                     <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }}>
-                      <Trash2 className="w-4 h-4 mr-2" /> Sil
+                      <Trash2 className="w-4 h-4 mr-2" /> {language === 'de' ? 'Löschen' : language === 'en' ? 'Delete' : 'Sil'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -971,13 +987,13 @@ const Expenses = () => {
                   
                   {/* Always visible action buttons */}
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }} title="Görüntüle">
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedExpense(expense); setIsPreviewOpen(true); }} title={language === 'de' ? 'Anzeigen' : language === 'en' ? 'View' : 'Görüntüle'}>
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => downloadExpense(expense)} title="İndir">
+                    <Button variant="ghost" size="icon" onClick={() => downloadExpense(expense)} title={language === 'de' ? 'Herunterladen' : language === 'en' ? 'Download' : 'İndir'}>
                       <Download className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }} title="Sil" className="text-destructive hover:text-destructive">
+                    <Button variant="ghost" size="icon" onClick={() => { setSelectedExpense(expense); setIsDeleteOpen(true); }} title={language === 'de' ? 'Löschen' : language === 'en' ? 'Delete' : 'Sil'} className="text-destructive hover:text-destructive">
                       <Trash2 className="w-4 h-4" />
                     </Button>
                     <DropdownMenu>
@@ -990,11 +1006,11 @@ const Expenses = () => {
                         {folders.length > 0 && (
                           <>
                             <DropdownMenuItem onClick={() => handleMoveToFolder(expense.id, null)}>
-                              <Folder className="w-4 h-4 mr-2" /> Klasörden Çıkar
+                              <Folder className="w-4 h-4 mr-2" /> {language === 'de' ? 'Aus Ordner entfernen' : language === 'en' ? 'Remove from Folder' : 'Klasörden Çıkar'}
                             </DropdownMenuItem>
                             {folders.filter(f => f.id !== expense.folder_id).slice(0, 5).map(folder => (
                               <DropdownMenuItem key={folder.id} onClick={() => handleMoveToFolder(expense.id, folder.id)}>
-                                <Folder className="w-4 h-4 mr-2 text-blue-500" /> {folder.name}'a Taşı
+                                <Folder className="w-4 h-4 mr-2 text-blue-500" /> {language === 'de' ? `In ${folder.name} verschieben` : language === 'en' ? `Move to ${folder.name}` : `${folder.name}'a Taşı`}
                               </DropdownMenuItem>
                             ))}
                           </>
@@ -1025,10 +1041,10 @@ const Expenses = () => {
                 <Label>Üst Klasör (Opsiyonel)</Label>
                 <Select value={parentFolderId || "root"} onValueChange={(v) => setParentFolderId(v === "root" ? null : v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Ana dizin" />
+                    <SelectValue placeholder={language === 'de' ? 'Hauptverzeichnis' : language === 'en' ? 'Root folder' : 'Ana dizin'} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="root">Ana Dizin (Kök)</SelectItem>
+                    <SelectItem value="root">{language === 'de' ? 'Hauptverzeichnis (Wurzel)' : language === 'en' ? 'Root Folder' : 'Ana Dizin (Kök)'}</SelectItem>
                     {folders.map(f => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.path || f.name}
@@ -1037,14 +1053,14 @@ const Expenses = () => {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Bir klasörün içinde alt klasör oluşturmak için üst klasör seçin
+                  {language === 'de' ? 'Wählen Sie einen übergeordneten Ordner, um einen Unterordner zu erstellen' : language === 'en' ? 'Select a parent folder to create a subfolder' : 'Bir klasörün içinde alt klasör oluşturmak için üst klasör seçin'}
                 </p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsFolderOpen(false); setParentFolderId(null); }}>İptal</Button>
-            <Button onClick={handleCreateFolder}>Oluştur</Button>
+            <Button variant="outline" onClick={() => { setIsFolderOpen(false); setParentFolderId(null); }}>{language === 'de' ? 'Abbrechen' : language === 'en' ? 'Cancel' : 'İptal'}</Button>
+            <Button onClick={handleCreateFolder}>{language === 'de' ? 'Erstellen' : language === 'en' ? 'Create' : 'Oluştur'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1053,7 +1069,7 @@ const Expenses = () => {
       <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>PDF Yükle</DialogTitle>
+            <DialogTitle>{language === 'de' ? 'PDF hochladen' : language === 'en' ? 'Upload PDF' : 'PDF Yükle'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div 
@@ -1333,15 +1349,15 @@ const Expenses = () => {
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Gideri Sil</AlertDialogTitle>
+            <AlertDialogTitle>{language === 'de' ? 'Ausgabe löschen' : language === 'en' ? 'Delete Expense' : 'Gideri Sil'}</AlertDialogTitle>
             <AlertDialogDescription>
-              Bu gider kaydını silmek istediğinizden emin misiniz?
+              {language === 'de' ? 'Möchten Sie diesen Ausgabeneintrag wirklich löschen?' : language === 'en' ? 'Are you sure you want to delete this expense?' : 'Bu gider kaydını silmek istediğinizden emin misiniz?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogCancel>{language === 'de' ? 'Abbrechen' : language === 'en' ? 'Cancel' : 'İptal'}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
-              Sil
+              {language === 'de' ? 'Löschen' : language === 'en' ? 'Delete' : 'Sil'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
