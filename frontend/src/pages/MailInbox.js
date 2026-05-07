@@ -1012,9 +1012,9 @@ const MailPage = () => {
         </button>
       </div>
 
-      {/* Email Detail View */}
+      {/* Email Detail View - Full Screen Overlay */}
       {selectedEmail && (
-        <div className={`fixed inset-0 z-50 bg-slate-900 flex flex-col overflow-hidden`}>
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-[100] bg-slate-900 flex flex-col overflow-hidden" style={{position: 'fixed', margin: 0}}>
           {/* Compact Header */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-slate-700/50 bg-slate-800/80 backdrop-blur-sm flex-shrink-0">
             <Button variant="ghost" size="sm" onClick={() => { setSelectedEmail(null); setIsEmailFullscreen(false); setShowAiPanel(false); }} className="text-white hover:bg-slate-700 rounded-lg h-8 px-2">
