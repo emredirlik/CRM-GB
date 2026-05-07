@@ -470,7 +470,8 @@ const Expenses = () => {
         category: selectedCategory !== 'all' ? selectedCategory : undefined,
         report_type: type === 'all' ? (selectedMonth ? 'monthly' : 'yearly') : type,
         month: selectedMonth || undefined,
-        year: selectedYear
+        year: selectedYear,
+        lang: language // Pass current language to backend
       };
       
       const response = await axios.get(`${API}/expenses/report/pdf`, {
@@ -479,9 +480,18 @@ const Expenses = () => {
       });
       
       const monthName = selectedMonth ? months.find(m => m.id === selectedMonth)?.name : '';
+      
+      // Filename based on language
+      const filenameLabels = {
+        de: { report: 'Ausgabenbericht', allYear: 'Gesamtes_Jahr' },
+        en: { report: 'Expense_Report', allYear: 'Full_Year' },
+        tr: { report: 'Gider_Raporu', allYear: 'Tum_Yil' }
+      };
+      const labels = filenameLabels[language] || filenameLabels.tr;
+      
       const filename = selectedMonth 
-        ? `Gider_Raporu_${selectedYear}_${monthName}.pdf`
-        : `Gider_Raporu_${selectedYear}_Tum_Yil.pdf`;
+        ? `${labels.report}_${selectedYear}_${monthName}.pdf`
+        : `${labels.report}_${selectedYear}_${labels.allYear}.pdf`;
       
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -490,9 +500,21 @@ const Expenses = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success(`Rapor indirildi: ${selectedYear} ${monthName || 'Tüm Yıl'}`);
+      
+      // Success message based on language
+      const successMsg = language === 'de' 
+        ? `Bericht heruntergeladen: ${selectedYear} ${monthName || 'Gesamtes Jahr'}`
+        : language === 'en'
+        ? `Report downloaded: ${selectedYear} ${monthName || 'Full Year'}`
+        : `Rapor indirildi: ${selectedYear} ${monthName || 'Tüm Yıl'}`;
+      toast.success(successMsg);
     } catch (error) {
-      toast.error('Rapor oluşturulamadı');
+      const errorMsg = language === 'de' 
+        ? 'Bericht konnte nicht erstellt werden'
+        : language === 'en'
+        ? 'Could not generate report'
+        : 'Rapor oluşturulamadı';
+      toast.error(errorMsg);
     }
   };
 

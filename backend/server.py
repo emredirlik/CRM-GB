@@ -1612,8 +1612,8 @@ async def regenerate_specification_pdf(spec_id: str):
     
     # Register DejaVu font for UTF-8 support
     try:
-        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
         font_name = 'DejaVu'
         font_bold = 'DejaVu-Bold'
     except:
@@ -6253,7 +6253,7 @@ async def download_activity_report(lead_id: Optional[str] = None):
     
     # Register font
     try:
-        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
         font_name = 'DejaVu'
     except:
         font_name = 'Helvetica'
@@ -7827,9 +7827,10 @@ async def generate_expense_report(
     date: str = None,
     report_type: str = 'all',  # all, monthly, yearly
     month: int = None,
-    year: int = None
+    year: int = None,
+    lang: str = 'tr'  # Language: tr, de, en
 ):
-    """Generate expense report PDF - supports all, monthly, yearly"""
+    """Generate expense report PDF - supports all, monthly, yearly with language support"""
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -7837,6 +7838,57 @@ async def generate_expense_report(
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.lib import colors
+    
+    # Language translations
+    translations = {
+        'tr': {
+            'months': {1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan", 5: "Mayıs", 6: "Haziran",
+                      7: "Temmuz", 8: "Ağustos", 9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"},
+            'monthly_report': "Aylık Gider Raporu",
+            'yearly_report': "Yıllık Gider Raporu",
+            'expense_report': "Gider Raporu",
+            'created': "Oluşturulma",
+            'date': "Tarih",
+            'category': "Kategori",
+            'description': "Açıklama",
+            'amount': "Tutar",
+            'total': "TOPLAM",
+            'categories': {"hotel": "Otel", "credit_card": "Kredi Kartı", "dkv": "DKV", "other": "Diğer"},
+            'filename': "gider_raporu.pdf"
+        },
+        'de': {
+            'months': {1: "Januar", 2: "Februar", 3: "März", 4: "April", 5: "Mai", 6: "Juni",
+                      7: "Juli", 8: "August", 9: "September", 10: "Oktober", 11: "November", 12: "Dezember"},
+            'monthly_report': "Monatlicher Ausgabenbericht",
+            'yearly_report': "Jährlicher Ausgabenbericht",
+            'expense_report': "Ausgabenbericht",
+            'created': "Erstellt am",
+            'date': "Datum",
+            'category': "Kategorie",
+            'description': "Beschreibung",
+            'amount': "Betrag",
+            'total': "GESAMT",
+            'categories': {"hotel": "Hotel", "credit_card": "Kreditkarte", "dkv": "DKV", "other": "Sonstige"},
+            'filename': "ausgabenbericht.pdf"
+        },
+        'en': {
+            'months': {1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June",
+                      7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"},
+            'monthly_report': "Monthly Expense Report",
+            'yearly_report': "Yearly Expense Report",
+            'expense_report': "Expense Report",
+            'created': "Created",
+            'date': "Date",
+            'category': "Category",
+            'description': "Description",
+            'amount': "Amount",
+            'total': "TOTAL",
+            'categories': {"hotel": "Hotel", "credit_card": "Credit Card", "dkv": "DKV", "other": "Other"},
+            'filename': "expense_report.pdf"
+        }
+    }
+    
+    t = translations.get(lang, translations['tr'])
     
     try:
         query = {}
@@ -7868,8 +7920,8 @@ async def generate_expense_report(
         buffer = BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=30, bottomMargin=30)
         
-        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
-        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
         
         styles = getSampleStyleSheet()
         title_style = ParagraphStyle('Title', fontName='DejaVu-Bold', fontSize=18, alignment=1, spaceAfter=20)
@@ -7878,35 +7930,31 @@ async def generate_expense_report(
         elements = []
         
         # Title based on report type
-        month_names = {1: "Ocak", 2: "Şubat", 3: "Mart", 4: "Nisan", 5: "Mayıs", 6: "Haziran",
-                      7: "Temmuz", 8: "Ağustos", 9: "Eylül", 10: "Ekim", 11: "Kasım", 12: "Aralık"}
-        
         if report_type == 'monthly':
-            title = f"Aylık Gider Raporu - {month_names.get(target_month, '')} {target_year}"
+            title = f"{t['monthly_report']} - {t['months'].get(target_month, '')} {target_year}"
         elif report_type == 'yearly':
-            title = f"Yıllık Gider Raporu - {target_year}"
+            title = f"{t['yearly_report']} - {target_year}"
         else:
-            title = "Gider Raporu"
+            title = t['expense_report']
         
         elements.append(Paragraph(title, title_style))
-        elements.append(Paragraph(f"Oluşturulma: {datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
+        elements.append(Paragraph(f"{t['created']}: {datetime.now().strftime('%d.%m.%Y')}", styles['Normal']))
         elements.append(Spacer(1, 20))
         
         # Table
-        category_names = {"hotel": "Otel", "credit_card": "Kredi Kartı", "dkv": "DKV", "other": "Diğer"}
-        data = [["Tarih", "Kategori", "Açıklama", "Tutar"]]
+        data = [[t['date'], t['category'], t['description'], t['amount']]]
         total = 0
         
         for exp in expenses:
             data.append([
                 exp.get("date", ""),
-                category_names.get(exp.get("category"), "Diğer"),
+                t['categories'].get(exp.get("category"), t['categories']['other']),
                 exp.get("description", "")[:30],
                 f"{exp.get('amount', 0):.2f} €"
             ])
             total += exp.get("amount", 0)
         
-        data.append(["", "", "TOPLAM", f"{total:.2f} €"])
+        data.append(["", "", t['total'], f"{total:.2f} €"])
         
         table = Table(data, colWidths=[70, 80, 200, 70])
         table.setStyle(TableStyle([
@@ -7927,7 +7975,7 @@ async def generate_expense_report(
         return Response(
             content=buffer.getvalue(),
             media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=gider_raporu.pdf"}
+            headers={"Content-Disposition": f"attachment; filename={t['filename']}"}
         )
     except Exception as e:
         logger.error(f"PDF report error: {e}")
