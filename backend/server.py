@@ -7617,25 +7617,57 @@ async def export_expenses_excel(category: str = None, year: int = None, month: i
         from io import BytesIO
         from collections import defaultdict
         
-        # Build query with year/month filter
-        query = {}
         target_year = year or datetime.now().year
         
-        if month:
-            # Filter by specific month
-            start_date = f"{target_year}-{str(month).zfill(2)}-01"
-            if month == 12:
-                end_date = f"{target_year + 1}-01-01"
-            else:
-                end_date = f"{target_year}-{str(month + 1).zfill(2)}-01"
-            query["date"] = {"$gte": start_date, "$lt": end_date}
-        else:
-            # Filter by year
-            start_date = f"{target_year}-01-01"
-            end_date = f"{target_year + 1}-01-01"
-            query["date"] = {"$gte": start_date, "$lt": end_date}
+        # Get ALL expenses first, then filter by year/month in Python
+        # This handles different date formats (YYYY-MM-DD, DD.MM.YYYY, etc.)
+        all_expenses = await db.expenses.find({}, {"_id": 0}).to_list(5000)
         
-        expenses = await db.expenses.find(query, {"_id": 0}).sort("date", 1).to_list(1000)
+        logger.info(f"Excel export: Found {len(all_expenses)} total expenses, filtering for year={target_year}, month={month}")
+        
+        # Filter expenses by year and optionally month
+        expenses = []
+        for exp in all_expenses:
+            date_str = exp.get("date", "")
+            exp_year = None
+            exp_month = None
+            
+            # Try to parse date in different formats
+            if "-" in date_str:
+                # Format: YYYY-MM-DD
+                try:
+                    parts = date_str.split("-")
+                    exp_year = int(parts[0])
+                    exp_month = int(parts[1])
+                except:
+                    pass
+            elif "." in date_str:
+                # Format: DD.MM.YYYY
+                try:
+                    parts = date_str.split(".")
+                    exp_year = int(parts[2])
+                    exp_month = int(parts[1])
+                except:
+                    pass
+            
+            # Apply filters
+            if exp_year == target_year:
+                if month is None or exp_month == month:
+                    expenses.append(exp)
+        
+        logger.info(f"Excel export: After filtering, {len(expenses)} expenses for year={target_year}, month={month}")
+        
+        # Sort by date
+        def parse_date_for_sort(exp):
+            date_str = exp.get("date", "")
+            if "-" in date_str:
+                return date_str
+            elif "." in date_str:
+                parts = date_str.split(".")
+                return f"{parts[2]}-{parts[1]}-{parts[0]}"
+            return "9999-99-99"
+        
+        expenses.sort(key=parse_date_for_sort)
         
         wb = openpyxl.Workbook()
         
