@@ -7477,10 +7477,13 @@ class MergePdfsRequest(BaseModel):
 
 @api_router.post("/expenses/merge-pdfs")
 async def merge_expense_pdfs(data: MergePdfsRequest):
-    """Merge multiple expense PDFs into a single PDF"""
+    """Merge multiple expense PDFs and images into a single PDF"""
     try:
-        from PyPDF2 import PdfMerger
+        from PyPDF2 import PdfMerger, PdfReader
         from io import BytesIO
+        from PIL import Image
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfgen import canvas
         
         logger.info(f"Merge request: folder_id={data.folder_id}, expense_ids={data.expense_ids}")
         
@@ -7500,24 +7503,91 @@ async def merge_expense_pdfs(data: MergePdfsRequest):
         merger = PdfMerger()
         merged_count = 0
         
+        # Supported image extensions
+        image_extensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']
+        
         for expense in expenses:
             file_path = expense.get("file_path")
             logger.info(f"Checking file: {file_path}")
             if file_path and Path(file_path).exists():
-                if file_path.lower().endswith('.pdf'):
+                file_ext = Path(file_path).suffix.lower()
+                
+                if file_ext == '.pdf':
+                    # Direct PDF merge
                     try:
                         merger.append(file_path)
                         merged_count += 1
-                        logger.info(f"Added to merge: {file_path}")
+                        logger.info(f"Added PDF to merge: {file_path}")
                     except Exception as e:
                         logger.warning(f"PDF merge skip {file_path}: {e}")
+                
+                elif file_ext in image_extensions:
+                    # Convert image to PDF and merge
+                    try:
+                        # Open image with PIL
+                        img = Image.open(file_path)
+                        
+                        # Convert to RGB if necessary (for PNG with transparency)
+                        if img.mode in ('RGBA', 'LA', 'P'):
+                            background = Image.new('RGB', img.size, (255, 255, 255))
+                            if img.mode == 'P':
+                                img = img.convert('RGBA')
+                            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                            img = background
+                        elif img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        
+                        # Create PDF from image
+                        img_buffer = BytesIO()
+                        
+                        # Get image dimensions
+                        img_width, img_height = img.size
+                        
+                        # Calculate scaling to fit A4 with margins
+                        a4_width, a4_height = A4
+                        margin = 40  # 40 points margin
+                        max_width = a4_width - (2 * margin)
+                        max_height = a4_height - (2 * margin)
+                        
+                        # Scale factor
+                        scale_w = max_width / img_width
+                        scale_h = max_height / img_height
+                        scale = min(scale_w, scale_h, 1.0)  # Don't enlarge, only shrink
+                        
+                        new_width = img_width * scale
+                        new_height = img_height * scale
+                        
+                        # Center on page
+                        x = (a4_width - new_width) / 2
+                        y = (a4_height - new_height) / 2
+                        
+                        # Create PDF with image
+                        c = canvas.Canvas(img_buffer, pagesize=A4)
+                        
+                        # Save image to temp bytes for ReportLab
+                        temp_img_buffer = BytesIO()
+                        img.save(temp_img_buffer, format='JPEG', quality=90)
+                        temp_img_buffer.seek(0)
+                        
+                        from reportlab.lib.utils import ImageReader
+                        img_reader = ImageReader(temp_img_buffer)
+                        c.drawImage(img_reader, x, y, width=new_width, height=new_height)
+                        c.save()
+                        
+                        img_buffer.seek(0)
+                        merger.append(img_buffer)
+                        merged_count += 1
+                        logger.info(f"Converted image to PDF and added: {file_path}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Image conversion skip {file_path}: {e}")
                 else:
-                    logger.info(f"Not a PDF: {file_path}")
+                    logger.info(f"Unsupported file type: {file_path}")
             else:
                 logger.warning(f"File not found: {file_path}")
         
         if merged_count == 0:
-            raise HTTPException(status_code=404, detail="Birleştirilecek PDF bulunamadı")
+            raise HTTPException(status_code=404, detail="Birleştirilecek dosya bulunamadı")
         
         output = BytesIO()
         merger.write(output)

@@ -1403,14 +1403,17 @@ def generate_combined_daily_report_pdf(reports: list, date: str, company_setting
     # Collect city/address data for route visualization
     route_locations = []
     for report in reports:
+        company_name = report.get('company_name', '')
         city = report.get('city', '')
         address = report.get('address', '')
         location = f"{address}, {city}" if address else city
-        if location.strip():
+        
+        # Always add if company_name exists, even without city/address
+        if company_name:
             route_locations.append({
-                'name': report.get('company_name', 'Unknown'),
-                'location': location,
-                'city': city
+                'name': company_name,
+                'location': location if location.strip() else 'Konum belirtilmemiş',
+                'city': city if city.strip() else (address if address.strip() else 'Adres yok')
             })
     
     if len(route_locations) >= 2:
