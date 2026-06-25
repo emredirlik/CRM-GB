@@ -7587,7 +7587,10 @@ async def merge_expense_pdfs(data: MergePdfsRequest):
                 logger.warning(f"File not found: {file_path}")
         
         if merged_count == 0:
-            raise HTTPException(status_code=404, detail="Birleştirilecek dosya bulunamadı")
+            # More detailed error message
+            file_paths = [exp.get("file_path", "None") for exp in expenses]
+            logger.error(f"No files could be merged. File paths: {file_paths}")
+            raise HTTPException(status_code=404, detail=f"Birleştirilecek dosya bulunamadı. Toplam {len(expenses)} gider kaydı var ama hiçbir dosya birleştirilemedi.")
         
         output = BytesIO()
         merger.write(output)
@@ -7759,7 +7762,9 @@ async def export_expenses_excel(category: str = None, year: int = None, month: i
             cell.fill = header_fill
             cell.font = header_font
         
-        hotel_expenses = [e for e in expenses if e.get("category") == "hotel"]
+        # Case-insensitive category matching
+        hotel_expenses = [e for e in expenses if str(e.get("category", "")).lower() in ["hotel", "otel"]]
+        logger.info(f"Excel export: Found {len(hotel_expenses)} hotel expenses")
         
         # Group hotels by month
         hotels_by_month = defaultdict(list)
@@ -7820,7 +7825,8 @@ async def export_expenses_excel(category: str = None, year: int = None, month: i
             cell.fill = header_fill
             cell.font = header_font
         
-        dkv_expenses = [e for e in expenses if e.get("category") == "dkv"]
+        dkv_expenses = [e for e in expenses if str(e.get("category", "")).lower() == "dkv"]
+        logger.info(f"Excel export: Found {len(dkv_expenses)} DKV expenses")
         dkv_by_month = defaultdict(list)
         for exp in dkv_expenses:
             date_str = exp.get("date", "")
@@ -7868,7 +7874,8 @@ async def export_expenses_excel(category: str = None, year: int = None, month: i
             cell.fill = header_fill
             cell.font = header_font
         
-        cc_expenses = [e for e in expenses if e.get("category") == "credit_card"]
+        cc_expenses = [e for e in expenses if str(e.get("category", "")).lower() in ["credit_card", "creditcard", "kredi_karti", "kreditkarte"]]
+        logger.info(f"Excel export: Found {len(cc_expenses)} credit card expenses")
         cc_by_month = defaultdict(list)
         for exp in cc_expenses:
             date_str = exp.get("date", "")
