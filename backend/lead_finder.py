@@ -393,7 +393,7 @@ En fazla 15-20 gerçek işletme bul. JSON array döndür:"""
                 api_key=self.gemini_key,
                 session_id=f"factory-{country}-{location}",
                 system_message=system_prompt
-            ).with_model("gemini", "gemini-2.0-flash")
+            ).with_model("gemini", "gemini-2.5-flash")
             
             message = UserMessage(text=user_prompt)
             response = await asyncio.wait_for(chat.send_message(message), timeout=120.0)

@@ -2197,7 +2197,14 @@ async def email_recipe(recipe_id: str, to_email: str, background_tasks: Backgrou
 # ===================== ORDER ENDPOINTS =====================
 
 @api_router.post("/orders", response_model=Order)
-async def create_order(order_data: OrderCreate):
+async def create_order(order_data: OrderCreate, request: Request):
+    # Get current user for multi-tenant isolation
+    try:
+        user = await get_current_user(request)
+        user_id = user.get('id')
+    except:
+        user_id = None
+    
     # Get lead info
     lead = await db.leads.find_one({"id": order_data.lead_id}, {"_id": 0})
     if not lead:
@@ -2268,6 +2275,7 @@ async def create_order(order_data: OrderCreate):
     )
     
     doc = order.model_dump()
+    doc['user_id'] = user_id  # Multi-tenant isolation
     doc['created_at'] = doc['created_at'].isoformat()
     doc['updated_at'] = doc['updated_at'].isoformat()
     # Serialize products
@@ -2276,8 +2284,16 @@ async def create_order(order_data: OrderCreate):
     return order
 
 @api_router.get("/orders", response_model=List[Order])
-async def get_orders():
-    orders = await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+async def get_orders(request: Request):
+    # Get current user for multi-tenant isolation
+    try:
+        user = await get_current_user(request)
+        user_id = user.get('id')
+        query = {"user_id": user_id} if user_id else {}
+    except:
+        query = {}
+    
+    orders = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
     for order in orders:
         deserialize_datetime(order)
     return orders
@@ -2376,9 +2392,17 @@ class SampleUpdate(BaseModel):
     notes: Optional[str] = None
 
 @api_router.post("/samples")
-async def create_sample(sample_data: SampleCreate):
+async def create_sample(sample_data: SampleCreate, request: Request):
+    # Get current user for multi-tenant isolation
+    try:
+        user = await get_current_user(request)
+        user_id = user.get('id')
+    except:
+        user_id = None
+    
     sample = {
         "id": str(uuid.uuid4()),
+        "user_id": user_id,  # Multi-tenant isolation
         "customer_id": sample_data.customer_id,
         "customer_name": sample_data.customer_name,
         "products": sample_data.products,
@@ -2395,8 +2419,16 @@ async def create_sample(sample_data: SampleCreate):
     return sample
 
 @api_router.get("/samples")
-async def get_samples():
-    samples = await db.samples.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+async def get_samples(request: Request):
+    # Get current user for multi-tenant isolation
+    try:
+        user = await get_current_user(request)
+        user_id = user.get('id')
+        query = {"user_id": user_id} if user_id else {}
+    except:
+        query = {}
+    
+    samples = await db.samples.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
     return samples
 
 @api_router.get("/samples/{sample_id}")
@@ -5999,16 +6031,21 @@ Lütfen şu konularda 2-3 cümlelik kısa öneriler ver:
 Türkçe ve samimi bir dille yaz."""
 
     try:
-        from emergentintegrations.llm.chat import chat, UserMessage
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import uuid as uuid_module
         
-        response = await chat(
-            api_key=os.environ.get('EMERGENT_LLM_KEY'),
-            model="gemini-2.0-flash",
-            messages=[UserMessage(content=prompt)]
-        )
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"ai-suggestion-{uuid_module.uuid4()}",
+            system_message="Sen deneyimli bir B2B satış danışmanısın."
+        ).with_model("gemini", "gemini-2.5-flash")
+        
+        user_message = UserMessage(text=prompt)
+        response = await chat.send_message(user_message)
         
         return {
-            "suggestion": response.content,
+            "suggestion": str(response),
             "lead_name": lead.get('company_name'),
             "total_activities": len(activities),
             "total_orders": total_orders,
@@ -7037,9 +7074,18 @@ class ExpenseFolderCreate(BaseModel):
     parent_id: Optional[str] = None  # For nested folders
 
 @api_router.get("/expenses")
-async def get_expenses(folder_id: str = None):
-    """Get expenses, optionally filtered by folder"""
+async def get_expenses(request: Request, folder_id: str = None):
+    """Get expenses, optionally filtered by folder (user-isolated)"""
+    # Get current user for multi-tenant isolation
+    try:
+        user = await get_current_user(request)
+        user_id = user.get('id')
+    except:
+        user_id = None
+    
     query = {}
+    if user_id:
+        query["user_id"] = user_id
     if folder_id:
         query["folder_id"] = folder_id
     expenses = await db.expenses.find(query, {"_id": 0}).sort("date", -1).to_list(1000)
@@ -7069,6 +7115,7 @@ async def update_expense(expense_id: str, data: ExpenseUpdate):
 
 @api_router.post("/expenses/upload")
 async def upload_expense(
+    request: Request,
     file: UploadFile = File(...),
     category: str = Form("other"),
     description: str = Form(""),
@@ -7088,6 +7135,13 @@ async def upload_expense(
 ):
     import re
     expense_id = str(uuid.uuid4())
+    
+    # Get current user for multi-tenant isolation
+    try:
+        user = await get_current_user(request)
+        user_id = user.get('id')
+    except:
+        user_id = None
     
     # Save file
     upload_dir = Path("/app/uploads/expenses")
@@ -7162,6 +7216,7 @@ async def upload_expense(
     
     expense = {
         "id": expense_id,
+        "user_id": user_id,  # Multi-tenant isolation
         "filename": file.filename,
         "file_path": str(file_path),
         "category": category,

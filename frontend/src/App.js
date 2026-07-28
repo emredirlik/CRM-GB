@@ -91,6 +91,7 @@ function AppRoutes() {
             <Layout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/leads" element={<Leads />} />
                 <Route path="/find-leads" element={<LeadFinder />} />
                 <Route path="/orders" element={<Orders />} />

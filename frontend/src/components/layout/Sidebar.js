@@ -55,7 +55,6 @@ const Sidebar = ({ onClose }) => {
     { path: '/compose', icon: Sparkles, label: 'aiMailComposer', highlight: true },
     { path: '/templates', icon: FileText, label: 'templates' },
     { path: '/ai-analytics', icon: Brain, label: 'aiAnalytics', highlight: true },
-    { path: '/history', icon: History, label: 'emailHistory' },
     { path: '/settings', icon: Settings, label: 'settings' },
     { path: '/doner-news', icon: Utensils, label: 'donerNews' },
   ];

@@ -89,6 +89,16 @@ const Dashboard = () => {
   
   // Recent Emails
   const [recentEmails, setRecentEmails] = useState([]);
+  
+  // World Clocks
+  const [worldTime, setWorldTime] = useState({});
+  
+  const WORLD_CLOCKS = [
+    { id: 'europe', label: 'Avrupa (Berlin)', timezone: 'Europe/Berlin', flag: '🇩🇪' },
+    { id: 'usa', label: 'Amerika (New York)', timezone: 'America/New_York', flag: '🇺🇸' },
+    { id: 'saudi', label: 'S. Arabistan (Riyad)', timezone: 'Asia/Riyadh', flag: '🇸🇦' },
+    { id: 'australia', label: 'Avustralya (Sidney)', timezone: 'Australia/Sydney', flag: '🇦🇺' },
+  ];
   const [loadingEmails, setLoadingEmails] = useState(false);
 
   // Widget Order & Drag
@@ -159,6 +169,38 @@ const Dashboard = () => {
     fetchFinanceSummary();
     fetchRecentEmails();
   }, [period]);
+
+  // World Clocks - Update every second
+  useEffect(() => {
+    const updateWorldTime = () => {
+      const times = {};
+      WORLD_CLOCKS.forEach(clock => {
+        const now = new Date();
+        const options = {
+          timeZone: clock.timezone,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        };
+        const dateOptions = {
+          timeZone: clock.timezone,
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short'
+        };
+        times[clock.id] = {
+          time: now.toLocaleTimeString('de-DE', options),
+          date: now.toLocaleDateString('de-DE', dateOptions)
+        };
+      });
+      setWorldTime(times);
+    };
+
+    updateWorldTime();
+    const interval = setInterval(updateWorldTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchRecentEmails = async () => {
     setLoadingEmails(true);
@@ -1049,6 +1091,35 @@ const Dashboard = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* World Clocks Section */}
+      <Card className="overflow-hidden" data-testid="world-clocks-widget">
+        <CardHeader className="pb-2 bg-gradient-to-r from-slate-800 to-slate-900">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2 text-white">
+            <Clock className="w-5 h-5 text-indigo-400" />
+            {t('worldClocks') || 'Dünya Saatleri'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-100">
+            {WORLD_CLOCKS.map((clock) => (
+              <div 
+                key={clock.id} 
+                className="p-4 text-center hover:bg-slate-50 transition-colors"
+              >
+                <div className="text-2xl mb-1">{clock.flag}</div>
+                <p className="text-xs text-slate-500 font-medium mb-1">{clock.label}</p>
+                <p className="text-2xl font-bold text-slate-900 font-mono tracking-tight">
+                  {worldTime[clock.id]?.time || '--:--:--'}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {worldTime[clock.id]?.date || '---'}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Shipments Section */}
       <Card className="mt-6">
