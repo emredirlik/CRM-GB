@@ -25,7 +25,8 @@ import {
   Brain,
   Crown,
   Utensils,
-  Receipt
+  Receipt,
+  TestTube
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -42,6 +43,7 @@ const Sidebar = ({ onClose }) => {
     { path: '/find-leads', icon: Search, label: 'findLeads', highlight: true },
     { path: '/customer-segments', icon: Crown, label: 'customerSegments', highlight: true },
     { path: '/orders', icon: ShoppingCart, label: 'orders' },
+    { path: '/samples', icon: TestTube, label: 'samples' },
     { path: '/specifications', icon: ClipboardList, label: 'specifications' },
     { path: '/product-videos', icon: Video, label: 'productVideos' },
     { path: '/recipes', icon: BookOpen, label: 'recipes' },

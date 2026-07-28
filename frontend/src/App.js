@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Leads from "@/pages/Leads";
 import LeadFinder from "@/pages/LeadFinder";
 import Orders from "@/pages/Orders";
+import Samples from "@/pages/Samples";
 import Products from "@/pages/Products";
 import ProductVideos from "@/pages/ProductVideos";
 import Recipes from "@/pages/Recipes";
@@ -93,6 +94,7 @@ function AppRoutes() {
                 <Route path="/leads" element={<Leads />} />
                 <Route path="/find-leads" element={<LeadFinder />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/samples" element={<Samples />} />
                 <Route path="/shipments" element={<Shipments />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/product-videos" element={<ProductVideos />} />

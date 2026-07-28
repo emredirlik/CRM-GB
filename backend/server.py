@@ -2353,6 +2353,81 @@ async def get_lead_orders(lead_id: str):
 
 # ===================== RECIPE ENDPOINTS =====================
 
+# ===================== SAMPLES (NUMUNE) ENDPOINTS =====================
+
+class SampleCreate(BaseModel):
+    customer_id: str
+    customer_name: str
+    products: str
+    quantity: Optional[str] = None
+    shipping_date: Optional[str] = None
+    tracking_number: Optional[str] = None
+    status: str = "pending"
+    notes: Optional[str] = None
+
+class SampleUpdate(BaseModel):
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
+    products: Optional[str] = None
+    quantity: Optional[str] = None
+    shipping_date: Optional[str] = None
+    tracking_number: Optional[str] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+@api_router.post("/samples")
+async def create_sample(sample_data: SampleCreate):
+    sample = {
+        "id": str(uuid.uuid4()),
+        "customer_id": sample_data.customer_id,
+        "customer_name": sample_data.customer_name,
+        "products": sample_data.products,
+        "quantity": sample_data.quantity,
+        "shipping_date": sample_data.shipping_date,
+        "tracking_number": sample_data.tracking_number,
+        "status": sample_data.status,
+        "notes": sample_data.notes,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.samples.insert_one(sample)
+    sample.pop("_id", None)
+    return sample
+
+@api_router.get("/samples")
+async def get_samples():
+    samples = await db.samples.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return samples
+
+@api_router.get("/samples/{sample_id}")
+async def get_sample(sample_id: str):
+    sample = await db.samples.find_one({"id": sample_id}, {"_id": 0})
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return sample
+
+@api_router.put("/samples/{sample_id}")
+async def update_sample(sample_id: str, sample_data: SampleUpdate):
+    existing = await db.samples.find_one({"id": sample_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    
+    update_data = {k: v for k, v in sample_data.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.samples.update_one({"id": sample_id}, {"$set": update_data})
+    updated = await db.samples.find_one({"id": sample_id}, {"_id": 0})
+    return updated
+
+@api_router.delete("/samples/{sample_id}")
+async def delete_sample(sample_id: str):
+    result = await db.samples.delete_one({"id": sample_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    return {"message": "Sample deleted successfully"}
+
+# ===================== RECIPE ENDPOINTS (ORIGINAL) =====================
+
 @api_router.post("/recipes", response_model=Recipe)
 async def create_recipe(recipe_data: RecipeCreate):
     # Get lead info

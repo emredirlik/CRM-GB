@@ -57,6 +57,7 @@ const COUNTRIES = {
   "UAE": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman"],
   "Kuwait": ["Kuwait City", "Hawalli"],
   "Qatar": ["Doha", "Al Wakrah"],
+  "Mexico": ["Mexico City", "Guadalajara", "Monterrey", "Puebla", "Tijuana", "León", "Chihuahua", "Culiacán", "Hermosillo", "San Pedro Garza García", "Navojoa"],
 };
 
 const texts = {
@@ -323,6 +324,7 @@ const LeadFinder = () => {
     { country: 'Netherlands', flag: '🇳🇱', city: '' },
     { country: 'UAE', flag: '🇦🇪', city: '' },
     { country: 'France', flag: '🇫🇷', city: '' },
+    { country: 'Mexico', flag: '🇲🇽', city: '' },
   ];
 
   // Search templates
