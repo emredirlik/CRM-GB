@@ -2,7 +2,7 @@
 
 ## Admin User
 - Username: emre@gewuerzberg.de
-- Password: 190371
+- Password: Emre.190371
 - Role: admin
 
 ## Auth Endpoints
